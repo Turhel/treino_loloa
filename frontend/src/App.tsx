@@ -4,1004 +4,301 @@ import {
   Activity,
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
   ClipboardCheck,
   Download,
   Dumbbell,
+  ExternalLink,
+  FileText,
+  Library,
+  Play,
+  Plus,
   Printer,
   RotateCcw,
+  Save,
   Search,
   Sparkles,
   TimerReset,
   Trash2,
+  Upload,
   X,
 } from "lucide-react";
+import { cardio, defaultTrainingPlan, getPlanDays, getPlanWeeks, overview, progression, recovery } from "./data/trainingPlans";
+import { exerciseLibrary, exerciseLibraryList, findExerciseLibraryItem, toPlanExercise } from "./data/exerciseLibrary";
+import { muscleImages } from "./data/muscleData";
+import type { CustomTrainingPlan, Exercise, ExerciseLog, Logs, Phase, TrainingDay, TrainingType, TrainingWeek } from "./types/training";
+import { focusToKey, focusToTargets } from "./utils/focus";
+import { getManualVideoLinks, videoKey, youtubeSearch } from "./utils/video";
+import {
+  ACTIVE_PLAN_KEY,
+  AUTO_WEEK_KEY,
+  CARDIO_LOG_KEY,
+  PAIN_LOG_KEY,
+  START_DATE_KEY,
+  STORAGE_KEY,
+  calculateWeekBlockFromStart,
+  calculateWeekFromStart,
+  emptyLog,
+  exerciseKey,
+  getTodayName,
+  readCustomPlans,
+  readJson,
+  saveCustomPlans,
+  shouldIncrease,
+  writeJson,
+} from "./utils/storage";
 
-type TrainingType = "puxar" | "empurrar" | "gluteo" | "inferior" | "superior" | "cardio" | "descanso";
-type Phase = "fase1" | "fase2";
-type Week = "A" | "B";
-
-type Exercise = {
-  order: number | string;
-  name: string;
-  focus: string;
-  video?: string;
-  rest?: number;
-};
-
-type DayPlan = {
+const weekdays = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+type PainLog = { date: string; level: string; text: string };
+type CardioLog = { date: string; minutes: string; type: string; intensity: string; lightMinutes?: string; moderateMinutes?: string; hardMinutes?: string };
+type WeeklySummary = {
   id: string;
-  phase: Phase;
-  week: Week;
-  day: string;
-  title: string;
-  type: TrainingType;
-  optional?: string;
-  exercises: Exercise[];
+  generatedAt: string;
+  startDate: string;
+  weekBlock: number;
+  weekId: string;
+  dateRange: string;
+  done: number;
+  total: number;
+  calories: number;
+  cardioCalories: number;
+  progress: string[];
+  reduce: string[];
+  skipped: string[];
+  pain: string[];
+  recommendations: string[];
+  bestExercise?: string;
+  topCalorieExercise?: string;
+  improveExercise?: string;
+  weeklyLoads?: { label: string; totalLoad: number; calories?: number }[];
 };
 
-type MuscleInfo = {
-  title: string;
-  description: string;
-  tips: string[];
-  image: string;
-};
-
-type ExerciseLog = {
-  done: boolean;
-  load: string;
-  reps1: string;
-  reps2: string;
-  reps3: string;
-  note: string;
-};
-
-type Logs = Record<string, ExerciseLog>;
-
-const STORAGE_KEY = "treino-loloa-logs-v2";
-const START_DATE_KEY = "treino-loloa-start-week-a";
-const AUTO_WEEK_KEY = "treino-loloa-auto-week";
+const WEEKLY_SUMMARY_KEY = "treino-loloa-weekly-summaries-v1";
+const cardioTypeOptions = ["Caminhada", "Esteira", "Corrida", "Bicicleta", "Elíptico", "Escada", "Outro"];
 
 const typeStyle: Record<TrainingType, { label: string; chip: string; border: string; soft: string; icon: string }> = {
-  puxar: {
-    label: "Puxar",
-    chip: "bg-blue-950/70 text-blue-200 ring-blue-800",
-    border: "border-blue-500",
-    soft: "bg-blue-950/30",
-    icon: "🔵",
-  },
-  empurrar: {
-    label: "Empurrar",
-    chip: "bg-rose-950/70 text-rose-200 ring-rose-800",
-    border: "border-rose-500",
-    soft: "bg-rose-950/30",
-    icon: "🔴",
-  },
-  gluteo: {
-    label: "Posterior/glúteos",
-    chip: "bg-orange-950/70 text-orange-200 ring-orange-800",
-    border: "border-orange-500",
-    soft: "bg-orange-950/30",
-    icon: "🟠",
-  },
-  inferior: {
-    label: "Inferiores",
-    chip: "bg-emerald-950/70 text-emerald-200 ring-emerald-800",
-    border: "border-emerald-500",
-    soft: "bg-emerald-950/30",
-    icon: "🟢",
-  },
-  superior: {
-    label: "Superiores/acessórios",
-    chip: "bg-violet-950/70 text-violet-200 ring-violet-800",
-    border: "border-violet-500",
-    soft: "bg-violet-950/30",
-    icon: "🟣",
-  },
-  cardio: {
-    label: "Cardio/mobilidade",
-    chip: "bg-teal-950/70 text-teal-200 ring-teal-800",
-    border: "border-teal-500",
-    soft: "bg-teal-950/30",
-    icon: "🟡",
-  },
-  descanso: {
-    label: "Descanso",
-    chip: "bg-zinc-800 text-zinc-300 ring-zinc-700",
-    border: "border-zinc-500",
-    soft: "bg-zinc-800/70",
-    icon: "⚪",
-  },
+  puxar: { label: "Puxar", chip: "bg-blue-950/70 text-blue-200 ring-blue-800", border: "border-blue-500", soft: "bg-blue-950/30", icon: "??" },
+  empurrar: { label: "Empurrar", chip: "bg-rose-950/70 text-rose-200 ring-rose-800", border: "border-rose-500", soft: "bg-rose-950/30", icon: "🔴" },
+  gluteo: { label: "Posterior/glúteos", chip: "bg-orange-950/70 text-orange-200 ring-orange-800", border: "border-orange-500", soft: "bg-orange-950/30", icon: "🟠" },
+  inferior: { label: "Inferiores", chip: "bg-emerald-950/70 text-emerald-200 ring-emerald-800", border: "border-emerald-500", soft: "bg-emerald-950/30", icon: "🟢" },
+  superior: { label: "Superiores/acessórios", chip: "bg-violet-950/70 text-violet-200 ring-violet-800", border: "border-violet-500", soft: "bg-violet-950/30", icon: "🟣" },
+  cardio: { label: "Cardio/mobilidade", chip: "bg-teal-950/70 text-teal-200 ring-teal-800", border: "border-teal-500", soft: "bg-teal-950/30", icon: "🟡" },
+  descanso: { label: "Descanso", chip: "bg-zinc-800 text-zinc-300 ring-zinc-700", border: "border-zinc-500", soft: "bg-zinc-800/70", icon: "⚪" },
 };
 
-// =====================================================
-// LINKS MANUAIS DOS VÍDEOS
-// =====================================================
-// Como usar:
-// 1. Copie o nome do exercício.
-// 2. Transforme em uma chave simples usando letras minúsculas, sem acento e com _.
-//    Exemplo: "Hip thrust" vira "hip_thrust".
-// 3. Cole o link do YouTube ou TikTok no campo correspondente.
-// 4. O botão "Abrir" vai usar o link manual. Se não tiver link manual,
-//    ele cai na busca automática do YouTube.
-//
-// Exemplos:
-// hip_thrust: {
-//   youtube: "https://www.youtube.com/watch?v=SEU_VIDEO",
-// },
-// stiff_com_halteres: {
-//   tiktok: "https://www.tiktok.com/@profissional/video/SEU_VIDEO",
-// },
-
-const exerciseVideoLinks: Record<
-  string,
-  {
-    youtube?: string;
-    tiktok?: string;
+function useLocalStorageLogs() {
+  const [logs, setLogs] = useState<Logs>(() => readJson(STORAGE_KEY, {}));
+  useEffect(() => writeJson(STORAGE_KEY, logs), [logs]);
+  function updateLog(key: string, patch: Partial<ExerciseLog>) {
+    setLogs((current) => ({ ...current, [key]: { ...(current[key] ?? emptyLog()), ...patch, updatedAt: new Date().toISOString() } }));
   }
-> = {
-  // Costas / puxar
-  puxada_na_frente_pegada_neutra_ou_aberta: {
-    youtube: "",
-    tiktok: "",
-  },
-  remada_baixa_no_cabo: {
-    youtube: "",
-    tiktok: "",
-  },
-  remada_unilateral_com_halter_apoiada: {
-    youtube: "",
-    tiktok: "",
-  },
-  pulldown_com_braco_reto_no_cabo: {
-    youtube: "",
-    tiktok: "",
-  },
-  face_pull_no_cabo: {
-    youtube: "",
-    tiktok: "",
-  },
-  encolhimento_com_halteres_ou_maquina: {
-    youtube: "",
-    tiktok: "",
-  },
-
-  // Glúteos / posterior
-  elevacao_pelvica_hip_thrust: {
-    youtube: "",
-    tiktok: "",
-  },
-  hip_thrust: {
-    youtube: "",
-    tiktok: "",
-  },
-  leg_press_com_pes_mais_altos: {
-    youtube: "",
-    tiktok: "",
-  },
-  stiff_com_halteres: {
-    youtube: "",
-    tiktok: "",
-  },
-  stiff: {
-    youtube: "",
-    tiktok: "",
-  },
-  mesa_flexora: {
-    youtube: "",
-    tiktok: "",
-  },
-  flexora_sentada: {
-    youtube: "",
-    tiktok: "",
-  },
-  cadeira_abdutora: {
-    youtube: "",
-    tiktok: "",
-  },
-  gluteo_no_cabo_ou_maquina: {
-    youtube: "",
-    tiktok: "",
-  },
-  gluteo_no_cabo: {
-    youtube: "",
-    tiktok: "",
-  },
-  extensao_lombar_45_graus_leve_e_controlada: {
-    youtube: "",
-    tiktok: "",
-  },
-  extensao_lombar_controlada: {
-    youtube: "",
-    tiktok: "",
-  },
-
-  // Peito / empurrar
-  supino_reto_na_maquina_ou_chest_press: {
-    youtube: "",
-    tiktok: "",
-  },
-  supino_inclinado_com_halteres: {
-    youtube: "",
-    tiktok: "",
-  },
-  crucifixo_na_maquina_ou_cabo: {
-    youtube: "",
-    tiktok: "",
-  },
-  desenvolvimento_na_maquina: {
-    youtube: "",
-    tiktok: "",
-  },
-  elevacao_lateral: {
-    youtube: "",
-    tiktok: "",
-  },
-  triceps_corda_no_pulley: {
-    youtube: "",
-    tiktok: "",
-  },
-  triceps_frances_no_cabo_ou_halter: {
-    youtube: "",
-    tiktok: "",
-  },
-
-  // Inferiores
-  agachamento_no_smith_ou_hack_machine: {
-    youtube: "",
-    tiktok: "",
-  },
-  hack_squat_ou_agachamento_no_smith: {
-    youtube: "",
-    tiktok: "",
-  },
-  leg_press_com_pes_medios: {
-    youtube: "",
-    tiktok: "",
-  },
-  cadeira_extensora: {
-    youtube: "",
-    tiktok: "",
-  },
-  cadeira_adutora: {
-    youtube: "",
-    tiktok: "",
-  },
-  panturrilha_em_pe: {
-    youtube: "",
-    tiktok: "",
-  },
-  panturrilha_sentada: {
-    youtube: "",
-    tiktok: "",
-  },
-
-  // Braços / acessórios
-  rosca_martelo_com_halteres: {
-    youtube: "",
-    tiktok: "",
-  },
-  rosca_martelo_no_cabo: {
-    youtube: "",
-    tiktok: "",
-  },
-  rosca_direta_no_cabo: {
-    youtube: "",
-    tiktok: "",
-  },
-  rosca_scott_maquina_nunca_fazer_amplitude_completa: {
-    youtube: "",
-    tiktok: "",
-  },
-  rosca_alternada_com_halteres: {
-    youtube: "",
-    tiktok: "",
-  },
-  triceps_barra_v_no_pulley: {
-    youtube: "",
-    tiktok: "",
-  },
-  triceps_unilateral_no_cabo: {
-    youtube: "",
-    tiktok: "",
-  },
-  triceps_testa_no_cabo: {
-    youtube: "",
-    tiktok: "",
-  },
-  triceps_corda: {
-    youtube: "",
-    tiktok: "",
-  },
-};
-
-const youtubeSearch = (query: string) =>
-  `https://www.youtube.com/results?search_query=${encodeURIComponent(`${query} execução correta profissional educação física`)}`;
-
-function videoKey(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
+  return { logs, updateLog, clearLogs: () => setLogs({}) };
 }
 
-function getExerciseVideoUrl(name: string, videoName?: string) {
-  if (videoName === "-") return undefined;
-
-  const keyFromName = videoKey(name);
-  const keyFromVideoName = videoName ? videoKey(videoName) : keyFromName;
-
-  const manualVideo = exerciseVideoLinks[keyFromName] ?? exerciseVideoLinks[keyFromVideoName];
-
-  if (manualVideo?.youtube && manualVideo.youtube.trim()) return manualVideo.youtube;
-  if (manualVideo?.tiktok && manualVideo.tiktok.trim()) return manualVideo.tiktok;
-
-  return youtubeSearch(videoName ?? name);
+function useStoredArray<T>(key: string) {
+  const [items, setItems] = useState<T[]>(() => readJson<T[]>(key, []));
+  useEffect(() => writeJson(key, items), [key, items]);
+  const setAndStore: React.Dispatch<React.SetStateAction<T[]>> = (value) => {
+    setItems((current) => {
+      const next = typeof value === "function" ? (value as (current: T[]) => T[])(current) : value;
+      writeJson(key, next);
+      return next;
+    });
+  };
+  return [items, setAndStore] as const;
 }
 
-function restFor(name: string) {
-  const text = name.toLowerCase();
-  if (["leg press", "hip thrust", "supino", "agachamento", "hack", "stiff", "remada", "desenvolvimento"].some((term) => text.includes(term))) return 90;
-  if (["cardio", "mobilidade", "alongamento"].some((term) => text.includes(term))) return 0;
-  return 60;
+function todayInputValue() {
+  return new Date().toISOString().slice(0, 10);
 }
 
-function ex(order: number | string, name: string, focus: string, videoName?: string): Exercise {
+function numericValue(value: string) {
+  const normalized = value.replace(",", ".");
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function estimateExerciseCalories(log?: ExerciseLog) {
+  if (!log) return 0;
+  const load = numericValue(log.load);
+  const reps = [log.reps1, log.reps2, log.reps3].reduce((sum, value) => sum + numericValue(value), 0);
+  if (!load || !reps) return 0;
+  return Math.round(Math.max(1, load * reps * 0.005 + reps * 0.08));
+}
+
+function exerciseVolume(log?: ExerciseLog) {
+  if (!log) return 0;
+  const load = numericValue(log.load);
+  const reps = [log.reps1, log.reps2, log.reps3].reduce((sum, value) => sum + numericValue(value), 0);
+  return Math.round(load * reps);
+}
+
+function averageReps(log?: ExerciseLog) {
+  if (!log) return 0;
+  const reps = [log.reps1, log.reps2, log.reps3].map((value) => numericValue(value)).filter(Boolean);
+  return reps.length ? reps.reduce((sum, value) => sum + value, 0) / reps.length : 0;
+}
+
+function cardioMinutes(entry: { minutes?: string; lightMinutes?: string; moderateMinutes?: string; hardMinutes?: string }) {
+  const splitTotal = numericValue(entry.lightMinutes ?? "") + numericValue(entry.moderateMinutes ?? "") + numericValue(entry.hardMinutes ?? "");
+  return splitTotal || numericValue(entry.minutes ?? "");
+}
+
+function estimateCardioCalories(entry: { minutes?: string; type: string; intensity?: string; lightMinutes?: string; moderateMinutes?: string; hardMinutes?: string }) {
+  const lightMinutes = numericValue(entry.lightMinutes ?? "");
+  const moderateMinutes = numericValue(entry.moderateMinutes ?? "");
+  const hardMinutes = numericValue(entry.hardMinutes ?? "");
+  const splitTotal = lightMinutes + moderateMinutes + hardMinutes;
+  const fallbackMinutes = numericValue(entry.minutes ?? "");
+  if (!splitTotal && !fallbackMinutes) return 0;
+  const type = entry.type.toLowerCase();
+  const baseMet = type.includes("corrida") ? 8 : type.includes("bike") || type.includes("bicicleta") ? 5.8 : type.includes("elíptico") || type.includes("eliptico") ? 5 : 3.8;
+  const referenceWeightKg = 70;
+  const caloriesFor = (minutes: number, multiplier: number) => ((baseMet * multiplier * 3.5 * referenceWeightKg) / 200) * minutes;
+  if (splitTotal) return Math.round(caloriesFor(lightMinutes, 0.85) + caloriesFor(moderateMinutes, 1.1) + caloriesFor(hardMinutes, 1.35));
+  const intensity = (entry.intensity ?? "Leve").toLowerCase();
+  const intensityMultiplier = intensity.includes("forte") ? 1.35 : intensity.includes("moderado") ? 1.1 : 0.85;
+  return Math.round(caloriesFor(fallbackMinutes, intensityMultiplier));
+}
+
+function formatCalories(value: number) {
+  return `${Math.round(value)} kcal`;
+}
+
+function escapeHtml(value: string) {
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+}
+
+function weeklySummaryReportHtml(summary: WeeklySummary) {
+  const list = (items: string[], fallback: string) => (items.length ? items : [fallback]).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>Resumo semanal ${escapeHtml(summary.weekId)}</title>
+  <style>
+    @page { margin: 18mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #18181b; font-family: Inter, Arial, sans-serif; background: #fff; }
+    .hero { border: 1px solid #d4d4d8; border-radius: 16px; padding: 16px; background: #f4f4f5; }
+    .eyebrow { color: #71717a; font-size: 11px; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; }
+    h1 { margin: 6px 0; font-size: 24px; line-height: 1.1; }
+    .muted { color: #52525b; font-size: 12px; line-height: 1.4; }
+    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
+    .metric { border: 1px solid #e4e4e7; border-radius: 14px; padding: 10px; }
+    .metric span { display: block; color: #71717a; font-size: 10px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+    .metric strong { display: block; margin-top: 5px; font-size: 18px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .chart { margin-bottom: 10px; border: 1px solid #e4e4e7; border-radius: 14px; padding: 10px; break-inside: avoid; }
+    section { border: 1px solid #e4e4e7; border-radius: 14px; padding: 10px; break-inside: avoid; }
+    h2 { margin: 0 0 6px; font-size: 13px; }
+    ul { margin: 0; padding-left: 16px; color: #3f3f46; font-size: 11px; line-height: 1.35; }
+    footer { margin-top: 10px; color: #71717a; font-size: 10px; }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <div class="eyebrow">Treino Loloa · Resumo semanal</div>
+    <h1>Semana ${escapeHtml(summary.weekId)} · ${escapeHtml(summary.dateRange)}</h1>
+    <p class="muted">Gerado em ${new Date(summary.generatedAt).toLocaleString("pt-BR")}. Estimativas calóricas são aproximações, não medição clínica.</p>
+  </div>
+  <div class="metrics">
+    <div class="metric"><span>Exercícios</span><strong>${summary.done}/${summary.total}</strong></div>
+    <div class="metric"><span>Treino</span><strong>${formatCalories(summary.calories)}</strong></div>
+    <div class="metric"><span>Cardio</span><strong>${formatCalories(summary.cardioCalories)}</strong></div>
+    <div class="metric"><span>Total</span><strong>${formatCalories(summary.calories + summary.cardioCalories)}</strong></div>
+  </div>
+  <div class="chart"><h2>Carga levantada por semana · últimas 4 semanas</h2>${svgLineChart((summary.weeklyLoads ?? []).slice(-4))}</div>
+  <div class="grid">
+    <section><h2>Melhores destaques</h2><ul>${list([summary.bestExercise ?? "Sem destaque suficiente.", summary.topCalorieExercise ?? "Sem cálculo de kcal por exercício.", summary.improveExercise ?? "Sem ponto crítico claro."], "Sem destaques.")}</ul></section>
+    <section><h2>Progredir carga</h2><ul>${list(summary.progress, "Nenhum exercício bateu critério de progressão.")}</ul></section>
+    <section><h2>Diminuir ou ajustar</h2><ul>${list(summary.reduce, "Sem sinais claros de redução por carga/reps.")}</ul></section>
+    <section><h2>Dor/desconforto</h2><ul>${list(summary.pain, "Sem desconforto registrado na semana.")}</ul></section>
+    <section><h2>Próxima semana</h2><ul>${list(summary.recommendations, "Manter consistência e técnica limpa.")}</ul></section>
+  </div>
+  <footer>Abra este arquivo no navegador e use Ctrl+P / Salvar como PDF para gerar o PDF.</footer>
+  <script>window.addEventListener("load", () => setTimeout(() => window.print(), 350));</script>
+</body>
+</html>`;
+}
+
+function downloadWeeklySummaryPdf(summary: WeeklySummary) {
+  const html = weeklySummaryReportHtml(summary);
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `resumo-semanal-${summary.weekId}-${summary.weekBlock + 1}-abrir-para-salvar-pdf.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function formatDateRange(startDate: string, weekBlock: number) {
+  const start = new Date(`${startDate}T00:00:00`);
+  start.setDate(start.getDate() + weekBlock * 7);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  return `${start.toLocaleDateString("pt-BR")} - ${end.toLocaleDateString("pt-BR")}`;
+}
+
+function isDateInWeek(date: string, startDate: string, weekBlock: number) {
+  const start = new Date(`${startDate}T00:00:00`);
+  const value = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(value.getTime())) return false;
+  const diffDays = Math.floor((value.getTime() - start.getTime()) / 86400000);
+  return diffDays >= weekBlock * 7 && diffDays < weekBlock * 7 + 7;
+}
+
+function svgLineChart(points: { label: string; totalLoad: number; calories?: number }[]) {
+  const width = 560;
+  const height = 120;
+  const padding = 18;
+  const values = points.length ? points : [{ label: "Semana 1", totalLoad: 0 }];
+  const max = Math.max(...values.map((point) => point.totalLoad), 1);
+  const step = values.length > 1 ? (width - padding * 2) / (values.length - 1) : 0;
+  const coords = values.map((point, index) => {
+    const x = values.length > 1 ? padding + index * step : width / 2;
+    const y = height - padding - (point.totalLoad / max) * (height - padding * 2);
+    return { ...point, x, y };
+  });
+  const polyline = coords.map((point) => `${point.x},${point.y}`).join(" ");
+  return `<svg viewBox="0 0 ${width} ${height}" width="100%" height="120" role="img" aria-label="Carga levantada por semana">
+    <rect x="0" y="0" width="${width}" height="${height}" rx="14" fill="#f4f4f5" />
+    <polyline points="${polyline}" fill="none" stroke="#18181b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+    ${coords.map((point) => `<circle cx="${point.x}" cy="${point.y}" r="4" fill="#18181b" /><text x="${point.x}" y="${height - 6}" font-size="10" text-anchor="middle" fill="#52525b">${escapeHtml(point.label.replace("Semana ", "S"))}</text><text x="${point.x}" y="${Math.max(12, point.y - 18)}" font-size="10" text-anchor="middle" fill="#18181b">${point.totalLoad}kg</text><text x="${point.x}" y="${Math.max(24, point.y - 6)}" font-size="9" text-anchor="middle" fill="#b45309">~${Math.round(point.calories ?? 0)}kcal</text>`).join("")}
+  </svg>`;
+}
+
+function makeCustomWeek(id: string): TrainingWeek {
   return {
-    order,
-    name,
-    focus,
-    rest: restFor(name),
-    video: getExerciseVideoUrl(name, videoName),
+    id,
+    label: `Semana ${id}`,
+    days: weekdays.map((day) => ({
+      id: `custom-${id.toLowerCase()}-${videoKey(day)}`,
+      week: id,
+      day,
+      title: day,
+      type: "superior",
+      exercises: [],
+    })),
   };
 }
 
-const muscleImages: Record<string, MuscleInfo> = {
-  biceps: {
-    title: "Bíceps",
-    description: "Atua em puxadas e roscas. Entra bastante nos treinos de puxar, mesmo quando o objetivo principal é costas.",
-    tips: ["Não balance o tronco.", "Controle a descida.", "Mantenha cotovelos relativamente fixos."],
-    image: "/musculos/biceps.png",
-  },
-  braquial: {
-    title: "Braquial",
-    description: "Músculo auxiliar importante nas roscas, especialmente na rosca martelo. Ajuda a dar volume ao braço.",
-    tips: ["Use pegada neutra quando quiser enfatizar mais.", "Controle o movimento.", "Evite roubar com o ombro."],
-    image: "/musculos/braquial.png",
-  },
-  costas_medias: {
-    title: "Costas médias",
-    description: "Região muito trabalhada em remadas. Ajuda postura, estabilidade escapular e espessura das costas.",
-    tips: ["Puxe com os cotovelos.", "Segure 1 segundo na contração.", "Não arredonde a coluna."],
-    image: "/musculos/costas_medias.png",
-  },
-  costas_superiores: {
-    title: "Costas superiores",
-    description: "Inclui região alta das costas, trapézio médio e musculatura escapular. Importante para postura.",
-    tips: ["Evite elevar demais os ombros.", "Controle a escápula.", "Não transforme remada em tranco."],
-    image: "/musculos/costas_superiores.png",
-  },
-  deltoide_posterior: {
-    title: "Deltoide posterior",
-    description: "Parte de trás do ombro. Trabalha muito em face pull, crucifixo inverso e movimentos posturais.",
-    tips: ["Carga leve costuma funcionar melhor.", "Puxe abrindo os braços.", "Não compense com lombar."],
-    image: "/musculos/deltoide_posterior.png",
-  },
-  dorsal: {
-    title: "Dorsal",
-    description: "Trabalha largura das costas em puxadas verticais e pulldowns. A dica mental é puxar com os cotovelos, não com as mãos.",
-    tips: ["Evite jogar o tronco demais para trás.", "Pense em descer os cotovelos.", "Controle a volta da carga."],
-    image: "/musculos/dorsal.png",
-  },
-  gastrocnemio: {
-    title: "Gastrocnêmio",
-    description: "Parte mais visível da panturrilha, mais enfatizada em exercícios com joelho estendido, como panturrilha em pé.",
-    tips: ["Use amplitude completa.", "Pause no topo.", "Desça controlando."],
-    image: "/musculos/gastrocnemio.png",
-  },
-  gluteo_maximo: {
-    title: "Glúteo máximo",
-    description: "Principal músculo de volume dos glúteos. Hip thrust, glúteo no cabo e leg press alto trabalham bastante essa região.",
-    tips: ["Contraia no topo do hip thrust.", "Não hiperestenda a lombar.", "Controle a descida."],
-    image: "/musculos/gluteo_maximo.png",
-  },
-  gluteo_medio: {
-    title: "Glúteo médio",
-    description: "Importante para estabilidade do quadril. Muito trabalhado em abdução de quadril e cadeira abdutora.",
-    tips: ["Controle a abertura.", "Evite impulso.", "Sinta a lateral do quadril trabalhando."],
-    image: "/musculos/gluteo_medio.png",
-  },
-  gluteos: {
-    title: "Glúteos",
-    description: "Grupo muscular dos glúteos. Participa de extensão, abdução e estabilização do quadril.",
-    tips: ["Priorize execução limpa.", "Evite jogar tudo para lombar.", "Use amplitude confortável."],
-    image: "/musculos/gluteos.png",
-  },
-  lombar: {
-    title: "Lombar",
-    description: "Região importante para suporte do tronco. Entra em extensões lombares, stiff e exercícios de estabilidade.",
-    tips: ["Movimento controlado.", "Evite hiperextensão.", "Pare se houver dor articular."],
-    image: "/musculos/lombar.png",
-  },
-  ombro_lateral: {
-    title: "Ombro lateral",
-    description: "Parte lateral do deltoide, muito trabalhada em elevação lateral. Ajuda no visual de ombro mais largo.",
-    tips: ["Cotovelos levemente flexionados.", "Não suba além do necessário.", "Carga menor e controle maior."],
-    image: "/musculos/ombro_lateral.png",
-  },
-  ombros: {
-    title: "Ombros",
-    description: "Grupo dos deltoides. Desenvolvimento, elevação lateral e face pull trabalham partes diferentes do ombro.",
-    tips: ["Controle a amplitude.", "Evite dor articular.", "Não use impulso do tronco."],
-    image: "/musculos/ombros.png",
-  },
-  panturrilha: {
-    title: "Panturrilha",
-    description: "Grupo muscular da panturrilha, incluindo gastrocnêmio e sóleo. Trabalha em panturrilha em pé, sentada e no leg press.",
-    tips: ["Amplitude completa.", "Pause no topo.", "Não faça repetição quicando."],
-    image: "/musculos/panturrilha.png",
-  },
-  peitoral: {
-    title: "Peitoral",
-    description: "Trabalhado em supinos, crucifixos e crossover. Inclinado tende a enfatizar mais a parte superior.",
-    tips: ["Escápulas estáveis.", "Controle a descida.", "Não deixe o ombro dominar tudo."],
-    image: "/musculos/peitoral.png",
-  },
-  posterior_coxa: {
-    title: "Posterior de coxa",
-    description: "Grupo posterior da coxa. Muito trabalhado em stiff, mesa flexora e flexora sentada.",
-    tips: ["Coluna neutra no stiff.", "Controle a descida.", "Na flexora, segure a contração."],
-    image: "/musculos/posterior_coxa.png",
-  },
-  quadriceps: {
-    title: "Quadríceps",
-    description: "Parte anterior da coxa. Trabalha em agachamento, leg press, hack e cadeira extensora.",
-    tips: ["Joelhos acompanham a linha dos pés.", "Controle a descida.", "Na extensora, controle o topo."],
-    image: "/musculos/quadriceps.png",
-  },
-  soleo: {
-    title: "Sóleo",
-    description: "Parte da panturrilha mais enfatizada em exercícios com joelho flexionado, como panturrilha sentada.",
-    tips: ["Desça bem controlado.", "Pause no topo.", "Não use impulso."],
-    image: "/musculos/soleo.png",
-  },
-  trapezio: {
-    title: "Trapézio",
-    description: "Participa de encolhimentos, remadas e estabilidade dos ombros.",
-    tips: ["Suba e desça controlando.", "Não gire os ombros.", "Menos ego, mais amplitude limpa."],
-    image: "/musculos/trapezio.png",
-  },
-  triceps: {
-    title: "Tríceps",
-    description: "Trabalha nos empurrões, supinos e extensões. A cabeça longa aparece melhor em movimentos acima da cabeça.",
-    tips: ["Estenda sem travar com violência.", "Não abra demais os cotovelos.", "Controle o retorno."],
-    image: "/musculos/triceps.png",
-  },
-  core: {
-    title: "Core",
-    description: "Core anti-rotação, prancha e dead bug treinam estabilidade. Menos abdominal ninja, mais controle.",
-    tips: ["Respiração controlada.", "Coluna neutra.", "Qualidade acima de tempo absurdo."],
-    image: "/musculos/lombar.png",
-  },
-};
-
-function focusToKey(focus: string) {
-  const text = focus.toLowerCase();
-
-  if (text.includes("costas superiores")) return "costas_superiores";
-  if (text.includes("costas médias") || text.includes("costas medias") || text.includes("meio das costas") || text.includes("espessura")) return "costas_medias";
-  if (text.includes("deltoide posterior") || text.includes("ombro posterior") || text.includes("postura")) return "deltoide_posterior";
-  if (text.includes("ombro lateral")) return "ombro_lateral";
-  if (text.includes("ombros") || text.includes("ombro")) return "ombros";
-  if (text.includes("glúteo máximo") || text.includes("gluteo maximo")) return "gluteo_maximo";
-  if (text.includes("glúteo médio") || text.includes("gluteo medio")) return "gluteo_medio";
-  if (text.includes("glúteos") || text.includes("gluteos") || text.includes("glúteo") || text.includes("gluteo")) return "gluteos";
-  if (text.includes("posterior de coxa") || text.includes("posterior")) return "posterior_coxa";
-  if (text.includes("gastrocnêmio") || text.includes("gastrocnemio")) return "gastrocnemio";
-  if (text.includes("sóleo") || text.includes("soleo")) return "soleo";
-  if (text.includes("panturrilha")) return "panturrilha";
-  if (text.includes("quadríceps") || text.includes("quadriceps")) return "quadriceps";
-  if (text.includes("peito") || text.includes("peitoral")) return "peitoral";
-  if (text.includes("tríceps") || text.includes("triceps")) return "triceps";
-  if (text.includes("braquial")) return "braquial";
-  if (text.includes("bíceps") || text.includes("biceps")) return "biceps";
-  if (text.includes("trapézio") || text.includes("trapezio")) return "trapezio";
-  if (text.includes("dorsal")) return "dorsal";
-  if (text.includes("lombar")) return "lombar";
-
-  return "core";
+function makeCustomPlan(name = "Meu treino personalizado"): CustomTrainingPlan {
+  const now = new Date().toISOString();
+  return { id: `custom-${Date.now()}`, name, phase: "custom", createdAt: now, updatedAt: now, weeks: [makeCustomWeek("A")] };
 }
 
-function alternativesFor(name: string) {
-  const text = name.toLowerCase();
-  if (text.includes("hip thrust") || text.includes("elevação pélvica")) return ["Máquina de glúteo", "Ponte com barra", "Glúteo no cabo"];
-  if (text.includes("hack") || text.includes("agachamento")) return ["Smith", "Leg press", "Cadeira extensora"];
-  if (text.includes("leg press")) return ["Hack machine", "Smith", "Cadeira extensora"];
-  if (text.includes("stiff")) return ["Flexora sentada", "Mesa flexora", "Terra romeno leve"];
-  if (text.includes("puxada")) return ["Puxada neutra", "Puxada supinada", "Remada articulada"];
-  if (text.includes("remada")) return ["Remada baixa", "Remada unilateral", "Remada máquina com apoio"];
-  if (text.includes("supino")) return ["Chest press", "Supino máquina", "Crossover leve"];
-  if (text.includes("tríceps") || text.includes("triceps")) return ["Tríceps corda", "Tríceps barra V", "Tríceps unilateral"];
-  if (text.includes("rosca")) return ["Rosca cabo", "Rosca alternada", "Rosca martelo"];
-  if (text.includes("panturrilha")) return ["Panturrilha em pé", "Panturrilha sentada", "Panturrilha no leg press"];
-  return ["Máquina equivalente", "Variação com cabo", "Variação com halter leve"];
-}
-
-const plans: DayPlan[] = [
-  {
-    id: "fase1-a-segunda",
-    phase: "fase1",
-    week: "A",
-    day: "Segunda",
-    title: "Puxar A: costas completas + bíceps",
-    type: "puxar",
-    optional: "Cardio 15 minutos; abdominal curto, como prancha inclinada ou dead bug.",
-    exercises: [
-      ex(1, "Puxada na frente, pegada neutra ou aberta", "Dorsal/largura"),
-      ex(2, "Remada baixa no cabo", "Meio das costas"),
-      ex(3, "Remada unilateral com halter apoiada", "Dorsal e controle"),
-      ex(4, "Pulldown com braço reto no cabo", "Dorsal com menor dependência do bíceps"),
-      ex(5, "Face pull no cabo", "Deltoide posterior e trapézio médio"),
-      ex(6, "Encolhimento com halteres ou máquina", "Trapézio superior"),
-      ex(7, "Rosca martelo com halteres", "Bíceps e braquial"),
-    ],
-  },
-  {
-    id: "fase1-a-terca",
-    phase: "fase1",
-    week: "A",
-    day: "Terça",
-    title: "Glúteos/posterior A",
-    type: "gluteo",
-    optional: "Panturrilha sentada 3x12–20; cardio 10 a 15 minutos leve.",
-    exercises: [
-      ex(1, "Elevação pélvica / hip thrust", "Glúteo máximo"),
-      ex(2, "Leg press com pés mais altos", "Glúteo e posterior"),
-      ex(3, "Stiff com halteres", "Posterior e glúteos"),
-      ex(4, "Mesa flexora", "Posterior de coxa"),
-      ex(5, "Cadeira abdutora", "Glúteo médio"),
-      ex(6, "Glúteo no cabo ou máquina", "Glúteo máximo"),
-      ex(7, "Extensão lombar 45 graus, leve e controlada", "Lombar e glúteo"),
-    ],
-  },
-  {
-    id: "fase1-a-quarta",
-    phase: "fase1",
-    week: "A",
-    day: "Quarta",
-    title: "Empurrar A: peito + ombros + tríceps",
-    type: "empurrar",
-    optional: "Cardio 15 minutos; abdominal na máquina ou no cabo.",
-    exercises: [
-      ex(1, "Supino reto na máquina ou chest press", "Peito geral"),
-      ex(2, "Supino inclinado com halteres", "Peito superior"),
-      ex(3, "Crucifixo na máquina ou cabo", "Peitoral isolado"),
-      ex(4, "Desenvolvimento na máquina", "Ombros"),
-      ex(5, "Elevação lateral", "Ombro lateral"),
-      ex(6, "Tríceps corda no pulley", "Tríceps"),
-      ex(7, "Tríceps francês no cabo ou halter", "Cabeça longa do tríceps"),
-    ],
-  },
-  {
-    id: "fase1-a-quinta",
-    phase: "fase1",
-    week: "A",
-    day: "Quinta",
-    title: "Inferiores A: quadríceps + adutores + panturrilha",
-    type: "inferior",
-    optional: "Cardio 10 a 15 minutos leve; Pallof press no cabo.",
-    exercises: [
-      ex(1, "Agachamento no Smith ou hack machine", "Quadríceps e glúteo"),
-      ex(2, "Leg press com pés médios", "Quadríceps"),
-      ex(3, "Cadeira extensora", "Quadríceps"),
-      ex(4, "Cadeira adutora", "Parte interna da coxa"),
-      ex(5, "Flexora sentada ou mesa flexora leve", "Posterior, sem excesso de carga"),
-      ex(6, "Panturrilha em pé", "Gastrocnêmio"),
-      ex(7, "Panturrilha sentada", "Sóleo"),
-    ],
-  },
-  {
-    id: "fase1-a-sexta",
-    phase: "fase1",
-    week: "A",
-    day: "Sexta",
-    title: "Superiores misto A: costas superiores + ombros + braços + peito leve",
-    type: "superior",
-    optional: "Cardio 15 a 20 minutos; abdômen leve.",
-    exercises: [
-      ex(1, "Remada máquina com peito apoiado", "Costas superiores"),
-      ex(2, "Puxada fechada neutra", "Dorsal"),
-      ex(3, "Peck deck (crucifixo) inverso", "Deltoide posterior"),
-      ex(4, "Elevação lateral no cabo ou halter", "Ombro lateral"),
-      ex(5, "Supino inclinado máquina, leve/moderado", "Peito superior"),
-      ex(6, "Rosca direta no cabo", "Bíceps"),
-      ex(7, "Tríceps barra V no pulley", "Tríceps"),
-    ],
-  },
-  {
-    id: "fase1-a-sabado",
-    phase: "fase1",
-    week: "A",
-    day: "Sábado",
-    title: "Cardio, mobilidade e recuperação ativa",
-    type: "cardio",
-    exercises: [
-      ex("Cardio", "25 a 40 minutos de caminhada inclinada, bike ou elíptico", "Resistência", "-"),
-      ex("Mobilidade", "Quadril, tornozelo e coluna torácica", "Mobilidade", "-"),
-      ex("Core opcional", "Dead bug, Pallof press e prancha inclinada", "Core", "dead bug pallof press prancha inclinada"),
-    ],
-  },
-  {
-    id: "fase1-b-segunda",
-    phase: "fase1",
-    week: "B",
-    day: "Segunda",
-    title: "Glúteos/quadríceps B",
-    type: "gluteo",
-    optional: "Cardio 10 a 15 minutos.",
-    exercises: [
-      ex(1, "Hip thrust", "Glúteo máximo"),
-      ex(2, "Hack squat ou agachamento no Smith", "Quadríceps e glúteo"),
-      ex(3, "Leg press unilateral", "Glúteo e quadríceps"),
-      ex(4, "Cadeira extensora", "Quadríceps"),
-      ex(5, "Cadeira abdutora", "Glúteo médio"),
-      ex(6, "Mesa flexora", "Posterior"),
-      ex(7, "Panturrilha sentada e em pé", "Panturrilha"),
-    ],
-  },
-  {
-    id: "fase1-b-terca",
-    phase: "fase1",
-    week: "B",
-    day: "Terça",
-    title: "Empurrar B: peito + ombro + tríceps",
-    type: "empurrar",
-    optional: "Cardio 15 minutos; abdômen curto.",
-    exercises: [
-      ex(1, "Supino inclinado na máquina", "Peito superior"),
-      ex(2, "Supino reto com halteres", "Peito geral"),
-      ex(3, "Crossover no cabo", "Peitoral"),
-      ex(4, "Desenvolvimento com halteres sentado ou máquina", "Ombros"),
-      ex(5, "Elevação lateral", "Ombro lateral"),
-      ex(6, "Tríceps unilateral no cabo", "Tríceps"),
-      ex(7, "Tríceps testa no cabo", "Tríceps"),
-    ],
-  },
-  {
-    id: "fase1-b-quarta",
-    phase: "fase1",
-    week: "B",
-    day: "Quarta",
-    title: "Puxar B: costas espessura + bíceps",
-    type: "puxar",
-    optional: "Cardio 15 minutos.",
-    exercises: [
-      ex(1, "Remada baixa pegada aberta", "Costas médias"),
-      ex(2, "Puxada frente pegada supinada ou neutra", "Dorsal e bíceps"),
-      ex(3, "Remada articulada máquina", "Espessura das costas"),
-      ex(4, "Pullover no cabo", "Dorsal"),
-      ex(5, "Crucifixo inverso máquina", "Deltoide posterior"),
-      ex(6, "Rosca Scott máquina (nunca fazer amplitude completa)", "Bíceps"),
-      ex(7, "Rosca alternada com halteres", "Bíceps"),
-    ],
-  },
-  {
-    id: "fase1-b-quinta",
-    phase: "fase1",
-    week: "B",
-    day: "Quinta",
-    title: "Posterior/glúteo B + adutores",
-    type: "gluteo",
-    optional: "Panturrilha em pé 3x12–20; cardio leve 10 a 15 minutos.",
-    exercises: [
-      ex(1, "Stiff", "Posterior e glúteo"),
-      ex(2, "Leg press pés altos", "Glúteos e posterior"),
-      ex(3, "Flexora sentada", "Posterior"),
-      ex(4, "Glúteo no cabo", "Glúteo máximo"),
-      ex(5, "Cadeira abdutora", "Glúteo médio"),
-      ex(6, "Cadeira adutora", "Adutores"),
-      ex(7, "Extensão lombar controlada", "Lombar e glúteos"),
-    ],
-  },
-  {
-    id: "fase1-b-sexta",
-    phase: "fase1",
-    week: "B",
-    day: "Sexta",
-    title: "Ombros + braços + postura",
-    type: "superior",
-    optional: "Cardio 15 a 20 minutos; abdominal leve.",
-    exercises: [
-      ex(1, "Desenvolvimento máquina, moderado", "Ombros"),
-      ex(2, "Elevação lateral", "Ombro lateral"),
-      ex(3, "Face pull", "Ombro posterior e postura"),
-      ex(4, "Remada alta no cabo com corda, leve", "Trapézio e deltoide lateral"),
-      ex(5, "Rosca martelo no cabo", "Bíceps e braquial"),
-      ex(6, "Rosca direta no cabo", "Bíceps"),
-      ex(7, "Tríceps corda", "Tríceps"),
-    ],
-  },
-  {
-    id: "fase1-b-sabado",
-    phase: "fase1",
-    week: "B",
-    day: "Sábado",
-    title: "Cardio maior",
-    type: "cardio",
-    exercises: [
-      ex("Cardio", "30 a 45 minutos moderado", "Resistência", "-"),
-      ex("Mobilidade", "Quadril, posterior, peitoral e dorsal", "Mobilidade", "-"),
-      ex("Core opcional", "Pallof press e dead bug", "Core", "pallof press dead bug"),
-    ],
-  },
-  {
-    id: "fase2-a-segunda",
-    phase: "fase2",
-    week: "A",
-    day: "Segunda",
-    title: "Upper A: peito + costas horizontal",
-    type: "superior",
-    exercises: [
-      ex(1, "Supino reto máquina ou halteres", "Peito geral"),
-      ex(2, "Remada baixa", "Costas médias"),
-      ex(3, "Supino inclinado", "Peito superior"),
-      ex(4, "Remada máquina com peito apoiado", "Costas superiores"),
-      ex(5, "Crucifixo máquina", "Peito isolado"),
-      ex(6, "Face pull", "Deltoide posterior e postura"),
-      ex(7, "Tríceps corda", "Tríceps"),
-    ],
-  },
-  {
-    id: "fase2-a-terca",
-    phase: "fase2",
-    week: "A",
-    day: "Terça",
-    title: "Lower A: quadríceps + glúteo",
-    type: "inferior",
-    exercises: [
-      ex(1, "Hack squat ou Smith", "Quadríceps e glúteo"),
-      ex(2, "Leg press", "Quadríceps"),
-      ex(3, "Hip thrust", "Glúteo máximo"),
-      ex(4, "Cadeira extensora", "Quadríceps"),
-      ex(5, "Cadeira abdutora", "Glúteo médio"),
-      ex(6, "Panturrilha em pé", "Panturrilha"),
-      ex(7, "Panturrilha sentada", "Panturrilha"),
-    ],
-  },
-  {
-    id: "fase2-a-quarta",
-    phase: "fase2",
-    week: "A",
-    day: "Quarta",
-    title: "Cardio + core + mobilidade",
-    type: "cardio",
-    exercises: [
-      ex(1, "Cardio 25 a 35 minutos", "Resistência", "-"),
-      ex(2, "Pallof press", "Core anti-rotação"),
-      ex(3, "Dead bug", "Core e controle lombar"),
-      ex(4, "Prancha inclinada", "Core"),
-      ex(5, "Mobilidade de quadril", "Mobilidade", "-"),
-      ex(6, "Mobilidade torácica", "Postura", "-"),
-      ex(7, "Alongamento leve de posterior/panturrilha", "Recuperação", "-"),
-    ],
-  },
-  {
-    id: "fase2-a-quinta",
-    phase: "fase2",
-    week: "A",
-    day: "Quinta",
-    title: "Upper B: costas vertical + ombro",
-    type: "superior",
-    exercises: [
-      ex(1, "Puxada frente aberta/neutra", "Dorsal"),
-      ex(2, "Desenvolvimento máquina", "Ombros"),
-      ex(3, "Pulldown braço reto", "Dorsal"),
-      ex(4, "Elevação lateral", "Ombro lateral"),
-      ex(5, "Crucifixo inverso", "Deltoide posterior"),
-      ex(6, "Rosca martelo", "Bíceps e braquial"),
-      ex(7, "Tríceps testa no cabo", "Tríceps"),
-    ],
-  },
-  {
-    id: "fase2-a-sexta",
-    phase: "fase2",
-    week: "A",
-    day: "Sexta",
-    title: "Lower B: posterior + glúteo",
-    type: "gluteo",
-    exercises: [
-      ex(1, "Stiff com halteres", "Posterior e glúteo"),
-      ex(2, "Hip thrust", "Glúteo máximo"),
-      ex(3, "Mesa flexora", "Posterior"),
-      ex(4, "Leg press pés altos", "Glúteo e posterior"),
-      ex(5, "Glúteo no cabo", "Glúteo máximo"),
-      ex(6, "Cadeira adutora", "Adutores"),
-      ex(7, "Extensão lombar controlada", "Lombar e glúteos"),
-    ],
-  },
-  {
-    id: "fase2-b-segunda",
-    phase: "fase2",
-    week: "B",
-    day: "Segunda",
-    title: "Lower C: glúteo forte + quadríceps moderado",
-    type: "gluteo",
-    exercises: [
-      ex(1, "Hip thrust", "Glúteo máximo"),
-      ex(2, "Leg press unilateral", "Glúteo e quadríceps"),
-      ex(3, "Agachamento no Smith", "Quadríceps e glúteo"),
-      ex(4, "Cadeira abdutora", "Glúteo médio"),
-      ex(5, "Cadeira extensora", "Quadríceps"),
-      ex(6, "Flexora sentada", "Posterior"),
-      ex(7, "Panturrilha sentada", "Panturrilha"),
-    ],
-  },
-  {
-    id: "fase2-b-terca",
-    phase: "fase2",
-    week: "B",
-    day: "Terça",
-    title: "Upper C: peito + ombro + tríceps",
-    type: "empurrar",
-    exercises: [
-      ex(1, "Supino inclinado máquina", "Peito superior"),
-      ex(2, "Supino reto halteres", "Peito geral"),
-      ex(3, "Crossover", "Peitoral"),
-      ex(4, "Desenvolvimento máquina", "Ombros"),
-      ex(5, "Elevação lateral", "Ombro lateral"),
-      ex(6, "Tríceps corda", "Tríceps"),
-      ex(7, "Tríceps unilateral", "Tríceps"),
-    ],
-  },
-  {
-    id: "fase2-b-quarta",
-    phase: "fase2",
-    week: "B",
-    day: "Quarta",
-    title: "Cardio + abdômen",
-    type: "cardio",
-    exercises: [
-      ex(1, "Cardio 25 a 40 minutos", "Resistência", "-"),
-      ex(2, "Abdominal no cabo", "Abdômen"),
-      ex(3, "Pallof press", "Core anti-rotação"),
-      ex(4, "Dead bug", "Core e controle lombar"),
-      ex(5, "Prancha lateral adaptada", "Core lateral"),
-      ex(6, "Mobilidade de tornozelo", "Mobilidade", "-"),
-      ex(7, "Mobilidade de quadril", "Mobilidade", "-"),
-    ],
-  },
-  {
-    id: "fase2-b-quinta",
-    phase: "fase2",
-    week: "B",
-    day: "Quinta",
-    title: "Lower D: posterior + adutor + glúteo médio",
-    type: "gluteo",
-    exercises: [
-      ex(1, "Stiff", "Posterior e glúteo"),
-      ex(2, "Flexora sentada", "Posterior"),
-      ex(3, "Leg press pés altos", "Glúteos e posterior"),
-      ex(4, "Cadeira adutora", "Adutores"),
-      ex(5, "Cadeira abdutora", "Glúteo médio"),
-      ex(6, "Glúteo no cabo", "Glúteo máximo"),
-      ex(7, "Panturrilha em pé", "Panturrilha"),
-    ],
-  },
-  {
-    id: "fase2-b-sexta",
-    phase: "fase2",
-    week: "B",
-    day: "Sexta",
-    title: "Upper D: costas + braços + postura",
-    type: "superior",
-    exercises: [
-      ex(1, "Remada máquina", "Costas"),
-      ex(2, "Puxada neutra", "Dorsal"),
-      ex(3, "Remada baixa", "Costas médias"),
-      ex(4, "Face pull", "Postura e deltoide posterior"),
-      ex(5, "Rosca direta", "Bíceps"),
-      ex(6, "Rosca martelo", "Bíceps e braquial"),
-      ex(7, "Tríceps barra V", "Tríceps"),
-    ],
-  },
-];
-
-const overview = [
-  ["Puxar", "Costas, dorsais, trapézio, deltoide posterior e bíceps."],
-  ["Empurrar", "Peito, ombros e tríceps."],
-  ["Posterior/glúteos", "Glúteos, posterior de coxa, lombar e panturrilha."],
-  ["Inferiores anterior", "Quadríceps, adutores, panturrilha e core."],
-  ["Superiores acessório", "Costas superiores, ombros, braços, postura e peito leve."],
-];
-
-const progression = [
-  ["Exercícios principais", "3 séries", "10 a 12 repetições"],
-  ["Exercícios secundários", "3 séries", "10 a 15 repetições"],
-  ["Panturrilha, abdutora, elevação lateral e face pull", "3 séries", "12 a 20 repetições"],
-];
-
-const cardio = [
-  ["Meses 1–2", "15 minutos leve/moderado"],
-  ["Meses 3–4", "15 a 20 minutos"],
-  ["Meses 5–6", "20 a 25 minutos"],
-  ["Depois dos 6 meses", "20 a 30 minutos, conforme recuperação"],
-];
-
-const recovery = [
-  ["Carga", "Reduzir 10% a 20%"],
-  ["Séries", "Fazer 2 séries por exercício"],
-  ["Cardio", "Leve"],
-  ["Falha muscular", "Não usar"],
-  ["Objetivo", "Recuperar e manter técnica"],
-];
-
-function getTodayName() {
-  const names = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
-  return names[new Date().getDay()];
-}
-
-function calculateWeekFromStart(startDate: string): Week {
-  if (!startDate) return "A";
-  const start = new Date(`${startDate}T00:00:00`);
-  const now = new Date();
-  const current = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  if (Number.isNaN(start.getTime())) return "A";
-  const diffDays = Math.floor((current.getTime() - start.getTime()) / 86400000);
-  const block = Math.floor(Math.max(0, diffDays) / 7);
-  return block % 2 === 0 ? "A" : "B";
-}
-
-function exerciseKey(plan: DayPlan, exercise: Exercise) {
-  return `${plan.id}::${exercise.order}::${exercise.name}`;
-}
-
-function emptyLog(): ExerciseLog {
-  return { done: false, load: "", reps1: "", reps2: "", reps3: "", note: "" };
-}
-
-function shouldIncrease(log?: ExerciseLog) {
-  if (!log) return false;
-  const reps = [log.reps1, log.reps2, log.reps3].map((value) => Number(value));
-  return reps.every((value) => Number.isFinite(value) && value >= 15);
-}
-
-function useLocalStorageLogs() {
-  const [logs, setLogs] = useState<Logs>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch {
-      return {};
-    }
-  });
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
-  }, [logs]);
-
-  function updateLog(key: string, patch: Partial<ExerciseLog>) {
-    setLogs((current) => ({ ...current, [key]: { ...(current[key] ?? emptyLog()), ...patch } }));
-  }
-
-  function clearLogs() {
-    setLogs({});
-  }
-
-  return { logs, updateLog, clearLogs };
+function nextWeekId(weeks: TrainingWeek[]) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  return alphabet[weeks.length] ?? `W${weeks.length + 1}`;
 }
 
 function Segmented<T extends string>({ value, setValue, options }: { value: T; setValue: (v: T) => void; options: { value: T; label: string }[] }) {
   return (
-    <div className="inline-flex rounded-2xl bg-zinc-950 p-1 ring-1 ring-zinc-800">
+    <div className="inline-flex max-w-full overflow-x-auto rounded-2xl bg-zinc-950 p-1 ring-1 ring-zinc-800">
       {options.map((option) => (
-        <button
-          key={option.value}
-          onClick={() => setValue(option.value)}
-          className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-            value === option.value ? "bg-zinc-800 text-zinc-50 shadow-sm" : "text-zinc-400 hover:text-zinc-100"
-          }`}
-        >
+        <button key={option.value} onClick={() => setValue(option.value)} className={`whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold transition ${value === option.value ? "bg-zinc-800 text-zinc-50" : "text-zinc-400 hover:text-zinc-100"}`}>
           {option.label}
         </button>
       ))}
@@ -1009,31 +306,12 @@ function Segmented<T extends string>({ value, setValue, options }: { value: T; s
   );
 }
 
-function InfoTable({ rows, headers }: { rows: string[][]; headers: string[] }) {
+function DashboardCard({ icon, title, value, description }: { icon: React.ReactNode; title: string; value: string; description: string }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
-      <table className="w-full text-left text-sm">
-        <thead className="bg-zinc-950 text-zinc-300">
-          <tr>
-            {headers.map((header) => (
-              <th key={header} className="px-4 py-3 font-bold">
-                {header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-zinc-800">
-          {rows.map((row, index) => (
-            <tr key={`${row[0]}-${index}`}>
-              {row.map((cell, cellIndex) => (
-                <td key={cellIndex} className="px-4 py-3 align-top text-zinc-300">
-                  {cell}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-5 shadow-sm">
+      <div className="flex items-center gap-3 text-zinc-400">{icon}<span className="text-sm font-bold uppercase tracking-[0.14em]">{title}</span></div>
+      <p className="mt-3 text-3xl font-black text-zinc-50">{value}</p>
+      <p className="mt-2 text-sm leading-6 text-zinc-400">{description}</p>
     </div>
   );
 }
@@ -1041,11 +319,14 @@ function InfoTable({ rows, headers }: { rows: string[][]; headers: string[] }) {
 function LogInputs({ log, onLog, compact = false }: { log: ExerciseLog; onLog: (patch: Partial<ExerciseLog>) => void; compact?: boolean }) {
   const inputClass = "min-w-0 rounded-xl border border-zinc-700 bg-zinc-950 px-2 py-2 text-xs text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-zinc-400";
   return (
-    <div className={`grid gap-2 ${compact ? "grid-cols-4" : "grid-cols-2 sm:grid-cols-4"}`}>
-      <input value={log.load} onChange={(event) => onLog({ load: event.target.value })} placeholder="kg" inputMode="decimal" className={inputClass} />
-      <input value={log.reps1} onChange={(event) => onLog({ reps1: event.target.value })} placeholder="R1" inputMode="numeric" className={inputClass} />
-      <input value={log.reps2} onChange={(event) => onLog({ reps2: event.target.value })} placeholder="R2" inputMode="numeric" className={inputClass} />
-      <input value={log.reps3} onChange={(event) => onLog({ reps3: event.target.value })} placeholder="R3" inputMode="numeric" className={inputClass} />
+    <div className="grid gap-2">
+      <div className={`grid gap-2 ${compact ? "grid-cols-4" : "grid-cols-2 sm:grid-cols-4"}`}>
+        <input value={log.load} onChange={(event) => onLog({ load: event.target.value })} placeholder="kg" inputMode="decimal" className={inputClass} />
+        <input value={log.reps1} onChange={(event) => onLog({ reps1: event.target.value })} placeholder="R1" inputMode="numeric" className={inputClass} />
+        <input value={log.reps2} onChange={(event) => onLog({ reps2: event.target.value })} placeholder="R2" inputMode="numeric" className={inputClass} />
+        <input value={log.reps3} onChange={(event) => onLog({ reps3: event.target.value })} placeholder="R3" inputMode="numeric" className={inputClass} />
+      </div>
+      <input value={log.note} onChange={(event) => onLog({ note: event.target.value })} placeholder="Observação" className={inputClass} />
     </div>
   );
 }
@@ -1053,7 +334,6 @@ function LogInputs({ log, onLog, compact = false }: { log: ExerciseLog; onLog: (
 function RestTimer({ defaultSeconds }: { defaultSeconds: number }) {
   const [seconds, setSeconds] = useState(defaultSeconds || 60);
   const [running, setRunning] = useState(false);
-
   useEffect(() => {
     if (!running) return;
     if (seconds <= 0) {
@@ -1063,255 +343,22 @@ function RestTimer({ defaultSeconds }: { defaultSeconds: number }) {
     const id = window.setTimeout(() => setSeconds((value) => value - 1), 1000);
     return () => window.clearTimeout(id);
   }, [running, seconds]);
-
   if (!defaultSeconds) return <span className="text-zinc-500">—</span>;
-
-  const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
-  const ss = String(seconds % 60).padStart(2, "0");
-
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button
-        onClick={() => setRunning((value) => !value)}
-        className={`rounded-xl px-3 py-2 text-xs font-black ${running ? "bg-orange-950/70 text-orange-200" : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"}`}
-      >
-        {mm}:{ss}
+      <button onClick={() => setRunning((value) => !value)} className={`rounded-xl px-3 py-2 text-xs font-black ${running ? "bg-orange-950/70 text-orange-200" : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"}`}>
+        {String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}
       </button>
-      {[60, 90, 120].map((preset) => (
-        <button
-          key={preset}
-          onClick={() => {
-            setSeconds(preset);
-            setRunning(true);
-          }}
-          className="rounded-lg bg-zinc-950 px-2 py-1 text-[11px] font-bold text-zinc-300 ring-1 ring-zinc-700 hover:bg-zinc-800"
-        >
-          {preset}s
-        </button>
-      ))}
+      {[60, 90, 120].map((preset) => <button key={preset} onClick={() => { setSeconds(preset); setRunning(true); }} className="rounded-lg bg-zinc-950 px-2 py-1 text-[11px] font-bold text-zinc-300 ring-1 ring-zinc-700 hover:bg-zinc-800">{preset}s</button>)}
     </div>
   );
 }
 
-function ExerciseRow({ exercise, log, onLog, onMuscleClick, lightMode }: { exercise: Exercise; log: ExerciseLog; onLog: (patch: Partial<ExerciseLog>) => void; onMuscleClick: (muscleKey: string) => void; lightMode: boolean }) {
-  const increase = shouldIncrease(log);
-  const alternatives = alternativesFor(exercise.name);
-
-  return (
-    <tr className={`align-top transition ${log.done ? "bg-emerald-950/30" : "hover:bg-zinc-800/50"}`}>
-      <td className="px-4 py-3 font-semibold text-zinc-400">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={log.done} onChange={(event) => onLog({ done: event.target.checked })} className="h-4 w-4 rounded border-zinc-700 accent-emerald-500" />
-          {exercise.order}
-        </label>
-      </td>
-      <td className="px-4 py-3">
-        <p className="font-bold text-zinc-100">{exercise.name}</p>
-        <details className="mt-2 text-xs text-zinc-400">
-          <summary className="cursor-pointer font-bold text-zinc-300">Alternativas</summary>
-          <div className="mt-2 flex flex-wrap gap-1">
-            {alternatives.map((alt) => (
-              <span key={alt} className="rounded-full bg-zinc-800 px-2 py-1 text-zinc-300">
-                {alt}
-              </span>
-            ))}
-          </div>
-        </details>
-      </td>
-      <td className="px-4 py-3">
-        <FocusLinks focus={exercise.focus} onMuscleClick={onMuscleClick} />
-      </td>
-      <td className="px-4 py-3">
-        <LogInputs log={log} onLog={onLog} />
-        {increase && <p className="mt-2 rounded-xl bg-emerald-950/70 px-2 py-1 text-xs font-black text-emerald-200">Bateu 3x15. Próximo treino: aumentar carga.</p>}
-        {lightMode && <p className="mt-2 text-xs font-semibold text-orange-300">Modo leve ativo: foco em execução limpa.</p>}
-      </td>
-      <td className="px-4 py-3">
-        <RestTimer defaultSeconds={exercise.rest ?? 60} />
-      </td>
-      <td className="px-4 py-3">
-        {exercise.video ? (
-          <a href={exercise.video} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-zinc-100 px-3 py-2 text-xs font-bold text-zinc-950 transition hover:bg-white">
-            <span aria-hidden="true">▶</span> Abrir
-          </a>
-        ) : (
-          <span className="text-zinc-500">—</span>
-        )}
-      </td>
-    </tr>
-  );
-}
-
-function ExerciseMobileCard({ exercise, log, onLog, onMuscleClick, lightMode }: { exercise: Exercise; log: ExerciseLog; onLog: (patch: Partial<ExerciseLog>) => void; onMuscleClick: (focus: string) => void; lightMode: boolean }) {
-  const increase = shouldIncrease(log);
-  const alternatives = alternativesFor(exercise.name);
-
-  return (
-    <article className={`rounded-2xl border p-4 shadow-sm ${log.done ? "border-emerald-800 bg-emerald-950/30" : "border-zinc-800 bg-zinc-950/70"}`}>
-      <div className="flex items-start justify-between gap-3">
-        <label className="flex min-w-0 items-start gap-3">
-          <input type="checkbox" checked={log.done} onChange={(event) => onLog({ done: event.target.checked })} className="mt-1 h-5 w-5 shrink-0 rounded border-zinc-700 accent-emerald-500" />
-          <span className="min-w-0">
-            <span className="block text-xs font-black uppercase tracking-[0.14em] text-zinc-500">{exercise.order}</span>
-            <span className="block text-base font-black leading-snug text-zinc-50">{exercise.name}</span>
-          </span>
-        </label>
-        {exercise.video ? (
-          <a href={exercise.video} target="_blank" rel="noreferrer" className="shrink-0 rounded-xl bg-zinc-100 px-3 py-2 text-xs font-black text-zinc-950">
-            ▶
-          </a>
-        ) : null}
-      </div>
-
-      <FocusLinks focus={exercise.focus} onMuscleClick={onMuscleClick} compact />
-
-      <div className="mt-4 grid gap-3">
-        <div>
-          <p className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">Carga e reps</p>
-          <LogInputs log={log} onLog={onLog} compact />
-        </div>
-        {increase && <p className="rounded-xl bg-emerald-950/70 px-3 py-2 text-xs font-black text-emerald-200">Bateu 3x15. Próximo treino: aumentar carga.</p>}
-        {lightMode && <p className="text-xs font-semibold text-orange-300">Modo leve ativo: foco em execução limpa.</p>}
-        <div>
-          <p className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">Descanso</p>
-          <RestTimer defaultSeconds={exercise.rest ?? 60} />
-        </div>
-        <details className="text-xs text-zinc-400">
-          <summary className="cursor-pointer font-bold text-zinc-300">Alternativas se a máquina estiver ocupada</summary>
-          <div className="mt-2 flex flex-wrap gap-1">
-            {alternatives.map((alt) => (
-              <span key={alt} className="rounded-full bg-zinc-800 px-2 py-1 text-zinc-300">
-                {alt}
-              </span>
-            ))}
-          </div>
-        </details>
-      </div>
-    </article>
-  );
-}
-
-function DayCard({ plan, logs, updateLog, onMuscleClick, lightMode }: { plan: DayPlan; logs: Logs; updateLog: (key: string, patch: Partial<ExerciseLog>) => void; onMuscleClick: (focus: string) => void; lightMode: boolean }) {
-  const style = typeStyle[plan.type];
-  const exercises = lightMode && plan.exercises.length > 4 ? plan.exercises.slice(0, 4) : plan.exercises;
-  const done = exercises.filter((exercise) => logs[exerciseKey(plan, exercise)]?.done).length;
-
-  return (
-    <motion.section layout initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className={`overflow-hidden rounded-3xl border-l-8 ${style.border} border-y border-r border-zinc-800 bg-zinc-900 shadow-sm`}>
-      <div className={`flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${style.soft}`}>
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-400">{plan.day}</p>
-          <h3 className="mt-1 text-lg font-black text-zinc-50">{plan.title}</h3>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-zinc-950/80 px-3 py-1 text-xs font-black text-zinc-300 ring-1 ring-zinc-800">
-            {done}/{exercises.length} feitos
-          </span>
-          <span className={`w-fit rounded-full px-3 py-1 text-xs font-bold ring-1 ${style.chip}`}>
-            {style.icon} {style.label}
-          </span>
-        </div>
-      </div>
-
-      <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[1080px] text-left text-sm">
-          <thead className="border-y border-zinc-800 bg-zinc-950 text-xs uppercase tracking-wide text-zinc-400">
-            <tr>
-              <th className="w-24 px-4 py-3">Feito</th>
-              <th className="px-4 py-3">Exercício</th>
-              <th className="px-4 py-3">Foco</th>
-              <th className="w-80 px-4 py-3">Carga/reps</th>
-              <th className="w-52 px-4 py-3">Descanso</th>
-              <th className="w-28 px-4 py-3">Vídeo</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-800">
-            {exercises.map((exercise) => {
-              const key = exerciseKey(plan, exercise);
-              return <ExerciseRow key={key} exercise={exercise} log={logs[key] ?? emptyLog()} onLog={(patch) => updateLog(key, patch)} onMuscleClick={onMuscleClick} lightMode={lightMode} />;
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="grid gap-3 p-4 md:hidden">
-        {exercises.map((exercise) => {
-          const key = exerciseKey(plan, exercise);
-          return <ExerciseMobileCard key={key} exercise={exercise} log={logs[key] ?? emptyLog()} onLog={(patch) => updateLog(key, patch)} onMuscleClick={onMuscleClick} lightMode={lightMode} />;
-        })}
-      </div>
-
-      {plan.optional && (
-        <div className="border-t border-zinc-800 px-5 py-4 text-sm text-zinc-400">
-          <span className="font-black text-zinc-100">Opcionais:</span> {plan.optional}
-        </div>
-      )}
-    </motion.section>
-  );
-}
-
-type FocusTarget = {
-  key: string;
-  label: string;
-};
-
-function addFocusTarget(targets: FocusTarget[], key: string, label?: string) {
-  if (targets.some((target) => target.key === key)) return;
-  const info = muscleImages[key] ?? muscleImages.core;
-  targets.push({ key, label: label ?? info.title });
-}
-
-function focusToTargets(focus: string): FocusTarget[] {
-  const text = focus.toLowerCase();
-  const targets: FocusTarget[] = [];
-
-  if (text.includes("costas superiores")) addFocusTarget(targets, "costas_superiores");
-  if (text.includes("costas médias") || text.includes("costas medias") || text.includes("meio das costas") || text.includes("espessura") || text === "costas") addFocusTarget(targets, "costas_medias");
-  if (text.includes("deltoide posterior") || text.includes("ombro posterior") || text.includes("postura")) addFocusTarget(targets, "deltoide_posterior");
-  if (text.includes("ombro lateral") || text.includes("deltoide lateral")) addFocusTarget(targets, "ombro_lateral");
-  if (text.includes("ombros") || text === "ombro" || text.includes("ombros")) addFocusTarget(targets, "ombros");
-
-  if (text.includes("glúteo máximo") || text.includes("gluteo maximo")) addFocusTarget(targets, "gluteo_maximo");
-  if (text.includes("glúteo médio") || text.includes("gluteo medio")) addFocusTarget(targets, "gluteo_medio");
-  if (text.includes("glúteos") || text.includes("gluteos")) addFocusTarget(targets, "gluteos");
-  if ((text.includes("glúteo") || text.includes("gluteo")) && !text.includes("máximo") && !text.includes("maximo") && !text.includes("médio") && !text.includes("medio")) addFocusTarget(targets, "gluteos", "Glúteo");
-
-  if (text.includes("posterior de coxa")) addFocusTarget(targets, "posterior_coxa");
-  if (text.includes("posterior") && !text.includes("deltoide") && !text.includes("ombro") && !text.includes("postura")) addFocusTarget(targets, "posterior_coxa", "Posterior de coxa");
-
-  if (text.includes("gastrocnêmio") || text.includes("gastrocnemio")) addFocusTarget(targets, "gastrocnemio");
-  if (text.includes("sóleo") || text.includes("soleo")) addFocusTarget(targets, "soleo");
-  if (text.includes("panturrilha")) addFocusTarget(targets, "panturrilha");
-  if (text.includes("quadríceps") || text.includes("quadriceps")) addFocusTarget(targets, "quadriceps");
-  if (text.includes("peito") || text.includes("peitoral")) addFocusTarget(targets, "peitoral");
-  if (text.includes("tríceps") || text.includes("triceps")) addFocusTarget(targets, "triceps");
-  if (text.includes("braquial")) addFocusTarget(targets, "braquial");
-  if (text.includes("bíceps") || text.includes("biceps")) addFocusTarget(targets, "biceps");
-  if (text.includes("trapézio") || text.includes("trapezio")) addFocusTarget(targets, "trapezio");
-  if (text.includes("dorsal")) addFocusTarget(targets, "dorsal");
-  if (text.includes("lombar")) addFocusTarget(targets, "lombar");
-  if (text.includes("core") || text.includes("abdômen") || text.includes("abdomen")) addFocusTarget(targets, "core");
-
-  if (targets.length === 0) addFocusTarget(targets, focusToKey(focus));
-  return targets;
-}
-
 function FocusLinks({ focus, onMuscleClick, compact = false }: { focus: string; onMuscleClick: (muscleKey: string) => void; compact?: boolean }) {
-  const targets = focusToTargets(focus);
-
   return (
     <div className={`flex flex-wrap gap-2 ${compact ? "mt-3" : ""}`}>
-      {targets.map((target) => (
-        <button
-          key={`${focus}-${target.key}`}
-          onClick={() => onMuscleClick(target.key)}
-          className={`${
-            compact
-              ? "rounded-xl bg-blue-950/40 px-3 py-2 text-left text-sm font-black text-blue-200 ring-1 ring-blue-800"
-              : "rounded-full bg-blue-950/40 px-3 py-1 text-xs font-black text-blue-200 ring-1 ring-blue-800 transition hover:bg-blue-900/60 hover:text-blue-100"
-          }`}
-          title={`Abrir imagem: ${target.label}`}
-        >
+      {focusToTargets(focus).map((target) => (
+        <button key={`${focus}-${target.key}`} onClick={() => onMuscleClick(target.key)} className={`${compact ? "rounded-xl bg-blue-950/40 px-3 py-2 text-left text-sm font-black text-blue-200 ring-1 ring-blue-800" : "rounded-full bg-blue-950/40 px-3 py-1 text-xs font-black text-blue-200 ring-1 ring-blue-800 transition hover:bg-blue-900/60 hover:text-blue-100"}`}>
           {target.label}
         </button>
       ))}
@@ -1319,116 +366,459 @@ function FocusLinks({ focus, onMuscleClick, compact = false }: { focus: string; 
   );
 }
 
-function MuscleModal({ focus, onClose }: { focus: string | null; onClose: () => void }) {
-  if (!focus) return null;
-  const info = muscleImages[focus] ?? muscleImages[focusToKey(focus)] ?? muscleImages.core;
+function VideoButton({ name, videoKey: explicitVideoKey, compact = false }: { name: string; videoKey?: string; compact?: boolean }) {
+  if (explicitVideoKey === "-") return compact ? null : <span className="text-zinc-500">—</span>;
 
+  const isValidVideoUrl = (value?: string) => {
+    const trimmed = value?.trim();
+    return trimmed && /^https?:\/\//i.test(trimmed) ? trimmed : "";
+  };
+  const manual = getManualVideoLinks(name, explicitVideoKey);
+  const youtubeUrl = isValidVideoUrl(manual?.youtube);
+  const tiktokUrl = isValidVideoUrl(manual?.tiktok);
+  const options: { label: string; value: string; tone: string; dot: string; iconBg: string }[] = [
+    ...(youtubeUrl ? [{ label: "YouTube", value: youtubeUrl, tone: "text-red-200", dot: "bg-red-500", iconBg: "bg-red-500 text-white" }] : []),
+    ...(tiktokUrl ? [{ label: "TikTok", value: tiktokUrl, tone: "text-cyan-200", dot: "bg-cyan-400", iconBg: "bg-cyan-400 text-zinc-950" }] : []),
+  ];
+  const fallbackUrl = youtubeSearch(explicitVideoKey ?? name);
+
+  if (options.length > 1) {
+    return (
+      <details className={`group relative inline-block ${compact ? "shrink-0" : ""}`}>
+        <summary
+          aria-label={`Escolher onde assistir ${name}`}
+          className={`${compact ? "h-9 w-9 justify-center p-0" : "h-10 pl-1.5 pr-3"} flex cursor-pointer list-none items-center gap-2 overflow-hidden rounded-full border border-zinc-700/80 bg-zinc-950/95 text-xs font-black text-zinc-100 shadow-sm shadow-black/20 outline-none ring-1 ring-white/5 transition hover:border-zinc-500 hover:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-zinc-400 [&::-webkit-details-marker]:hidden`}
+        >
+          <span className={`${compact ? "h-full w-full" : "h-7 w-7"} relative flex shrink-0 items-center justify-center rounded-full bg-red-500 text-white shadow-sm shadow-red-950/40`}>
+            <Play className={`${compact ? "h-4 w-4" : "h-3.5 w-3.5"} translate-x-px fill-current`} />
+            {compact && <span className="absolute bottom-0 right-0 flex h-3.5 w-3.5 items-center justify-center rounded-full border border-zinc-950 bg-zinc-900 text-zinc-300"><ChevronDown className="h-2.5 w-2.5 transition group-open:rotate-180" /></span>}
+          </span>
+          {!compact && <span>Abrir</span>}
+          {!compact && <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-zinc-400 transition group-open:bg-zinc-800 group-open:text-zinc-100">
+            <ChevronDown className="h-3 w-3 transition group-open:rotate-180" />
+          </span>}
+        </summary>
+        <div className={`absolute ${compact ? "right-0" : "left-0"} top-12 z-30 w-48 rounded-2xl border border-zinc-700/80 bg-zinc-950 p-1.5 shadow-2xl shadow-black/50 ring-1 ring-white/10 before:absolute before:-top-1.5 ${compact ? "before:right-6" : "before:left-6"} before:h-3 before:w-3 before:rotate-45 before:border-l before:border-t before:border-zinc-700/80 before:bg-zinc-950`}>
+          <p className="relative px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">Assistir em</p>
+          {options.map((option) => (
+            <a key={option.label} href={option.value} target="_blank" rel="noreferrer" className="relative flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm font-black text-zinc-100 transition hover:bg-zinc-800">
+              <span className="flex items-center gap-2">
+                <span className={`h-2 w-2 rounded-full ${option.dot}`} />
+                <span className={option.tone}>{option.label}</span>
+              </span>
+              <ExternalLink className="h-3.5 w-3.5 text-zinc-500" />
+            </a>
+          ))}
+        </div>
+      </details>
+    );
+  }
+
+  if (options.length === 0) {
+    return (
+      <a
+        href={fallbackUrl}
+        target="_blank"
+        rel="noreferrer"
+        aria-label={`Buscar vídeo de ${name} no YouTube`}
+        className={`${compact ? "inline-flex h-9 w-9 shrink-0 items-center justify-center p-0 leading-none" : "inline-flex h-10 items-center gap-2 rounded-full pl-1.5 pr-3 text-xs"} overflow-hidden rounded-full border border-zinc-700/80 bg-zinc-950/95 font-black text-zinc-100 shadow-sm shadow-black/20 outline-none ring-1 ring-white/5 transition hover:border-zinc-500 hover:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-zinc-400`}
+      >
+        {compact ? (
+          <Search className="block h-4 w-4 text-zinc-300" />
+        ) : (
+          <>
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 text-zinc-950">
+              <Play className="h-3.5 w-3.5 translate-x-px fill-current" />
+            </span>
+            <span>Buscar</span>
+            <Search className="h-3.5 w-3.5 text-zinc-400" />
+          </>
+        )}
+      </a>
+    );
+  }
+
+  const url = options[0].value;
+  const directOption = options[0];
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={onClose}>
-      <motion.div initial={{ opacity: 0, scale: 0.96, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900 shadow-2xl" onClick={(event) => event.stopPropagation()}>
-        <div className="flex items-start justify-between gap-4 border-b border-zinc-800 p-5">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">Foco selecionado</p>
-            <h2 className="mt-1 text-2xl font-black text-zinc-50">{info.title}</h2>
-            <p className="mt-2 text-sm text-zinc-400">Imagem do músculo trabalhado</p>
-          </div>
-          <button onClick={onClose} className="rounded-full bg-zinc-800 p-2 text-zinc-300 transition hover:bg-zinc-700 hover:text-zinc-50">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        <div className="grid gap-5 p-5 md:grid-cols-[1fr_1.1fr]">
-          <div className="overflow-hidden rounded-2xl bg-zinc-950 p-3">
-            <img src={info.image} alt={info.title} className="h-full max-h-[420px] w-full object-contain" />
-          </div>
-          <div className="flex flex-col justify-center">
-            <p className="text-base leading-relaxed text-zinc-300">{info.description}</p>
-            <ul className="mt-4 space-y-2 text-sm text-zinc-300">
-              {info.tips.map((tip) => (
-                <li key={tip} className="rounded-xl bg-zinc-950 px-3 py-2">
-                  • {tip}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-5 rounded-2xl bg-amber-950/50 p-4 text-sm text-amber-200 ring-1 ring-amber-800">
-              Imagem anatômica é referência. Execução real: use o botão do YouTube e priorize profissional de educação física.
-            </div>
-          </div>
-        </div>
-      </motion.div>
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className={`${compact ? "h-9 w-9 shrink-0 justify-center rounded-full border border-zinc-700/80 bg-zinc-950/95 px-0 text-xs text-zinc-100 ring-1 ring-white/5 hover:bg-zinc-900" : "inline-flex h-10 items-center gap-2 rounded-full bg-zinc-100 px-3 text-xs text-zinc-950 hover:bg-white"} overflow-hidden font-black shadow-sm transition`}
+    >
+      <span className={`${compact ? directOption.iconBg : ""} ${compact ? "flex h-full w-full items-center justify-center rounded-full" : ""}`}>
+        <Play className={`${compact ? "h-4 w-4" : "h-3.5 w-3.5"} translate-x-px fill-current`} />
+      </span>
+      {!compact && "Abrir"}
+    </a>
+  );
+}
+
+function AlternativeChips({ exercise, onAlternativeClick }: { exercise: Exercise; onAlternativeClick: (idOrName: string, source: Exercise) => void }) {
+  return (
+    <div className="mt-2 flex flex-wrap gap-2">
+      {(exercise.alternatives ?? []).map((alt) => {
+        const item = findExerciseLibraryItem(alt);
+        return <button key={alt} type="button" onClick={(event) => { event.stopPropagation(); onAlternativeClick(alt, exercise); }} className="min-h-8 rounded-full bg-zinc-800 px-3 py-1 text-left text-xs font-bold text-zinc-200 transition hover:bg-zinc-700 hover:text-white">{item?.name ?? alt}</button>;
+      })}
     </div>
   );
 }
 
-function DashboardCard({ icon, title, value, description }: { icon: React.ReactNode; title: string; value: string; description: string }) {
+function ExerciseHistory({ logs, exercise }: { logs: Logs; exercise: Exercise }) {
+  const rows = Object.entries(logs).filter(([key]) => key.includes(`::${exercise.id}::`) || key.endsWith(`::${exercise.name}`)).slice(-3);
+  if (rows.length === 0) return null;
   return (
-    <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-5 shadow-sm">
-      <div className="flex items-center gap-3 text-zinc-400">
-        {icon}
-        <span className="text-sm font-bold uppercase tracking-[0.14em]">{title}</span>
+    <details className="mt-2 text-xs text-zinc-400">
+      <summary className="cursor-pointer font-bold text-zinc-300">Histórico</summary>
+      <div className="mt-2 grid gap-1">{rows.map(([key, log]) => <p key={key} className="rounded-xl bg-zinc-950 px-2 py-1">{log.load || "sem carga"} kg · {log.reps1 || "-"}/{log.reps2 || "-"}/{log.reps3 || "-"} reps{log.note ? ` · ${log.note}` : ""}</p>)}</div>
+    </details>
+  );
+}
+
+function ExerciseRow({ exercise, log, logs, onLog, onMuscleClick, onAlternativeClick, lightMode }: { exercise: Exercise; log: ExerciseLog; logs: Logs; onLog: (patch: Partial<ExerciseLog>) => void; onMuscleClick: (muscleKey: string) => void; onAlternativeClick: (idOrName: string, source: Exercise) => void; lightMode: boolean }) {
+  const increase = shouldIncrease(log);
+  return (
+    <tr className={`align-top transition ${log.done ? "bg-emerald-950/30" : "hover:bg-zinc-800/50"}`}>
+      <td className="px-4 py-3 font-semibold text-zinc-400"><label className="flex items-center gap-2"><input type="checkbox" checked={log.done} onChange={(event) => onLog({ done: event.target.checked })} className="h-4 w-4 rounded border-zinc-700 accent-emerald-500" />{exercise.order}</label></td>
+      <td className="px-4 py-3"><p className="font-bold text-zinc-100">{exercise.name}</p><details className="mt-2 text-xs text-zinc-400"><summary className="cursor-pointer font-bold text-zinc-300">Alternativas</summary><AlternativeChips exercise={exercise} onAlternativeClick={onAlternativeClick} /></details><ExerciseHistory logs={logs} exercise={exercise} /></td>
+      <td className="px-4 py-3"><FocusLinks focus={`${exercise.name} ${exercise.focus}`} onMuscleClick={onMuscleClick} /></td>
+      <td className="px-4 py-3"><LogInputs log={log} onLog={onLog} />{increase && <p className="mt-2 rounded-xl bg-emerald-950/70 px-2 py-1 text-xs font-black text-emerald-200">Bateu 3x15. Próximo treino: aumentar carga.</p>}{lightMode && <p className="mt-2 text-xs font-semibold text-orange-300">Modo leve ativo: foco em execução limpa.</p>}</td>
+      <td className="px-4 py-3"><RestTimer defaultSeconds={exercise.rest ?? 60} /></td>
+      <td className="px-4 py-3"><VideoButton name={exercise.name} videoKey={exercise.videoKey} /></td>
+    </tr>
+  );
+}
+
+function ExerciseMobileCard(props: Parameters<typeof ExerciseRow>[0]) {
+  const { exercise, log, logs, onLog, onMuscleClick, onAlternativeClick, lightMode } = props;
+  const increase = shouldIncrease(log);
+  return (
+    <article className={`rounded-2xl border p-4 shadow-sm ${log.done ? "border-emerald-800 bg-emerald-950/30" : "border-zinc-800 bg-zinc-950/70"}`}>
+      <div className="flex items-start justify-between gap-3">
+        <label className="flex min-w-0 items-start gap-3"><input type="checkbox" checked={log.done} onChange={(event) => onLog({ done: event.target.checked })} className="mt-1 h-5 w-5 shrink-0 rounded border-zinc-700 accent-emerald-500" /><span className="min-w-0"><span className="block text-xs font-black uppercase tracking-[0.14em] text-zinc-500">{exercise.order}</span><span className="block text-base font-black leading-snug text-zinc-50">{exercise.name}</span></span></label>
+        <VideoButton name={exercise.name} videoKey={exercise.videoKey} compact />
       </div>
-      <p className="mt-3 text-3xl font-black text-zinc-50">{value}</p>
-      <p className="mt-2 text-sm leading-6 text-zinc-400">{description}</p>
-    </div>
+      <FocusLinks focus={`${exercise.name} ${exercise.focus}`} onMuscleClick={onMuscleClick} compact />
+      <div className="mt-4 grid gap-3">
+        <div><p className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">Carga e reps</p><LogInputs log={log} onLog={onLog} compact /></div>
+        {increase && <p className="rounded-xl bg-emerald-950/70 px-3 py-2 text-xs font-black text-emerald-200">Bateu 3x15. Próximo treino: aumentar carga.</p>}
+        {lightMode && <p className="text-xs font-semibold text-orange-300">Modo leve ativo: foco em execução limpa.</p>}
+        <div><p className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">Descanso</p><RestTimer defaultSeconds={exercise.rest ?? 60} /></div>
+        <details className="text-xs text-zinc-400"><summary className="cursor-pointer font-bold text-zinc-300">Alternativas se a máquina estiver ocupada</summary><AlternativeChips exercise={exercise} onAlternativeClick={onAlternativeClick} /></details>
+        <ExerciseHistory logs={logs} exercise={exercise} />
+      </div>
+    </article>
+  );
+}
+
+function DayCard({
+  plan,
+  logs,
+  getLog,
+  updateExerciseLog,
+  onMuscleClick,
+  onAlternativeClick,
+  lightMode,
+}: {
+  plan: TrainingDay;
+  logs: Logs;
+  getLog: (plan: TrainingDay, exercise: Exercise) => ExerciseLog | undefined;
+  updateExerciseLog: (plan: TrainingDay, exercise: Exercise, patch: Partial<ExerciseLog>) => void;
+  onMuscleClick: (focus: string) => void;
+  onAlternativeClick: (idOrName: string, source: Exercise) => void;
+  lightMode: boolean;
+}) {
+  const style = typeStyle[plan.type] ?? typeStyle.superior;
+  const exercises = lightMode && plan.exercises.length > 4 ? plan.exercises.slice(0, 4) : plan.exercises;
+  const done = exercises.filter((exercise) => getLog(plan, exercise)?.done).length;
+  const estimatedCalories = exercises.reduce((sum, exercise) => sum + estimateExerciseCalories(getLog(plan, exercise)), 0);
+  const calorieTooltip = "Estimativa simples baseada em volume registrado: carga x repetições x fator metabólico. Só entra no cálculo quando há carga e pelo menos 1 repetição.";
+  return (
+    <motion.section layout initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className={`overflow-hidden rounded-3xl border-l-8 ${style.border} border-y border-r border-zinc-800 bg-zinc-900 shadow-sm`}>
+      <div className={`flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${style.soft}`}><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-400">{plan.day}</p><h3 className="mt-1 text-lg font-black text-zinc-50">{plan.title}</h3></div><div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-zinc-950/80 px-3 py-1 text-xs font-black text-zinc-300 ring-1 ring-zinc-800">{done}/{exercises.length} feitos</span>{estimatedCalories > 0 && <span title={calorieTooltip} className="rounded-full bg-amber-950/70 px-3 py-1 text-xs font-black text-amber-200 ring-1 ring-amber-800">~{formatCalories(estimatedCalories)}</span>}<span className={`w-fit rounded-full px-3 py-1 text-xs font-bold ring-1 ${style.chip}`}>{style.icon} {style.label}</span></div></div>
+      <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[1080px] text-left text-sm"><thead className="border-y border-zinc-800 bg-zinc-950 text-xs uppercase tracking-wide text-zinc-400"><tr><th className="w-24 px-4 py-3">Feito</th><th className="px-4 py-3">Exercício</th><th className="px-4 py-3">Foco</th><th className="w-80 px-4 py-3">Carga/reps</th><th className="w-52 px-4 py-3">Descanso</th><th className="w-28 px-4 py-3">Vídeo</th></tr></thead><tbody className="divide-y divide-zinc-800">{exercises.map((exercise) => { const key = exerciseKey(plan, exercise); return <ExerciseRow key={key} exercise={exercise} log={getLog(plan, exercise) ?? emptyLog()} logs={logs} onLog={(patch) => updateExerciseLog(plan, exercise, patch)} onMuscleClick={onMuscleClick} onAlternativeClick={onAlternativeClick} lightMode={lightMode} />; })}</tbody></table></div>
+      <div className="grid gap-3 p-4 md:hidden">{exercises.map((exercise) => { const key = exerciseKey(plan, exercise); return <ExerciseMobileCard key={key} exercise={exercise} log={getLog(plan, exercise) ?? emptyLog()} logs={logs} onLog={(patch) => updateExerciseLog(plan, exercise, patch)} onMuscleClick={onMuscleClick} onAlternativeClick={onAlternativeClick} lightMode={lightMode} />; })}</div>
+      {plan.optional && <div className="border-t border-zinc-800 px-5 py-4 text-sm text-zinc-400"><span className="font-black text-zinc-100">Opcionais:</span> {plan.optional}</div>}
+    </motion.section>
+  );
+}
+
+function ModalShell({ children, onClose, wide = false }: { children: React.ReactNode; onClose: () => void; wide?: boolean }) {
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={onClose}><motion.div initial={{ opacity: 0, scale: 0.96, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} className={`max-h-[92vh] w-full overflow-y-auto rounded-3xl border border-zinc-800 bg-zinc-900 shadow-2xl ${wide ? "max-w-6xl" : "max-w-4xl"}`} onClick={(event) => event.stopPropagation()}>{children}</motion.div></div>;
+}
+
+function MuscleModal({ focus, onClose }: { focus: string | null; onClose: () => void }) {
+  if (!focus) return null;
+  const info = muscleImages[focus] ?? muscleImages[focusToKey(focus)] ?? muscleImages.core;
+  return (
+    <ModalShell onClose={onClose}>
+      <div className="flex items-start justify-between gap-4 border-b border-zinc-800 p-5"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">Foco selecionado</p><h2 className="mt-1 text-2xl font-black text-zinc-50">{info.title}</h2><p className="mt-2 text-sm text-zinc-400">Imagem do músculo trabalhado</p></div><button onClick={onClose} className="rounded-full bg-zinc-800 p-2 text-zinc-300"><X className="h-5 w-5" /></button></div>
+      <div className="grid gap-5 p-5 md:grid-cols-[1fr_1.1fr]"><div className="overflow-hidden rounded-2xl bg-zinc-950 p-3"><img src={info.image} alt={info.title} className="h-full max-h-[420px] w-full object-contain" /></div><div><p className="text-base leading-relaxed text-zinc-300">{info.description}</p><ul className="mt-4 space-y-2 text-sm text-zinc-300">{info.tips.map((tip) => <li key={tip} className="rounded-xl bg-zinc-950 px-3 py-2">• {tip}</li>)}</ul></div></div>
+    </ModalShell>
+  );
+}
+
+function AlternativeModal({ alternative, onClose, onMuscleClick }: { alternative: { idOrName: string; source: Exercise } | null; onClose: () => void; onMuscleClick: (focus: string) => void }) {
+  if (!alternative) return null;
+  const item = findExerciseLibraryItem(alternative.idOrName);
+  const name = item?.name ?? alternative.idOrName;
+  const focus = item?.focus ?? alternative.source.focus;
+  const muscles = item?.muscles?.length ? item.muscles : focusToTargets(focus).map((target) => target.key);
+  const primaryMuscle = muscleImages[muscles[0]] ?? muscleImages[focusToKey(focus)] ?? muscleImages.core;
+  return (
+    <ModalShell onClose={onClose}>
+      <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-zinc-800 bg-zinc-900/95 p-5 backdrop-blur"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">Alternativa</p><h2 className="mt-1 text-2xl font-black text-zinc-50">{name}</h2><p className="mt-2 text-sm text-zinc-400">{focus}</p></div><button onClick={onClose} className="rounded-full bg-zinc-800 p-2 text-zinc-300"><X className="h-5 w-5" /></button></div>
+      <div className="grid gap-5 p-5 md:grid-cols-[0.9fr_1.1fr]"><div className="rounded-2xl bg-zinc-950 p-3"><img src={primaryMuscle.image} alt={primaryMuscle.title} className="h-full max-h-[360px] w-full object-contain" /></div><div><p className="text-base leading-relaxed text-zinc-300">{item?.description ?? "Informações completas ainda não cadastradas. Use esta alternativa como variação próxima ao exercício original e confirme a execução com um profissional."}</p><div className="mt-4 flex flex-wrap gap-2">{muscles.map((muscle) => <button key={muscle} onClick={() => onMuscleClick(muscle)} className="rounded-full bg-blue-950/40 px-3 py-1 text-xs font-black text-blue-200 ring-1 ring-blue-800">{muscleImages[muscle]?.title ?? muscle}</button>)}</div><ul className="mt-4 space-y-2 text-sm text-zinc-300">{(item?.tips ?? ["Controle o movimento.", "Use carga confortável.", "Pare se sentir dor articular."]).map((tip) => <li key={tip} className="rounded-xl bg-zinc-950 px-3 py-2">• {tip}</li>)}</ul><div className="mt-5 flex flex-wrap gap-2"><VideoButton name={name} videoKey={item?.videoKey ?? item?.id ?? name} /></div></div></div>
+    </ModalShell>
+  );
+}
+
+function InfoModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  if (!isOpen) return null;
+  const tables = [
+    ["Divisão muscular", ["Tipo", "Músculos trabalhados"], overview],
+    ["Séries e repetições", ["Tipo", "Séries", "Repetições"], progression],
+    ["Cardio sugerido", ["Período", "Cardio"], cardio],
+    ["Semana regenerativa", ["Variável", "Ajuste"], recovery],
+  ] as const;
+  return (
+    <ModalShell onClose={onClose} wide>
+      <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-zinc-800 bg-zinc-900/95 p-5 backdrop-blur"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">Guia rápido</p><h2 className="mt-1 text-2xl font-black text-zinc-50">Informações do treino</h2></div><button onClick={onClose} className="rounded-full bg-zinc-800 p-2 text-zinc-300"><X className="h-5 w-5" /></button></div>
+      <div className="grid gap-6 p-5 lg:grid-cols-2">{tables.map(([title, headers, rows]) => <div key={title}><h3 className="mb-3 text-xl font-black text-zinc-50">{title}</h3><div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900"><table className="w-full text-left text-sm"><thead className="bg-zinc-950 text-zinc-300"><tr>{headers.map((header) => <th key={header} className="px-4 py-3 font-bold">{header}</th>)}</tr></thead><tbody className="divide-y divide-zinc-800">{rows.map((row, index) => <tr key={`${row[0]}-${index}`}>{row.map((cell, cellIndex) => <td key={cellIndex} className="px-4 py-3 align-top text-zinc-300">{cell}</td>)}</tr>)}</tbody></table></div></div>)}</div>
+    </ModalShell>
+  );
+}
+
+function TrainingEditor({ open, plans, activePlanId, onClose, onSave, onDelete }: { open: boolean; plans: CustomTrainingPlan[]; activePlanId: string; onClose: () => void; onSave: (plan: CustomTrainingPlan) => void; onDelete: (id: string) => void }) {
+  const base = plans.find((plan) => plan.id === activePlanId) ?? plans[0] ?? makeCustomPlan();
+  const [draft, setDraft] = useState(base);
+  const [selectedExercise, setSelectedExercise] = useState(exerciseLibraryList[0]?.id ?? "");
+  useEffect(() => { if (open) setDraft(base); }, [open, base]);
+  if (!open) return null;
+  const patch = (next: CustomTrainingPlan) => setDraft({ ...next, updatedAt: new Date().toISOString() });
+  const confirmDelete = () => window.confirm("Excluir este treino personalizado?") && onDelete(draft.id);
+  function updateDay(weekIndex: number, dayIndex: number, updater: (day: TrainingDay) => TrainingDay) {
+    patch({ ...draft, weeks: draft.weeks.map((week, wi) => wi !== weekIndex ? week : { ...week, days: week.days.map((day, di) => di === dayIndex ? updater(day) : day) }) });
+  }
+  function addExercise(weekIndex: number, dayIndex: number) {
+    const item = exerciseLibrary[selectedExercise];
+    if (!item) return;
+    updateDay(weekIndex, dayIndex, (day) => ({ ...day, exercises: [...day.exercises, toPlanExercise(item, day.exercises.length + 1)] }));
+  }
+  function moveExercise(weekIndex: number, dayIndex: number, exerciseIndex: number, delta: number) {
+    updateDay(weekIndex, dayIndex, (day) => {
+      const next = [...day.exercises];
+      const target = exerciseIndex + delta;
+      if (target < 0 || target >= next.length) return day;
+      [next[exerciseIndex], next[target]] = [next[target], next[exerciseIndex]];
+      return { ...day, exercises: next.map((exercise, index) => ({ ...exercise, order: index + 1 })) };
+    });
+  }
+  return (
+    <ModalShell onClose={onClose} wide>
+      <div className="sticky top-0 z-10 flex flex-col gap-4 border-b border-zinc-800 bg-zinc-900/95 p-4 backdrop-blur sm:p-5 md:flex-row md:items-end md:justify-between">
+        <div className="grid gap-2"><p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">Editor de treino</p><input value={draft.name} onChange={(event) => patch({ ...draft, name: event.target.value })} className="w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-xl font-black text-zinc-50 outline-none" /></div>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+          <button onClick={onClose} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-black text-zinc-100 hover:bg-zinc-800"><X className="h-4 w-4" /> Fechar</button>
+          <button onClick={confirmDelete} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-900 bg-red-950/40 px-4 py-3 text-sm font-black text-red-100 hover:bg-red-950"><Trash2 className="h-4 w-4" /> Excluir</button>
+          <button onClick={() => patch({ ...draft, weeks: [...draft.weeks, makeCustomWeek(nextWeekId(draft.weeks))] })} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-700 px-4 py-3 text-sm font-black text-zinc-100 hover:bg-zinc-800"><Plus className="h-4 w-4" /> Semana</button>
+          <button onClick={() => onSave(draft)} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-sm font-black text-zinc-950"><Save className="h-4 w-4" /> Salvar</button>
+        </div>
+      </div>
+      <div className="grid gap-5 p-5">
+        <div className="grid gap-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-4 md:grid-cols-[1fr_auto]"><select value={selectedExercise} onChange={(event) => setSelectedExercise(event.target.value)} className="min-w-0 rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm font-semibold text-zinc-100 outline-none">{exerciseLibraryList.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.focus}</option>)}</select><p className="text-sm text-zinc-400 md:self-center">Escolha um exercício e toque em Adicionar no dia desejado.</p></div>
+        {draft.weeks.map((week, weekIndex) => <section key={week.id} className="rounded-3xl border border-zinc-800 bg-zinc-950 p-4"><div className="mb-4 flex flex-wrap items-center justify-between gap-2"><input value={week.id} onChange={(event) => patch({ ...draft, weeks: draft.weeks.map((item, index) => index === weekIndex ? { ...item, id: event.target.value.toUpperCase(), label: `Semana ${event.target.value.toUpperCase()}`, days: item.days.map((day) => ({ ...day, week: event.target.value.toUpperCase() })) } : item) })} className="w-36 rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-2 text-lg font-black text-zinc-50" />{draft.weeks.length > 1 && <button onClick={() => patch({ ...draft, weeks: draft.weeks.filter((_, index) => index !== weekIndex) })} className="rounded-2xl border border-red-900 px-3 py-2 text-sm font-bold text-red-200 hover:bg-red-950">Remover semana</button>}</div><div className="grid gap-3 lg:grid-cols-2">{week.days.map((day, dayIndex) => <div key={day.day} className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4"><div className="mb-3 grid gap-2 sm:grid-cols-[1fr_auto]"><input value={day.title} onChange={(event) => updateDay(weekIndex, dayIndex, (current) => ({ ...current, title: event.target.value }))} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm font-black text-zinc-50" /><select value={day.type} onChange={(event) => updateDay(weekIndex, dayIndex, (current) => ({ ...current, type: event.target.value as TrainingType }))} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">{Object.keys(typeStyle).map((type) => <option key={type} value={type}>{typeStyle[type as TrainingType].label}</option>)}</select></div><p className="mb-3 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">{day.day}</p><div className="grid gap-2">{day.exercises.map((exercise, exerciseIndex) => <div key={`${exercise.id}-${exerciseIndex}`} className="flex items-center gap-2 rounded-xl bg-zinc-950 px-3 py-2 text-sm text-zinc-200"><span className="min-w-0 flex-1 truncate">{exercise.order}. {exercise.name}</span><button onClick={() => moveExercise(weekIndex, dayIndex, exerciseIndex, -1)} className="rounded-lg bg-zinc-800 px-2 py-1 text-xs">↑</button><button onClick={() => moveExercise(weekIndex, dayIndex, exerciseIndex, 1)} className="rounded-lg bg-zinc-800 px-2 py-1 text-xs">↓</button><button onClick={() => updateDay(weekIndex, dayIndex, (current) => ({ ...current, exercises: current.exercises.filter((_, index) => index !== exerciseIndex).map((item, index) => ({ ...item, order: index + 1 })) }))} className="rounded-lg bg-red-950 px-2 py-1 text-xs text-red-100">Remover</button></div>)}<button onClick={() => addExercise(weekIndex, dayIndex)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-100 px-3 py-2 text-sm font-black text-zinc-950"><Plus className="h-4 w-4" /> Adicionar</button></div></div>)}</div></section>)}
+        <div className="sticky bottom-0 z-10 -mx-5 -mb-5 grid gap-2 border-t border-zinc-800 bg-zinc-900/95 p-4 backdrop-blur sm:hidden">
+          <button onClick={() => onSave(draft)} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-sm font-black text-zinc-950"><Save className="h-4 w-4" /> Salvar treino</button>
+          <button onClick={onClose} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-black text-zinc-100"><X className="h-4 w-4" /> Voltar ao treino</button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+function QuickLogs({ painLogs, setPainLogs, cardioLogs, setCardioLogs }: { painLogs: PainLog[]; setPainLogs: React.Dispatch<React.SetStateAction<PainLog[]>>; cardioLogs: CardioLog[]; setCardioLogs: React.Dispatch<React.SetStateAction<CardioLog[]>> }) {
+  const today = todayInputValue();
+  const [pain, setPain] = useState({ date: today, text: "", level: "0" });
+  const [cardioDraft, setCardioDraft] = useState<CardioLog>({ date: today, minutes: "", type: "Caminhada", intensity: "Variável", lightMinutes: "", moderateMinutes: "", hardMinutes: "" });
+  const [customCardioType, setCustomCardioType] = useState("");
+  const selectedCardioType = cardioDraft.type === "Outro" ? customCardioType.trim() || "Outro" : cardioDraft.type;
+  const cardioToEstimate = { ...cardioDraft, type: selectedCardioType, minutes: String(cardioMinutes(cardioDraft)) };
+  const cardioCalories = estimateCardioCalories(cardioToEstimate);
+  const lastCardioCalories = cardioLogs[0] ? estimateCardioCalories(cardioLogs[0]) : 0;
+  const cardioTooltip = "Estimativa por MET usando tipo, intensidade, minutos e peso de referência de 70 kg. Pode variar conforme peso, condicionamento e aparelho.";
+  const totalCardioMinutes = cardioMinutes(cardioDraft);
+  return (
+    <section className="grid gap-4 lg:grid-cols-2">
+      <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-5"><h3 className="text-lg font-black text-zinc-50">Check de dor/desconforto</h3><div className="mt-3 grid gap-2 sm:grid-cols-[auto_auto_1fr_auto]"><input type="date" value={pain.date} onChange={(e) => setPain({ ...pain, date: e.target.value })} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" /><select value={pain.level} onChange={(e) => setPain({ ...pain, level: e.target.value })} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"><option value="0">Sem dor</option><option value="1">Leve</option><option value="2">Moderada</option><option value="3">Forte</option></select><input value={pain.text} onChange={(e) => setPain({ ...pain, text: e.target.value })} placeholder="Onde sentiu?" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" /><button onClick={() => { setPainLogs((items) => [pain, ...items].slice(0, 12)); setPain({ date: today, text: "", level: "0" }); }} className="rounded-xl bg-zinc-100 px-3 py-2 text-sm font-black text-zinc-950">Salvar</button></div>{painLogs[0] && <p className="mt-3 text-sm text-zinc-400">Último: {painLogs[0].date} · nível {painLogs[0].level} · {painLogs[0].text || "sem observação"}</p>}</div>
+      <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-5"><div className="flex items-center justify-between gap-3"><div><h3 className="text-lg font-black text-zinc-50">Cardio</h3><p className="mt-1 text-xs font-bold text-zinc-500">Hoje · {new Date(`${today}T00:00:00`).toLocaleDateString("pt-BR")}</p></div>{cardioCalories > 0 && <span title={cardioTooltip} className="rounded-full bg-amber-950/70 px-3 py-1 text-xs font-black text-amber-200 ring-1 ring-amber-800">~{formatCalories(cardioCalories)}</span>}</div><div className="mt-3 grid gap-3"><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{cardioTypeOptions.map((type) => <button key={type} onClick={() => setCardioDraft({ ...cardioDraft, type })} className={`rounded-2xl px-3 py-2 text-sm font-black ring-1 transition ${cardioDraft.type === type ? "bg-zinc-100 text-zinc-950 ring-zinc-100" : "bg-zinc-950 text-zinc-300 ring-zinc-700 hover:bg-zinc-800"}`}>{type}</button>)}</div>{cardioDraft.type === "Outro" && <input value={customCardioType} onChange={(e) => setCustomCardioType(e.target.value)} placeholder="Qual cardio?" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" />}<div className="grid gap-2 sm:grid-cols-3"><label className="grid gap-1 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">Leve<input value={cardioDraft.lightMinutes} onChange={(e) => setCardioDraft({ ...cardioDraft, lightMinutes: e.target.value })} placeholder="min" inputMode="numeric" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-zinc-100" /></label><label className="grid gap-1 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">Moderado<input value={cardioDraft.moderateMinutes} onChange={(e) => setCardioDraft({ ...cardioDraft, moderateMinutes: e.target.value })} placeholder="min" inputMode="numeric" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-zinc-100" /></label><label className="grid gap-1 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">Forte<input value={cardioDraft.hardMinutes} onChange={(e) => setCardioDraft({ ...cardioDraft, hardMinutes: e.target.value })} placeholder="min" inputMode="numeric" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-zinc-100" /></label></div><button disabled={!totalCardioMinutes || cardioDraft.type === "Outro" && !customCardioType.trim()} onClick={() => { setCardioLogs((items) => [{ ...cardioToEstimate, date: today, intensity: "Variável" }, ...items].slice(0, 12)); setCardioDraft({ date: today, minutes: "", type: "Caminhada", intensity: "Variável", lightMinutes: "", moderateMinutes: "", hardMinutes: "" }); setCustomCardioType(""); }} className="rounded-xl bg-zinc-100 px-3 py-3 text-sm font-black text-zinc-950 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500">Salvar {totalCardioMinutes ? `${totalCardioMinutes} min` : ""}</button></div>{cardioLogs[0] && <p className="mt-3 text-sm text-zinc-400">Último: {cardioLogs[0].date} · {cardioLogs[0].type} · {cardioMinutes(cardioLogs[0]) || "?"} min · variável{lastCardioCalories > 0 ? ` · ~${formatCalories(lastCardioCalories)}` : ""}</p>}</div>
+    </section>
   );
 }
 
 export default function TrainingPlanApp() {
   const [phase, setPhase] = useState<Phase>("fase1");
-  const [week, setWeek] = useState<Week>("A");
+  const [customPlans, setCustomPlans] = useState<CustomTrainingPlan[]>(() => readCustomPlans());
+  const [activePlanId, setActivePlanId] = useState(() => localStorage.getItem(ACTIVE_PLAN_KEY) ?? defaultTrainingPlan.id);
+  const activePlan = customPlans.find((plan) => plan.id === activePlanId) ?? defaultTrainingPlan;
+  const [week, setWeek] = useState("A");
   const [query, setQuery] = useState("");
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
+  const [selectedAlternative, setSelectedAlternative] = useState<{ idOrName: string; source: Exercise } | null>(null);
+  const [infoModalOpen, setInfoModalOpen] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
   const [onlyToday, setOnlyToday] = useState(false);
   const [lightMode, setLightMode] = useState(false);
   const [startDate, setStartDate] = useState(() => localStorage.getItem(START_DATE_KEY) ?? "");
   const [autoWeekEnabled, setAutoWeekEnabled] = useState(() => localStorage.getItem(AUTO_WEEK_KEY) !== "false");
   const { logs, updateLog, clearLogs } = useLocalStorageLogs();
+  const [painLogs, setPainLogs] = useStoredArray<PainLog>(PAIN_LOG_KEY);
+  const [cardioLogs, setCardioLogs] = useStoredArray<CardioLog>(CARDIO_LOG_KEY);
+  const [weeklySummaries, setWeeklySummaries] = useStoredArray<WeeklySummary>(WEEKLY_SUMMARY_KEY);
 
-  useEffect(() => {
-    localStorage.setItem(START_DATE_KEY, startDate);
-  }, [startDate]);
-
-  useEffect(() => {
-    localStorage.setItem(AUTO_WEEK_KEY, String(autoWeekEnabled));
-  }, [autoWeekEnabled]);
-
+  const availableWeeks = useMemo(() => getPlanWeeks(activePlan, activePlan.id === defaultTrainingPlan.id ? phase : undefined), [activePlan, phase]);
+  const weekIds = availableWeeks.map((item) => item.id);
   const todayName = getTodayName();
-  const autoWeek = calculateWeekFromStart(startDate);
+  const autoWeek = calculateWeekFromStart(startDate, weekIds);
+  const weekBlock = startDate ? calculateWeekBlockFromStart(startDate) : 0;
 
-  useEffect(() => {
-    if (autoWeekEnabled) setWeek(autoWeek);
-  }, [autoWeekEnabled, autoWeek]);
+  useEffect(() => localStorage.setItem(START_DATE_KEY, startDate), [startDate]);
+  useEffect(() => localStorage.setItem(AUTO_WEEK_KEY, String(autoWeekEnabled)), [autoWeekEnabled]);
+  useEffect(() => localStorage.setItem(ACTIVE_PLAN_KEY, activePlan.id), [activePlan.id]);
+  useEffect(() => saveCustomPlans(customPlans), [customPlans]);
+  useEffect(() => { if (autoWeekEnabled) setWeek(autoWeek); }, [autoWeekEnabled, autoWeek]);
+  useEffect(() => { if (weekIds.length && !weekIds.includes(week)) setWeek(weekIds[0]); }, [weekIds.join("|"), week]);
 
   const filteredPlans = useMemo(() => {
-    return plans.filter((plan) => {
-      const matchesPhase = plan.phase === phase;
-      const matchesWeek = plan.week === week;
+    return getPlanDays(activePlan, activePlan.id === defaultTrainingPlan.id ? phase : undefined, week).filter((plan) => {
       const searchable = `${plan.day} ${plan.title} ${plan.type} ${plan.exercises.map((exercise) => `${exercise.name} ${exercise.focus}`).join(" ")}`.toLowerCase();
-      const matchesQuery = searchable.includes(query.toLowerCase());
-      const matchesToday = !onlyToday || plan.day === todayName;
-      return matchesPhase && matchesWeek && matchesQuery && matchesToday;
+      return searchable.includes(query.toLowerCase()) && (!onlyToday || plan.day === todayName);
     });
-  }, [phase, week, query, onlyToday, todayName]);
+  }, [activePlan, phase, week, query, onlyToday, todayName]);
 
-  const visibleExercises = filteredPlans.flatMap((plan) =>
-    (lightMode ? plan.exercises.slice(0, 4) : plan.exercises).map((exercise) => ({ plan, exercise })),
-  );
+  const visibleExercises = filteredPlans.flatMap((plan) => (lightMode ? plan.exercises.slice(0, 4) : plan.exercises).map((exercise) => ({ plan, exercise })));
+  function selectedWeekBlock(dateValue: string, selectedWeek: string) {
+    if (!dateValue || weekIds.length === 0) return 0;
+    const currentBlock = calculateWeekBlockFromStart(dateValue);
+    if (weekIds[currentBlock % weekIds.length] === selectedWeek) return currentBlock;
+    for (let offset = 1; offset <= weekIds.length; offset += 1) {
+      const candidate = Math.max(0, currentBlock - offset);
+      if (weekIds[candidate % weekIds.length] === selectedWeek) return candidate;
+    }
+    return currentBlock;
+  }
 
-  const doneCount = visibleExercises.filter(({ plan, exercise }) => logs[exerciseKey(plan, exercise)]?.done).length;
+  function logKeyFor(plan: TrainingDay, exercise: Exercise, dateValue = startDate) {
+    const phaseKey = activePlan.id === defaultTrainingPlan.id ? phase : "custom";
+    const occurrence = dateValue ? `start:${dateValue}::block:${selectedWeekBlock(dateValue, plan.week)}` : `floating:${activePlan.id}:${phaseKey}:${plan.week}`;
+    return `${occurrence}::${exerciseKey(plan, exercise)}`;
+  }
+
+  function exactLogKeyFor(plan: TrainingDay, exercise: Exercise, block: number) {
+    return `start:${startDate}::block:${block}::${exerciseKey(plan, exercise)}`;
+  }
+
+  function getLog(plan: TrainingDay, exercise: Exercise) {
+    return logs[logKeyFor(plan, exercise)];
+  }
+
+  function updateExerciseLog(plan: TrainingDay, exercise: Exercise, patch: Partial<ExerciseLog>) {
+    const shouldSetStartDate = !startDate && patch.done;
+    const effectiveStartDate = shouldSetStartDate ? todayInputValue() : startDate;
+    const previousFloatingLog = shouldSetStartDate ? logs[logKeyFor(plan, exercise, "")] : undefined;
+    if (shouldSetStartDate) setStartDate(effectiveStartDate);
+    updateLog(logKeyFor(plan, exercise, effectiveStartDate), { ...(previousFloatingLog ?? {}), ...patch });
+  }
+
+  const doneCount = visibleExercises.filter(({ plan, exercise }) => getLog(plan, exercise)?.done).length;
   const increaseCount = Object.values(logs).filter(shouldIncrease).length;
   const totalCount = visibleExercises.length;
 
-  function applyToday() {
-    setOnlyToday(true);
-    setWeek(autoWeek);
+  function buildWeeklySummary(block: number): WeeklySummary {
+    const summaryWeekId = weekIds[block % Math.max(weekIds.length, 1)] ?? "A";
+    const days = getPlanDays(activePlan, activePlan.id === defaultTrainingPlan.id ? phase : undefined, summaryWeekId);
+    const exercises = days.flatMap((plan) => plan.exercises.map((exercise) => ({ plan, exercise, log: logs[exactLogKeyFor(plan, exercise, block)] })));
+    const doneExercises = exercises.filter(({ log }) => log?.done);
+    const progress = doneExercises.filter(({ log }) => shouldIncrease(log)).map(({ exercise, log }) => `Subir carga em ${exercise.name} após bater ${log?.reps1 || "-"}/${log?.reps2 || "-"}/${log?.reps3 || "-"} reps com ${log?.load || "carga registrada"} kg.`);
+    const reduce = doneExercises
+      .filter(({ log }) => {
+        const average = averageReps(log);
+        return Boolean(log?.load && average > 0 && average < 8);
+      })
+      .map(({ exercise, log }) => `Diminuir ou revisar ${exercise.name}: média de ${averageReps(log).toFixed(1)} reps ficou baixa para ${log?.load || "a carga atual"} kg.`);
+    const skipped = exercises.filter(({ log }) => !log?.done).slice(0, 12).map(({ exercise }) => exercise.name);
+    const pain = painLogs.filter((entry) => isDateInWeek(entry.date, startDate, block) && entry.level !== "0").map((entry) => `${entry.date}: nível ${entry.level}${entry.text ? ` · ${entry.text}` : ""}`);
+    const weekCardioLogs = cardioLogs.filter((entry) => isDateInWeek(entry.date, startDate, block));
+    const calories = exercises.reduce((sum, item) => sum + estimateExerciseCalories(item.log), 0);
+    const cardioCalories = weekCardioLogs.reduce((sum, entry) => sum + estimateCardioCalories(entry), 0);
+    const notePain = doneExercises.filter(({ log }) => log?.note.toLowerCase().includes("dor") || log?.note.toLowerCase().includes("desconforto")).map(({ exercise }) => exercise.name);
+    const exerciseStats = doneExercises.map(({ exercise, log }) => ({ exercise, log, volume: exerciseVolume(log), calories: estimateExerciseCalories(log), avgReps: averageReps(log) }));
+    const best = [...exerciseStats].sort((a, b) => b.volume - a.volume)[0];
+    const topCalories = [...exerciseStats].sort((a, b) => b.calories - a.calories)[0];
+    const improve = [...exerciseStats].filter((item) => item.avgReps > 0).sort((a, b) => a.avgReps - b.avgReps)[0];
+    const allWeeklyLoads = Array.from({ length: Math.max(block + 1, 1) }, (_, index) => {
+      const weekId = weekIds[index % Math.max(weekIds.length, 1)] ?? "A";
+      const weekDays = getPlanDays(activePlan, activePlan.id === defaultTrainingPlan.id ? phase : undefined, weekId);
+      const weeklyEntries = weekDays.flatMap((day) => day.exercises.map((exercise) => logs[exactLogKeyFor(day, exercise, index)]));
+      const totalLoad = weeklyEntries.reduce((sum, log) => sum + exerciseVolume(log), 0);
+      const calories = weeklyEntries.reduce((sum, log) => sum + estimateExerciseCalories(log), 0);
+      return { label: `Semana ${index + 1}`, totalLoad, calories };
+    });
+    const weeklyLoads = allWeeklyLoads.slice(-4);
+    const recommendations = [
+      progress.length ? `Progressão sugerida em ${progress.length} exercício(s), sempre mantendo técnica limpa.` : "Manter cargas até bater o critério de progressão.",
+      reduce.length ? `${reduce.length} exercício(s) pedem redução/revisão por reps baixas.` : "Sem necessidade clara de reduzir carga pela média de reps.",
+      pain.length || notePain.length ? `Maneirar na próxima semana em regiões/exercícios com dor: ${[...pain, ...notePain].slice(0, 4).join("; ")}.` : "Sem alertas fortes de dor registrados.",
+      skipped.length ? `Exercícios pulados não são problema; retome prioridade nos primeiros blocos do próximo treino.` : "Boa consistência: nenhum exercício ficou sem registro nesta semana.",
+    ];
+
+    return {
+      id: `${activePlan.id}-${phase}-${startDate}-${block}`,
+      generatedAt: new Date().toISOString(),
+      startDate,
+      weekBlock: block,
+      weekId: summaryWeekId,
+      dateRange: formatDateRange(startDate, block),
+      done: doneExercises.length,
+      total: exercises.length,
+      calories,
+      cardioCalories,
+      progress,
+      reduce,
+      skipped,
+      pain,
+      recommendations,
+      bestExercise: best && best.volume ? `${best.exercise.name}: ${best.volume} kg totais levantados.` : undefined,
+      topCalorieExercise: topCalories && topCalories.calories ? `${topCalories.exercise.name}: ~${formatCalories(topCalories.calories)} estimadas.` : undefined,
+      improveExercise: improve ? `${improve.exercise.name}: média de ${improve.avgReps.toFixed(1)} reps; revisar carga, descanso ou técnica.` : undefined,
+      weeklyLoads,
+    };
   }
 
-  function changeWeekManually(nextWeek: Week) {
-    setAutoWeekEnabled(false);
-    setWeek(nextWeek);
+
+  useEffect(() => {
+    if (!startDate || weekBlock <= 0 || weekIds.length === 0) return;
+    const previousBlock = weekBlock - 1;
+    const id = `${activePlan.id}-${phase}-${startDate}-${previousBlock}`;
+    if (weeklySummaries.some((summary) => summary.id === id)) return;
+    setWeeklySummaries((current) => [buildWeeklySummary(previousBlock), ...current].slice(0, 24));
+  }, [startDate, weekBlock, weekIds.join("|"), activePlan.id, phase, logs, painLogs, cardioLogs, weeklySummaries]);
+
+  const canDownloadWeeklySummary = Boolean(startDate && weekBlock > 0 && weekIds.length > 0);
+
+  function downloadLatestWeeklySummary() {
+    if (!canDownloadWeeklySummary) return;
+    const previousBlock = weekBlock - 1;
+    const id = `${activePlan.id}-${phase}-${startDate}-${previousBlock}`;
+    const summary = buildWeeklySummary(previousBlock);
+    setWeeklySummaries((current) => [summary, ...current.filter((item) => item.id !== id)].slice(0, 24));
+    downloadWeeklySummaryPdf(summary);
   }
 
   function exportData() {
-    const payload = { exportedAt: new Date().toISOString(), phase, week, startDate, autoWeekEnabled, logs };
+    const payload = { exportedAt: new Date().toISOString(), phase, week, startDate, autoWeekEnabled, activePlanId: activePlan.id, logs, painLogs, cardioLogs, weeklySummaries, customPlans };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -1438,118 +828,76 @@ export default function TrainingPlanApp() {
     URL.revokeObjectURL(url);
   }
 
+  function importData(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    file.text().then((text) => {
+      const payload = JSON.parse(text);
+      if (payload.logs) writeJson(STORAGE_KEY, payload.logs);
+      if (payload.customPlans) setCustomPlans(payload.customPlans);
+      if (payload.painLogs) setPainLogs(payload.painLogs);
+      if (payload.cardioLogs) setCardioLogs(payload.cardioLogs);
+      if (payload.weeklySummaries) setWeeklySummaries(payload.weeklySummaries);
+      if (payload.startDate) setStartDate(payload.startDate);
+      window.location.reload();
+    }).catch(() => window.alert("Não foi possível importar este arquivo."));
+  }
+
+  function createPlan() {
+    const plan = makeCustomPlan();
+    setCustomPlans((current) => [...current, plan]);
+    setActivePlanId(plan.id);
+    setEditorOpen(true);
+  }
+
+  function saveCustomPlan(plan: CustomTrainingPlan) {
+    setCustomPlans((current) => current.some((item) => item.id === plan.id) ? current.map((item) => item.id === plan.id ? plan : item) : [...current, plan]);
+    setActivePlanId(plan.id);
+    setEditorOpen(false);
+  }
+
+  function deleteCustomPlan(id: string) {
+    setCustomPlans((current) => current.filter((plan) => plan.id !== id));
+    if (activePlanId === id) setActivePlanId(defaultTrainingPlan.id);
+    setEditorOpen(false);
+  }
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#1e293b,transparent_34%),linear-gradient(180deg,#09090b,#18181b)] text-zinc-100">
       <header className="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1 text-xs font-bold text-zinc-950">
-                <Dumbbell className="h-4 w-4" /> Plano de treino interativo
-              </div>
-              <h1 className="mt-4 max-w-4xl text-4xl font-black tracking-tight text-zinc-50 sm:text-5xl">Treino A/B com progresso, descanso e modo leve</h1>
-              <p className="mt-4 max-w-3xl text-base leading-7 text-zinc-400">
-                Treino de musculação para o meu biricutico. Plano dividido em fases e semanas, com registro de progresso, sugestões de descanso e modo leve para focar na execução.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button onClick={exportData} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-200 shadow-sm transition hover:bg-zinc-800">
-                <Download className="h-4 w-4" /> Exportar
-              </button>
-              <button onClick={() => window.confirm("Apagar todo o progresso salvo neste navegador?") && clearLogs()} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-200 shadow-sm transition hover:bg-zinc-800">
-                <Trash2 className="h-4 w-4" /> Limpar
-              </button>
-              <button onClick={() => window.print()} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-200 shadow-sm transition hover:bg-zinc-800">
-                <Printer className="h-4 w-4" /> Imprimir
-              </button>
-            </div>
+            <div><div className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1 text-xs font-bold text-zinc-950"><Dumbbell className="h-4 w-4" /> Plano de treino interativo</div><h1 className="mt-4 max-w-4xl text-4xl font-black tracking-tight text-zinc-50 sm:text-5xl">Treino com progresso, descanso e modo leve</h1><p className="mt-4 max-w-3xl text-base leading-7 text-zinc-400">Treino de musculação para o meu biricutico. Plano padrão ou personalizado, semana automática, vídeos, timer, biblioteca e registros locais.</p></div>
+            <div className="flex flex-wrap gap-2"><button onClick={() => setInfoModalOpen(true)} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-200 hover:bg-zinc-800"><Activity className="h-4 w-4" /> Informações</button><button onClick={exportData} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-200 hover:bg-zinc-800"><Download className="h-4 w-4" /> Exportar</button><label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-200 hover:bg-zinc-800"><Upload className="h-4 w-4" /> Importar<input type="file" accept="application/json" onChange={importData} className="hidden" /></label><button onClick={() => window.confirm("Apagar todo o progresso salvo neste navegador?") && clearLogs()} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-200 hover:bg-zinc-800"><Trash2 className="h-4 w-4" /> Limpar</button>{canDownloadWeeklySummary && <button onClick={downloadLatestWeeklySummary} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-200 hover:bg-zinc-800"><FileText className="h-4 w-4" /> Relatório semanal</button>}<button onClick={() => window.print()} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-200 hover:bg-zinc-800"><Printer className="h-4 w-4" /> Imprimir</button></div>
           </div>
 
           <div className="grid gap-4 rounded-3xl border border-zinc-800 bg-zinc-900 p-4 shadow-sm xl:grid-cols-[auto_auto_1fr] xl:items-center">
-            <Segmented value={phase} setValue={setPhase} options={[{ value: "fase1", label: "Meses 1–6" }, { value: "fase2", label: "Após 6 meses" }]} />
-            <Segmented value={week} setValue={changeWeekManually} options={[{ value: "A", label: "Semana A" }, { value: "B", label: "Semana B" }]} />
-            <label className="relative block">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500" />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Buscar exercício, músculo ou dia..."
-                className="w-full rounded-2xl border border-zinc-700 bg-zinc-950 py-3 pl-11 pr-4 text-sm text-zinc-100 placeholder:text-zinc-500 outline-none transition focus:border-zinc-400"
-              />
-            </label>
+            <select value={activePlan.id} onChange={(event) => setActivePlanId(event.target.value)} className="rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-black text-zinc-100 outline-none"><option value={defaultTrainingPlan.id}>Treino padrão</option>{customPlans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name}</option>)}</select>
+            {activePlan.id === defaultTrainingPlan.id ? <Segmented value={phase} setValue={setPhase} options={[{ value: "fase1", label: "Meses 1-6" }, { value: "fase2", label: "Após 6 meses" }]} /> : <button onClick={() => setEditorOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-black text-zinc-200"><Library className="h-4 w-4" /> Treino personalizado</button>}
+            <label className="relative block"><Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar exercício, músculo ou dia..." className="w-full rounded-2xl border border-zinc-700 bg-zinc-950 py-3 pl-11 pr-4 text-sm text-zinc-100 placeholder:text-zinc-500 outline-none transition focus:border-zinc-400" /></label>
           </div>
 
           <div className="grid gap-3 rounded-3xl border border-zinc-800 bg-zinc-900 p-4 shadow-sm lg:grid-cols-[1fr_auto_auto_auto] lg:items-center">
-            <label className="grid gap-1 text-sm font-bold text-zinc-300">
-              Data de início da Semana A
-              <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-semibold text-zinc-100 outline-none focus:border-zinc-400" />
-            </label>
-            <button onClick={applyToday} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-sm font-bold text-zinc-950 shadow-sm transition hover:bg-white">
-              <CalendarDays className="h-4 w-4" /> Treino de hoje: {todayName} · {autoWeek}
-            </button>
-            <button onClick={() => setAutoWeekEnabled((value) => !value)} className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold shadow-sm transition ${autoWeekEnabled ? "bg-emerald-700 text-white" : "border border-zinc-800 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}>
-              <RotateCcw className="h-4 w-4" /> Semana auto: {autoWeekEnabled ? "ON" : "OFF"}
-            </button>
-            <div className="grid grid-cols-2 gap-2 lg:flex">
-              <button onClick={() => setOnlyToday((value) => !value)} className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold shadow-sm transition ${onlyToday ? "bg-blue-700 text-white" : "border border-zinc-800 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}>
-                <ClipboardCheck className="h-4 w-4" /> Só hoje
-              </button>
-              <button onClick={() => setLightMode((value) => !value)} className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold shadow-sm transition ${lightMode ? "bg-orange-600 text-white" : "border border-zinc-800 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}>
-                <Sparkles className="h-4 w-4" /> Modo leve
-              </button>
-            </div>
+            <label className="grid gap-1 text-sm font-bold text-zinc-300">Data de início da Semana A<input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-semibold text-zinc-100 outline-none focus:border-zinc-400" /></label>
+            <button onClick={() => { setOnlyToday(true); setWeek(autoWeek); }} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-sm font-bold text-zinc-950 hover:bg-white"><CalendarDays className="h-4 w-4" /> Treino de hoje: {todayName} · {autoWeek}</button>
+            <button onClick={() => setAutoWeekEnabled((value) => !value)} className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold transition ${autoWeekEnabled ? "bg-emerald-700 text-white" : "border border-zinc-800 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}><RotateCcw className="h-4 w-4" /> Semana auto: {autoWeekEnabled ? "ON" : "OFF"}</button>
+            <div className="grid grid-cols-2 gap-2 lg:flex"><button onClick={() => setOnlyToday((value) => !value)} className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold transition ${onlyToday ? "bg-blue-700 text-white" : "border border-zinc-800 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}><ClipboardCheck className="h-4 w-4" /> Só hoje</button><button onClick={() => setLightMode((value) => !value)} className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold transition ${lightMode ? "bg-orange-600 text-white" : "border border-zinc-800 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}><Sparkles className="h-4 w-4" /> Modo leve</button></div>
           </div>
+          <div className="flex flex-wrap gap-2"><Segmented value={week} setValue={(next) => { setAutoWeekEnabled(false); setWeek(next); }} options={availableWeeks.map((item) => ({ value: item.id, label: item.label }))} /><button onClick={createPlan} className="inline-flex items-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-sm font-black text-zinc-950"><Plus className="h-4 w-4" /> Treino personalizado</button>{customPlans.length > 0 && <button onClick={() => setEditorOpen(true)} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-black text-zinc-200"><Library className="h-4 w-4" /> Editar personalizado</button>}</div>
         </div>
       </header>
 
       <main className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 lg:px-8">
-        <section className="grid gap-4 md:grid-cols-4">
-          <DashboardCard icon={<CheckCircle2 className="h-6 w-6" />} title="Feitos" value={`${doneCount}/${totalCount}`} description="Exercícios marcados como feitos na tela atual." />
-          <DashboardCard icon={<Activity className="h-6 w-6" />} title="Progressão" value={`${increaseCount}`} description="Registros que bateram 3x15 e sugerem aumento de carga." />
-          <DashboardCard icon={<TimerReset className="h-6 w-6" />} title="Descanso" value="60–120s" description="Timer por exercício, com presets rápidos." />
-          <DashboardCard icon={<RotateCcw className="h-6 w-6" />} title="Modo leve" value={lightMode ? "Ativo" : "Off"} description="Corta o treino para os 4 primeiros exercícios." />
-        </section>
-
-        <section className="grid gap-5 lg:grid-cols-2">
-          <div>
-            <h2 className="mb-3 text-xl font-black text-zinc-50">Divisão muscular</h2>
-            <InfoTable headers={["Tipo", "Músculos trabalhados"]} rows={overview} />
-          </div>
-          <div>
-            <h2 className="mb-3 text-xl font-black text-zinc-50">Séries e repetições</h2>
-            <InfoTable headers={["Tipo", "Séries", "Repetições"]} rows={progression} />
-          </div>
-        </section>
-
-        <section className="grid gap-5 lg:grid-cols-2">
-          <div>
-            <h2 className="mb-3 text-xl font-black text-zinc-50">Cardio sugerido</h2>
-            <InfoTable headers={["Período", "Cardio"]} rows={cardio} />
-          </div>
-          <div>
-            <h2 className="mb-3 text-xl font-black text-zinc-50">Semana regenerativa</h2>
-            <InfoTable headers={["Variável", "Ajuste"]} rows={recovery} />
-          </div>
-        </section>
-
-        <section className="space-y-5">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <p className="text-sm font-bold uppercase tracking-[0.18em] text-zinc-500">Treinos</p>
-              <h2 className="text-2xl font-black text-zinc-50">{phase === "fase1" ? "Fase 1: meses 1 a 6" : "Fase 2: após 6 meses"} · Semana {week}</h2>
-            </div>
-            <p className="hidden text-sm text-zinc-500 sm:block">{filteredPlans.length} bloco(s) encontrado(s)</p>
-          </div>
-
-          {filteredPlans.length > 0 ? (
-            filteredPlans.map((plan) => <DayCard key={plan.id} plan={plan} logs={logs} updateLog={updateLog} onMuscleClick={setSelectedMuscle} lightMode={lightMode} />)
-          ) : (
-            <div className="rounded-3xl border border-dashed border-zinc-700 bg-zinc-900 p-10 text-center text-zinc-400">Nada encontrado. A busca conseguiu descansar mais que domingo.</div>
-          )}
-        </section>
+        <section className="grid gap-4 md:grid-cols-4"><DashboardCard icon={<CheckCircle2 className="h-6 w-6" />} title="Feitos" value={`${doneCount}/${totalCount}`} description="Exercícios marcados como feitos na tela atual." /><DashboardCard icon={<Activity className="h-6 w-6" />} title="Progressão" value={`${increaseCount}`} description="Registros que bateram 3x15 e sugerem aumento de carga." /><DashboardCard icon={<TimerReset className="h-6 w-6" />} title="Descanso" value="60-120s" description="Timer por exercício, com presets rápidos." /><DashboardCard icon={<RotateCcw className="h-6 w-6" />} title="Plano" value={activePlan.name} description={`Semana automática alterna entre ${weekIds.join(", ") || "A"}; ocorrência atual: ${weekBlock + 1}.`} /></section>
+        <section className="rounded-3xl border border-zinc-800 bg-zinc-900 p-5 shadow-sm"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold uppercase tracking-[0.18em] text-zinc-500">Começar treino</p><h2 className="mt-1 text-xl font-black text-zinc-50">{activePlan.name} · Semana {week}</h2><p className="mt-2 text-sm text-zinc-400">Use “Só hoje” para focar no treino do dia, ou busque qualquer exercício da semana selecionada.</p></div><button onClick={() => { setOnlyToday(true); setWeek(autoWeek); }} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-sm font-black text-zinc-950 hover:bg-white"><CalendarDays className="h-4 w-4" /> Começar treino</button></div></section>
+        <QuickLogs painLogs={painLogs} setPainLogs={setPainLogs} cardioLogs={cardioLogs} setCardioLogs={setCardioLogs} />
+        <section className="space-y-5"><div className="flex items-end justify-between gap-4"><div><p className="text-sm font-bold uppercase tracking-[0.18em] text-zinc-500">Treinos</p><h2 className="text-2xl font-black text-zinc-50">{activePlan.id === defaultTrainingPlan.id ? (phase === "fase1" ? "Fase 1: meses 1 a 6" : "Fase 2: após 6 meses") : activePlan.name} · Semana {week}</h2></div><p className="hidden text-sm text-zinc-500 sm:block">{filteredPlans.length} bloco(s) encontrado(s)</p></div>{filteredPlans.length > 0 ? filteredPlans.map((plan) => <DayCard key={plan.id} plan={plan} logs={logs} getLog={getLog} updateExerciseLog={updateExerciseLog} onMuscleClick={setSelectedMuscle} onAlternativeClick={(idOrName, source) => setSelectedAlternative({ idOrName, source })} lightMode={lightMode} />) : <div className="rounded-3xl border border-dashed border-zinc-700 bg-zinc-900 p-10 text-center text-zinc-400">Nada encontrado para esta busca.</div>}</section>
       </main>
 
+      <InfoModal isOpen={infoModalOpen} onClose={() => setInfoModalOpen(false)} />
       <MuscleModal focus={selectedMuscle} onClose={() => setSelectedMuscle(null)} />
+      <AlternativeModal alternative={selectedAlternative} onClose={() => setSelectedAlternative(null)} onMuscleClick={setSelectedMuscle} />
+      <TrainingEditor open={editorOpen} plans={customPlans} activePlanId={activePlanId} onClose={() => setEditorOpen(false)} onSave={saveCustomPlan} onDelete={deleteCustomPlan} />
     </div>
   );
 }

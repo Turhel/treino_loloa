@@ -1,0 +1,17 @@
+{
+  "name": "Treino Loloa",
+  "short_name": "Treino",
+  "description": "Treino interativo com progresso, vídeos e planos personalizados.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
