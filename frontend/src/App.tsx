@@ -77,7 +77,7 @@ const WEEKLY_SUMMARY_KEY = "treino-loloa-weekly-summaries-v1";
 const cardioTypeOptions = ["Caminhada", "Esteira", "Corrida", "Bicicleta", "Elíptico", "Escada", "Outro"];
 
 const typeStyle: Record<TrainingType, { label: string; chip: string; border: string; soft: string; icon: string }> = {
-  puxar: { label: "Puxar", chip: "bg-blue-950/70 text-blue-200 ring-blue-800", border: "border-blue-500", soft: "bg-blue-950/30", icon: "??" },
+  puxar: { label: "Puxar", chip: "bg-blue-950/70 text-blue-200 ring-blue-800", border: "border-blue-500", soft: "bg-blue-950/30", icon: "🔵" },
   empurrar: { label: "Empurrar", chip: "bg-rose-950/70 text-rose-200 ring-rose-800", border: "border-rose-500", soft: "bg-rose-950/30", icon: "🔴" },
   gluteo: { label: "Posterior/glúteos", chip: "bg-orange-950/70 text-orange-200 ring-orange-800", border: "border-orange-500", soft: "bg-orange-950/30", icon: "🟠" },
   inferior: { label: "Inferiores", chip: "bg-emerald-950/70 text-emerald-200 ring-emerald-800", border: "border-emerald-500", soft: "bg-emerald-950/30", icon: "🟢" },
