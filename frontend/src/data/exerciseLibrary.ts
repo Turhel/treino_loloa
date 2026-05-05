@@ -177,6 +177,15 @@ const extraExercises: ExerciseLibraryItem[] = [
     tips: ["Punhos neutros.", "Cotovelos perto do corpo.", "Controle a volta."],
     rest: 60,
   },
+  {
+    id: "sumo-terra",
+    name: "Levantamento Terra Sumo",
+    focus: "Posterior e glúteos",
+    muscles: ["posterior_coxa", "gluteos", "lombar", "adutores"],
+    description: "Levantamento de barra com pegada ampla para ênfase em glúteos e adutores.",
+    tips: ["Corpo tensionado.", "Penas mais abertas.", "Pés apontados levemente para fora."],
+    rest: 90,
+  },
 ];
 
 function fromExercise(exercise: Exercise): ExerciseLibraryItem {

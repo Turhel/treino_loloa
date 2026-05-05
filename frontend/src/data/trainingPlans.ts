@@ -20,6 +20,7 @@ export function alternativesFor(name: string) {
   if (text.includes("tríceps") || text.includes("triceps")) return ["Tríceps corda", "Tríceps barra V", "Tríceps unilateral"];
   if (text.includes("rosca")) return ["Rosca cabo", "Rosca alternada", "Rosca martelo"];
   if (text.includes("panturrilha")) return ["Panturrilha em pé", "Panturrilha sentada", "Panturrilha no leg press"];
+  if (text.includes("levantamento terra")) return ["Stiff com halteres", "Leg press pés altos", "Hip thrust"];
   return ["Máquina equivalente", "Variação com cabo", "Variação com halter leve"];
 }
 
@@ -105,7 +106,7 @@ const legacyDayPlans: TrainingDay[] = [
       ex(4, "Cadeira adutora", "Parte interna da coxa"),
       ex(5, "Flexora sentada ou mesa flexora leve", "Posterior, sem excesso de carga"),
       ex(6, "Panturrilha em pé", "Gastrocnêmio"),
-      ex(7, "Panturrilha sentada", "Sóleo"),
+      ex(7, "Levantamento Terra Sumo", "Posterior e glúteos"),
     ],
   },
   {
