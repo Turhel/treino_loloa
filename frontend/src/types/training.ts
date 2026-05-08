@@ -65,6 +65,7 @@ export type ExerciseLibraryItem = {
   alternatives?: string[];
   rest?: number;
   videoKey?: string;
+  illustrations?: string[];
 };
 
 export type ExerciseLog = {

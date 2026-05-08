@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Activity,
@@ -10,6 +10,7 @@ import {
   Dumbbell,
   ExternalLink,
   FileText,
+  HeartPulse,
   Library,
   Play,
   Plus,
@@ -17,18 +18,25 @@ import {
   RotateCcw,
   Save,
   Search,
+  Settings,
   Sparkles,
   TimerReset,
   Trash2,
   Upload,
   X,
 } from "lucide-react";
+import type { User } from "@supabase/supabase-js";
+import { AuthModal } from "./components/AuthModal";
+import { UserMenu } from "./components/UserMenu";
 import { cardio, defaultTrainingPlan, getPlanDays, getPlanWeeks, overview, progression, recovery } from "./data/trainingPlans";
 import { exerciseLibrary, exerciseLibraryList, findExerciseLibraryItem, toPlanExercise } from "./data/exerciseLibrary";
 import { muscleImages } from "./data/muscleData";
 import type { CustomTrainingPlan, Exercise, ExerciseLog, Logs, Phase, TrainingDay, TrainingType, TrainingWeek } from "./types/training";
 import { focusToKey, focusToTargets } from "./utils/focus";
 import { getManualVideoLinks, videoKey, youtubeSearch } from "./utils/video";
+import { getCurrentSession, onAuthSessionChange, signOut } from "./services/authService";
+import { getUserAppData, hasRemoteData, mergeUserAppData, normalizeUserAppData, saveUserAppData, type UserAppData } from "./services/userDataService";
+import { PerformancePage } from "./pages/PerformancePage";
 import {
   ACTIVE_PLAN_KEY,
   AUTO_WEEK_KEY,
@@ -40,17 +48,24 @@ import {
   calculateWeekFromStart,
   emptyLog,
   exerciseKey,
+  getCurrentDayLogKey,
+  getLastExerciseHistory,
   getTodayName,
   readCustomPlans,
   readJson,
   saveCustomPlans,
   shouldIncrease,
+  todayDateKey,
   writeJson,
 } from "./utils/storage";
+import { addDays } from "./utils/schedule";
 
 const weekdays = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
-type PainLog = { date: string; level: string; text: string };
-type CardioLog = { date: string; minutes: string; type: string; intensity: string; lightMinutes?: string; moderateMinutes?: string; hardMinutes?: string };
+type PainLog = { id?: string; date: string; level: string; text: string };
+type CardioLog = { id?: string; date: string; minutes: string; type: string; intensity: string; lightMinutes?: string; moderateMinutes?: string; hardMinutes?: string };
+type SyncStatus = "Local" | "Sincronizado" | "Sincronizando" | "Erro ao sincronizar";
+type MediaTarget = { name: string; videoKey?: string; source?: Exercise };
+type AppView = "training" | "performance";
 type WeeklySummary = {
   id: string;
   generatedAt: string;
@@ -77,13 +92,13 @@ const WEEKLY_SUMMARY_KEY = "treino-loloa-weekly-summaries-v1";
 const cardioTypeOptions = ["Caminhada", "Esteira", "Corrida", "Bicicleta", "Elíptico", "Escada", "Outro"];
 
 const typeStyle: Record<TrainingType, { label: string; chip: string; border: string; soft: string; icon: string }> = {
-  puxar: { label: "Puxar", chip: "bg-blue-950/70 text-blue-200 ring-blue-800", border: "border-blue-500", soft: "bg-blue-950/30", icon: "🔵" },
-  empurrar: { label: "Empurrar", chip: "bg-rose-950/70 text-rose-200 ring-rose-800", border: "border-rose-500", soft: "bg-rose-950/30", icon: "🔴" },
-  gluteo: { label: "Posterior/glúteos", chip: "bg-orange-950/70 text-orange-200 ring-orange-800", border: "border-orange-500", soft: "bg-orange-950/30", icon: "🟠" },
-  inferior: { label: "Inferiores", chip: "bg-emerald-950/70 text-emerald-200 ring-emerald-800", border: "border-emerald-500", soft: "bg-emerald-950/30", icon: "🟢" },
-  superior: { label: "Superiores/acessórios", chip: "bg-violet-950/70 text-violet-200 ring-violet-800", border: "border-violet-500", soft: "bg-violet-950/30", icon: "🟣" },
-  cardio: { label: "Cardio/mobilidade", chip: "bg-teal-950/70 text-teal-200 ring-teal-800", border: "border-teal-500", soft: "bg-teal-950/30", icon: "🟡" },
-  descanso: { label: "Descanso", chip: "bg-zinc-800 text-zinc-300 ring-zinc-700", border: "border-zinc-500", soft: "bg-zinc-800/70", icon: "⚪" },
+  puxar: { label: "Puxar", chip: "bg-blue-950/70 text-blue-200 ring-blue-800", border: "border-blue-500", soft: "bg-blue-950/30", icon: "" },
+  empurrar: { label: "Empurrar", chip: "bg-rose-950/70 text-rose-200 ring-rose-800", border: "border-rose-500", soft: "bg-rose-950/30", icon: "" },
+  gluteo: { label: "Posterior/glúteos", chip: "bg-orange-950/70 text-orange-200 ring-orange-800", border: "border-orange-500", soft: "bg-orange-950/30", icon: "" },
+  inferior: { label: "Inferiores", chip: "bg-emerald-950/70 text-emerald-200 ring-emerald-800", border: "border-emerald-500", soft: "bg-emerald-950/30", icon: "" },
+  superior: { label: "Superiores/acessórios", chip: "bg-violet-950/70 text-violet-200 ring-violet-800", border: "border-violet-500", soft: "bg-violet-950/30", icon: "" },
+  cardio: { label: "Cardio/mobilidade", chip: "bg-teal-950/70 text-teal-200 ring-teal-800", border: "border-teal-500", soft: "bg-teal-950/30", icon: "" },
+  descanso: { label: "Descanso", chip: "bg-zinc-800 text-zinc-300 ring-zinc-700", border: "border-zinc-500", soft: "bg-zinc-800/70", icon: "" },
 };
 
 function useLocalStorageLogs() {
@@ -92,7 +107,7 @@ function useLocalStorageLogs() {
   function updateLog(key: string, patch: Partial<ExerciseLog>) {
     setLogs((current) => ({ ...current, [key]: { ...(current[key] ?? emptyLog()), ...patch, updatedAt: new Date().toISOString() } }));
   }
-  return { logs, updateLog, clearLogs: () => setLogs({}) };
+  return { logs, setLogs, updateLog, clearLogs: () => setLogs({}) };
 }
 
 function useStoredArray<T>(key: string) {
@@ -110,6 +125,20 @@ function useStoredArray<T>(key: string) {
 
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function getDayIndex(dayName: string) {
+  return weekdays.findIndex((day) => day.toLowerCase() === dayName.toLowerCase());
+}
+
+function shouldDayStartOpen(dayName: string, todayName: string, query: string, onlyToday: boolean) {
+  if (query.trim()) return true;
+  if (onlyToday) return dayName === todayName;
+  return getDayIndex(dayName) === getDayIndex(todayName);
+}
+
+function makeEntryId(prefix: string) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function numericValue(value: string) {
@@ -306,14 +335,8 @@ function Segmented<T extends string>({ value, setValue, options }: { value: T; s
   );
 }
 
-function DashboardCard({ icon, title, value, description }: { icon: React.ReactNode; title: string; value: string; description: string }) {
-  return (
-    <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-5 shadow-sm">
-      <div className="flex items-center gap-3 text-zinc-400">{icon}<span className="text-sm font-bold uppercase tracking-[0.14em]">{title}</span></div>
-      <p className="mt-3 text-3xl font-black text-zinc-50">{value}</p>
-      <p className="mt-2 text-sm leading-6 text-zinc-400">{description}</p>
-    </div>
-  );
+function StatBadge({ icon, title, value, tooltip }: { icon: React.ReactNode; title: string; value: string; tooltip: string }) {
+  return <span title={tooltip} className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950/80 px-3 py-2 text-xs font-black text-zinc-200 shadow-sm shadow-black/20"><span className="text-zinc-400">{icon}</span><span className="text-zinc-500">{title}</span><span className="text-zinc-50">{value}</span></span>;
 }
 
 function LogInputs({ log, onLog, compact = false }: { log: ExerciseLog; onLog: (patch: Partial<ExerciseLog>) => void; compact?: boolean }) {
@@ -343,7 +366,7 @@ function RestTimer({ defaultSeconds }: { defaultSeconds: number }) {
     const id = window.setTimeout(() => setSeconds((value) => value - 1), 1000);
     return () => window.clearTimeout(id);
   }, [running, seconds]);
-  if (!defaultSeconds) return <span className="text-zinc-500">—</span>;
+  if (!defaultSeconds) return <span className="text-zinc-500">-</span>;
   return (
     <div className="flex flex-wrap items-center gap-2">
       <button onClick={() => setRunning((value) => !value)} className={`rounded-xl px-3 py-2 text-xs font-black ${running ? "bg-orange-950/70 text-orange-200" : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"}`}>
@@ -366,95 +389,22 @@ function FocusLinks({ focus, onMuscleClick, compact = false }: { focus: string; 
   );
 }
 
-function VideoButton({ name, videoKey: explicitVideoKey, compact = false }: { name: string; videoKey?: string; compact?: boolean }) {
-  if (explicitVideoKey === "-") return compact ? null : <span className="text-zinc-500">—</span>;
-
-  const isValidVideoUrl = (value?: string) => {
-    const trimmed = value?.trim();
-    return trimmed && /^https?:\/\//i.test(trimmed) ? trimmed : "";
-  };
-  const manual = getManualVideoLinks(name, explicitVideoKey);
-  const youtubeUrl = isValidVideoUrl(manual?.youtube);
-  const tiktokUrl = isValidVideoUrl(manual?.tiktok);
-  const options: { label: string; value: string; tone: string; dot: string; iconBg: string }[] = [
-    ...(youtubeUrl ? [{ label: "YouTube", value: youtubeUrl, tone: "text-red-200", dot: "bg-red-500", iconBg: "bg-red-500 text-white" }] : []),
-    ...(tiktokUrl ? [{ label: "TikTok", value: tiktokUrl, tone: "text-cyan-200", dot: "bg-cyan-400", iconBg: "bg-cyan-400 text-zinc-950" }] : []),
-  ];
-  const fallbackUrl = youtubeSearch(explicitVideoKey ?? name);
-
-  if (options.length > 1) {
-    return (
-      <details className={`group relative inline-block ${compact ? "shrink-0" : ""}`}>
-        <summary
-          aria-label={`Escolher onde assistir ${name}`}
-          className={`${compact ? "h-9 w-9 justify-center p-0" : "h-10 pl-1.5 pr-3"} flex cursor-pointer list-none items-center gap-2 overflow-hidden rounded-full border border-zinc-700/80 bg-zinc-950/95 text-xs font-black text-zinc-100 shadow-sm shadow-black/20 outline-none ring-1 ring-white/5 transition hover:border-zinc-500 hover:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-zinc-400 [&::-webkit-details-marker]:hidden`}
-        >
-          <span className={`${compact ? "h-full w-full" : "h-7 w-7"} relative flex shrink-0 items-center justify-center rounded-full bg-red-500 text-white shadow-sm shadow-red-950/40`}>
-            <Play className={`${compact ? "h-4 w-4" : "h-3.5 w-3.5"} translate-x-px fill-current`} />
-            {compact && <span className="absolute bottom-0 right-0 flex h-3.5 w-3.5 items-center justify-center rounded-full border border-zinc-950 bg-zinc-900 text-zinc-300"><ChevronDown className="h-2.5 w-2.5 transition group-open:rotate-180" /></span>}
-          </span>
-          {!compact && <span>Abrir</span>}
-          {!compact && <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-zinc-400 transition group-open:bg-zinc-800 group-open:text-zinc-100">
-            <ChevronDown className="h-3 w-3 transition group-open:rotate-180" />
-          </span>}
-        </summary>
-        <div className={`absolute ${compact ? "right-0" : "left-0"} top-12 z-30 w-48 rounded-2xl border border-zinc-700/80 bg-zinc-950 p-1.5 shadow-2xl shadow-black/50 ring-1 ring-white/10 before:absolute before:-top-1.5 ${compact ? "before:right-6" : "before:left-6"} before:h-3 before:w-3 before:rotate-45 before:border-l before:border-t before:border-zinc-700/80 before:bg-zinc-950`}>
-          <p className="relative px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">Assistir em</p>
-          {options.map((option) => (
-            <a key={option.label} href={option.value} target="_blank" rel="noreferrer" className="relative flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm font-black text-zinc-100 transition hover:bg-zinc-800">
-              <span className="flex items-center gap-2">
-                <span className={`h-2 w-2 rounded-full ${option.dot}`} />
-                <span className={option.tone}>{option.label}</span>
-              </span>
-              <ExternalLink className="h-3.5 w-3.5 text-zinc-500" />
-            </a>
-          ))}
-        </div>
-      </details>
-    );
-  }
-
-  if (options.length === 0) {
-    return (
-      <a
-        href={fallbackUrl}
-        target="_blank"
-        rel="noreferrer"
-        aria-label={`Buscar vídeo de ${name} no YouTube`}
-        className={`${compact ? "inline-flex h-9 w-9 shrink-0 items-center justify-center p-0 leading-none" : "inline-flex h-10 items-center gap-2 rounded-full pl-1.5 pr-3 text-xs"} overflow-hidden rounded-full border border-zinc-700/80 bg-zinc-950/95 font-black text-zinc-100 shadow-sm shadow-black/20 outline-none ring-1 ring-white/5 transition hover:border-zinc-500 hover:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-zinc-400`}
-      >
-        {compact ? (
-          <Search className="block h-4 w-4 text-zinc-300" />
-        ) : (
-          <>
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 text-zinc-950">
-              <Play className="h-3.5 w-3.5 translate-x-px fill-current" />
-            </span>
-            <span>Buscar</span>
-            <Search className="h-3.5 w-3.5 text-zinc-400" />
-          </>
-        )}
-      </a>
-    );
-  }
-
-  const url = options[0].value;
-  const directOption = options[0];
+function VideoButton({ name, videoKey: explicitVideoKey, compact = false, onOpen }: { name: string; videoKey?: string; compact?: boolean; onOpen: (target: MediaTarget) => void }) {
+  if (explicitVideoKey === "-") return compact ? null : <span className="text-zinc-500">-</span>;
   return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noreferrer"
-      className={`${compact ? "h-9 w-9 shrink-0 justify-center rounded-full border border-zinc-700/80 bg-zinc-950/95 px-0 text-xs text-zinc-100 ring-1 ring-white/5 hover:bg-zinc-900" : "inline-flex h-10 items-center gap-2 rounded-full bg-zinc-100 px-3 text-xs text-zinc-950 hover:bg-white"} overflow-hidden font-black shadow-sm transition`}
+    <button
+      type="button"
+      onClick={() => onOpen({ name, videoKey: explicitVideoKey })}
+      aria-label={`Ver exercício ${name}`}
+      className={`${compact ? "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full p-0" : "inline-flex h-10 items-center gap-2 rounded-full px-3"} border border-zinc-700/80 bg-zinc-950/95 text-xs font-black text-zinc-100 shadow-sm shadow-black/20 outline-none ring-1 ring-white/5 transition hover:border-zinc-500 hover:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-zinc-400`}
     >
-      <span className={`${compact ? directOption.iconBg : ""} ${compact ? "flex h-full w-full items-center justify-center rounded-full" : ""}`}>
+      <span className={`${compact ? "" : "flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 text-zinc-950"}`}>
         <Play className={`${compact ? "h-4 w-4" : "h-3.5 w-3.5"} translate-x-px fill-current`} />
       </span>
-      {!compact && "Abrir"}
-    </a>
+      {!compact && <span>Ver exercício</span>}
+    </button>
   );
 }
-
 function AlternativeChips({ exercise, onAlternativeClick }: { exercise: Exercise; onAlternativeClick: (idOrName: string, source: Exercise) => void }) {
   return (
     <div className="mt-2 flex flex-wrap gap-2">
@@ -466,39 +416,41 @@ function AlternativeChips({ exercise, onAlternativeClick }: { exercise: Exercise
   );
 }
 
-function ExerciseHistory({ logs, exercise }: { logs: Logs; exercise: Exercise }) {
-  const rows = Object.entries(logs).filter(([key]) => key.includes(`::${exercise.id}::`) || key.endsWith(`::${exercise.name}`)).slice(-3);
+function ExerciseHistory({ logs, exercise, currentLogKey }: { logs: Logs; exercise: Exercise; currentLogKey: string }) {
+  const last = getLastExerciseHistory(exercise.id, logs, currentLogKey);
+  const rows = Object.entries(logs).filter(([key]) => key !== currentLogKey && (key.includes(`::${exercise.id}::`) || key.endsWith(`::${exercise.name}`) || key.endsWith(`:${exercise.id}`))).slice(-3);
   if (rows.length === 0) return null;
   return (
     <details className="mt-2 text-xs text-zinc-400">
       <summary className="cursor-pointer font-bold text-zinc-300">Histórico</summary>
+      {last && <p className="mt-2 rounded-xl bg-blue-950/40 px-2 py-1 font-bold text-blue-100">Última vez: {last.load || "sem carga"} kg · {last.reps1 || "-"}/{last.reps2 || "-"}/{last.reps3 || "-"} reps</p>}
       <div className="mt-2 grid gap-1">{rows.map(([key, log]) => <p key={key} className="rounded-xl bg-zinc-950 px-2 py-1">{log.load || "sem carga"} kg · {log.reps1 || "-"}/{log.reps2 || "-"}/{log.reps3 || "-"} reps{log.note ? ` · ${log.note}` : ""}</p>)}</div>
     </details>
   );
 }
 
-function ExerciseRow({ exercise, log, logs, onLog, onMuscleClick, onAlternativeClick, lightMode }: { exercise: Exercise; log: ExerciseLog; logs: Logs; onLog: (patch: Partial<ExerciseLog>) => void; onMuscleClick: (muscleKey: string) => void; onAlternativeClick: (idOrName: string, source: Exercise) => void; lightMode: boolean }) {
+function ExerciseRow({ exercise, log, logs, onLog, onMuscleClick, onAlternativeClick, onMediaOpen, lightMode, exerciseDomKey, registerExerciseRef, highlighted, currentLogKey }: { exercise: Exercise; log: ExerciseLog; logs: Logs; onLog: (patch: Partial<ExerciseLog>) => void; onMuscleClick: (muscleKey: string) => void; onAlternativeClick: (idOrName: string, source: Exercise) => void; onMediaOpen: (target: MediaTarget) => void; lightMode: boolean; exerciseDomKey: string; registerExerciseRef: (key: string, element: HTMLElement | null) => void; highlighted: boolean; currentLogKey: string }) {
   const increase = shouldIncrease(log);
   return (
-    <tr className={`align-top transition ${log.done ? "bg-emerald-950/30" : "hover:bg-zinc-800/50"}`}>
+    <tr ref={(element) => registerExerciseRef(exerciseDomKey, element)} className={`scroll-mt-28 align-top transition ${highlighted ? "bg-blue-950/60 ring-2 ring-blue-400" : log.done ? "bg-emerald-950/30" : "hover:bg-zinc-800/50"}`}>
       <td className="px-4 py-3 font-semibold text-zinc-400"><label className="flex items-center gap-2"><input type="checkbox" checked={log.done} onChange={(event) => onLog({ done: event.target.checked })} className="h-4 w-4 rounded border-zinc-700 accent-emerald-500" />{exercise.order}</label></td>
-      <td className="px-4 py-3"><p className="font-bold text-zinc-100">{exercise.name}</p><details className="mt-2 text-xs text-zinc-400"><summary className="cursor-pointer font-bold text-zinc-300">Alternativas</summary><AlternativeChips exercise={exercise} onAlternativeClick={onAlternativeClick} /></details><ExerciseHistory logs={logs} exercise={exercise} /></td>
+      <td className="px-4 py-3"><p className="font-bold text-zinc-100">{exercise.name}</p><details className="mt-2 text-xs text-zinc-400"><summary className="cursor-pointer font-bold text-zinc-300">Alternativas</summary><AlternativeChips exercise={exercise} onAlternativeClick={onAlternativeClick} /></details><ExerciseHistory logs={logs} exercise={exercise} currentLogKey={currentLogKey} /></td>
       <td className="px-4 py-3"><FocusLinks focus={`${exercise.name} ${exercise.focus}`} onMuscleClick={onMuscleClick} /></td>
       <td className="px-4 py-3"><LogInputs log={log} onLog={onLog} />{increase && <p className="mt-2 rounded-xl bg-emerald-950/70 px-2 py-1 text-xs font-black text-emerald-200">Bateu 3x15. Próximo treino: aumentar carga.</p>}{lightMode && <p className="mt-2 text-xs font-semibold text-orange-300">Modo leve ativo: foco em execução limpa.</p>}</td>
       <td className="px-4 py-3"><RestTimer defaultSeconds={exercise.rest ?? 60} /></td>
-      <td className="px-4 py-3"><VideoButton name={exercise.name} videoKey={exercise.videoKey} /></td>
+      <td className="px-4 py-3"><VideoButton name={exercise.name} videoKey={exercise.videoKey} onOpen={onMediaOpen} /></td>
     </tr>
   );
 }
 
 function ExerciseMobileCard(props: Parameters<typeof ExerciseRow>[0]) {
-  const { exercise, log, logs, onLog, onMuscleClick, onAlternativeClick, lightMode } = props;
+  const { exercise, log, logs, onLog, onMuscleClick, onAlternativeClick, onMediaOpen, lightMode, exerciseDomKey, registerExerciseRef, highlighted, currentLogKey } = props;
   const increase = shouldIncrease(log);
   return (
-    <article className={`rounded-2xl border p-4 shadow-sm ${log.done ? "border-emerald-800 bg-emerald-950/30" : "border-zinc-800 bg-zinc-950/70"}`}>
+    <article ref={(element) => registerExerciseRef(exerciseDomKey, element)} className={`scroll-mt-28 rounded-2xl border p-4 shadow-sm transition ${highlighted ? "border-blue-400 bg-blue-950/50 ring-2 ring-blue-400" : log.done ? "border-emerald-800 bg-emerald-950/30" : "border-zinc-800 bg-zinc-950/70"}`}>
       <div className="flex items-start justify-between gap-3">
         <label className="flex min-w-0 items-start gap-3"><input type="checkbox" checked={log.done} onChange={(event) => onLog({ done: event.target.checked })} className="mt-1 h-5 w-5 shrink-0 rounded border-zinc-700 accent-emerald-500" /><span className="min-w-0"><span className="block text-xs font-black uppercase tracking-[0.14em] text-zinc-500">{exercise.order}</span><span className="block text-base font-black leading-snug text-zinc-50">{exercise.name}</span></span></label>
-        <VideoButton name={exercise.name} videoKey={exercise.videoKey} compact />
+        <VideoButton name={exercise.name} videoKey={exercise.videoKey} compact onOpen={onMediaOpen} />
       </div>
       <FocusLinks focus={`${exercise.name} ${exercise.focus}`} onMuscleClick={onMuscleClick} compact />
       <div className="mt-4 grid gap-3">
@@ -507,7 +459,7 @@ function ExerciseMobileCard(props: Parameters<typeof ExerciseRow>[0]) {
         {lightMode && <p className="text-xs font-semibold text-orange-300">Modo leve ativo: foco em execução limpa.</p>}
         <div><p className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">Descanso</p><RestTimer defaultSeconds={exercise.rest ?? 60} /></div>
         <details className="text-xs text-zinc-400"><summary className="cursor-pointer font-bold text-zinc-300">Alternativas se a máquina estiver ocupada</summary><AlternativeChips exercise={exercise} onAlternativeClick={onAlternativeClick} /></details>
-        <ExerciseHistory logs={logs} exercise={exercise} />
+        <ExerciseHistory logs={logs} exercise={exercise} currentLogKey={currentLogKey} />
       </div>
     </article>
   );
@@ -520,6 +472,14 @@ function DayCard({
   updateExerciseLog,
   onMuscleClick,
   onAlternativeClick,
+  onMediaOpen,
+  isOpen,
+  onToggle,
+  getExerciseDomKey,
+  getCurrentLogKey,
+  getDayDateKey,
+  registerExerciseRef,
+  highlightedExerciseKey,
   lightMode,
 }: {
   plan: TrainingDay;
@@ -528,19 +488,44 @@ function DayCard({
   updateExerciseLog: (plan: TrainingDay, exercise: Exercise, patch: Partial<ExerciseLog>) => void;
   onMuscleClick: (focus: string) => void;
   onAlternativeClick: (idOrName: string, source: Exercise) => void;
+  onMediaOpen: (target: MediaTarget) => void;
+  isOpen: boolean;
+  onToggle: () => void;
+  getExerciseDomKey: (plan: TrainingDay, exercise: Exercise) => string;
+  getCurrentLogKey: (plan: TrainingDay, exercise: Exercise) => string;
+  getDayDateKey: (plan: TrainingDay) => string;
+  registerExerciseRef: (key: string, element: HTMLElement | null) => void;
+  highlightedExerciseKey: string | null;
   lightMode: boolean;
 }) {
   const style = typeStyle[plan.type] ?? typeStyle.superior;
   const exercises = lightMode && plan.exercises.length > 4 ? plan.exercises.slice(0, 4) : plan.exercises;
   const done = exercises.filter((exercise) => getLog(plan, exercise)?.done).length;
+  const hasProgression = exercises.some((exercise) => shouldIncrease(getLog(plan, exercise)));
   const estimatedCalories = exercises.reduce((sum, exercise) => sum + estimateExerciseCalories(getLog(plan, exercise)), 0);
+  const sessionDateKey = getDayDateKey(plan);
   const calorieTooltip = "Estimativa simples baseada em volume registrado: carga x repetições x fator metabólico. Só entra no cálculo quando há carga e pelo menos 1 repetição.";
   return (
-    <motion.section layout initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className={`overflow-hidden rounded-3xl border-l-8 ${style.border} border-y border-r border-zinc-800 bg-zinc-900 shadow-sm`}>
-      <div className={`flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${style.soft}`}><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-400">{plan.day}</p><h3 className="mt-1 text-lg font-black text-zinc-50">{plan.title}</h3></div><div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-zinc-950/80 px-3 py-1 text-xs font-black text-zinc-300 ring-1 ring-zinc-800">{done}/{exercises.length} feitos</span>{estimatedCalories > 0 && <span title={calorieTooltip} className="rounded-full bg-amber-950/70 px-3 py-1 text-xs font-black text-amber-200 ring-1 ring-amber-800">~{formatCalories(estimatedCalories)}</span>}<span className={`w-fit rounded-full px-3 py-1 text-xs font-bold ring-1 ${style.chip}`}>{style.icon} {style.label}</span></div></div>
-      <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[1080px] text-left text-sm"><thead className="border-y border-zinc-800 bg-zinc-950 text-xs uppercase tracking-wide text-zinc-400"><tr><th className="w-24 px-4 py-3">Feito</th><th className="px-4 py-3">Exercício</th><th className="px-4 py-3">Foco</th><th className="w-80 px-4 py-3">Carga/reps</th><th className="w-52 px-4 py-3">Descanso</th><th className="w-28 px-4 py-3">Vídeo</th></tr></thead><tbody className="divide-y divide-zinc-800">{exercises.map((exercise) => { const key = exerciseKey(plan, exercise); return <ExerciseRow key={key} exercise={exercise} log={getLog(plan, exercise) ?? emptyLog()} logs={logs} onLog={(patch) => updateExerciseLog(plan, exercise, patch)} onMuscleClick={onMuscleClick} onAlternativeClick={onAlternativeClick} lightMode={lightMode} />; })}</tbody></table></div>
-      <div className="grid gap-3 p-4 md:hidden">{exercises.map((exercise) => { const key = exerciseKey(plan, exercise); return <ExerciseMobileCard key={key} exercise={exercise} log={getLog(plan, exercise) ?? emptyLog()} logs={logs} onLog={(patch) => updateExerciseLog(plan, exercise, patch)} onMuscleClick={onMuscleClick} onAlternativeClick={onAlternativeClick} lightMode={lightMode} />; })}</div>
-      {plan.optional && <div className="border-t border-zinc-800 px-5 py-4 text-sm text-zinc-400"><span className="font-black text-zinc-100">Opcionais:</span> {plan.optional}</div>}
+    <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className={`overflow-hidden rounded-3xl border-l-8 ${style.border} border-y border-r border-zinc-800 bg-zinc-900 shadow-sm`}>
+      <div className={`flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-start sm:justify-between ${style.soft}`}>
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-400">{plan.day}</p>
+          <h3 className="mt-1 max-w-3xl text-lg font-black leading-snug text-zinc-50">{plan.title}</h3>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <span className="rounded-full bg-zinc-950/80 px-3 py-1 text-xs font-black text-zinc-300 ring-1 ring-zinc-800">{done}/{exercises.length} feitos</span>
+          {hasProgression && <span className="rounded-full bg-emerald-950/70 px-3 py-1 text-xs font-black text-emerald-200 ring-1 ring-emerald-800">Progressão</span>}
+          {estimatedCalories > 0 && <span title={calorieTooltip} className="rounded-full bg-amber-950/70 px-3 py-1 text-xs font-black text-amber-200 ring-1 ring-amber-800">~{formatCalories(estimatedCalories)}</span>}
+          <span title="Data usada na chave desta sessão" className="rounded-full bg-zinc-950/80 px-3 py-1 text-xs font-black text-zinc-300 ring-1 ring-zinc-800">{sessionDateKey === todayDateKey() ? "Hoje" : sessionDateKey}</span>
+          <span className={`w-fit rounded-full px-3 py-1 text-xs font-bold ring-1 ${style.chip}`}>{style.label}</span>
+          <button type="button" onClick={onToggle} className="inline-flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-950 px-3 py-1 text-xs font-black text-zinc-200 transition hover:bg-zinc-800">
+            {isOpen ? "Recolher" : "Expandir"} <ChevronDown className={`h-3.5 w-3.5 transition ${isOpen ? "rotate-180" : ""}`} />
+          </button>
+        </div>
+      </div>
+      {isOpen && <><div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[1080px] text-left text-sm"><thead className="border-y border-zinc-800 bg-zinc-950 text-xs uppercase tracking-wide text-zinc-400"><tr><th className="w-24 px-4 py-3">Feito</th><th className="px-4 py-3">Exercício</th><th className="px-4 py-3">Foco</th><th className="w-80 px-4 py-3">Carga/reps</th><th className="w-52 px-4 py-3">Descanso</th><th className="w-28 px-4 py-3">Vídeo</th></tr></thead><tbody className="divide-y divide-zinc-800">{exercises.map((exercise) => { const key = exerciseKey(plan, exercise); const domKey = getExerciseDomKey(plan, exercise); const currentLogKey = getCurrentLogKey(plan, exercise); return <ExerciseRow key={key} currentLogKey={currentLogKey} exerciseDomKey={domKey} registerExerciseRef={registerExerciseRef} highlighted={highlightedExerciseKey === domKey} exercise={exercise} log={getLog(plan, exercise) ?? emptyLog()} logs={logs} onLog={(patch) => updateExerciseLog(plan, exercise, patch)} onMuscleClick={onMuscleClick} onAlternativeClick={onAlternativeClick} onMediaOpen={onMediaOpen} lightMode={lightMode} />; })}</tbody></table></div>
+      <div className="grid gap-3 p-4 md:hidden">{exercises.map((exercise) => { const key = exerciseKey(plan, exercise); const domKey = getExerciseDomKey(plan, exercise); const currentLogKey = getCurrentLogKey(plan, exercise); return <ExerciseMobileCard key={key} currentLogKey={currentLogKey} exerciseDomKey={domKey} registerExerciseRef={registerExerciseRef} highlighted={highlightedExerciseKey === domKey} exercise={exercise} log={getLog(plan, exercise) ?? emptyLog()} logs={logs} onLog={(patch) => updateExerciseLog(plan, exercise, patch)} onMuscleClick={onMuscleClick} onAlternativeClick={onAlternativeClick} onMediaOpen={onMediaOpen} lightMode={lightMode} />; })}</div>
+      {plan.optional && <div className="border-t border-zinc-800 px-5 py-4 text-sm text-zinc-400"><span className="font-black text-zinc-100">Opcionais:</span> {plan.optional}</div>}</>}
     </motion.section>
   );
 }
@@ -560,7 +545,7 @@ function MuscleModal({ focus, onClose }: { focus: string | null; onClose: () => 
   );
 }
 
-function AlternativeModal({ alternative, onClose, onMuscleClick }: { alternative: { idOrName: string; source: Exercise } | null; onClose: () => void; onMuscleClick: (focus: string) => void }) {
+function AlternativeModal({ alternative, onClose, onMuscleClick, onMediaOpen }: { alternative: { idOrName: string; source: Exercise } | null; onClose: () => void; onMuscleClick: (focus: string) => void; onMediaOpen: (target: MediaTarget) => void }) {
   if (!alternative) return null;
   const item = findExerciseLibraryItem(alternative.idOrName);
   const name = item?.name ?? alternative.idOrName;
@@ -570,7 +555,48 @@ function AlternativeModal({ alternative, onClose, onMuscleClick }: { alternative
   return (
     <ModalShell onClose={onClose}>
       <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-zinc-800 bg-zinc-900/95 p-5 backdrop-blur"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">Alternativa</p><h2 className="mt-1 text-2xl font-black text-zinc-50">{name}</h2><p className="mt-2 text-sm text-zinc-400">{focus}</p></div><button onClick={onClose} className="rounded-full bg-zinc-800 p-2 text-zinc-300"><X className="h-5 w-5" /></button></div>
-      <div className="grid gap-5 p-5 md:grid-cols-[0.9fr_1.1fr]"><div className="rounded-2xl bg-zinc-950 p-3"><img src={primaryMuscle.image} alt={primaryMuscle.title} className="h-full max-h-[360px] w-full object-contain" /></div><div><p className="text-base leading-relaxed text-zinc-300">{item?.description ?? "Informações completas ainda não cadastradas. Use esta alternativa como variação próxima ao exercício original e confirme a execução com um profissional."}</p><div className="mt-4 flex flex-wrap gap-2">{muscles.map((muscle) => <button key={muscle} onClick={() => onMuscleClick(muscle)} className="rounded-full bg-blue-950/40 px-3 py-1 text-xs font-black text-blue-200 ring-1 ring-blue-800">{muscleImages[muscle]?.title ?? muscle}</button>)}</div><ul className="mt-4 space-y-2 text-sm text-zinc-300">{(item?.tips ?? ["Controle o movimento.", "Use carga confortável.", "Pare se sentir dor articular."]).map((tip) => <li key={tip} className="rounded-xl bg-zinc-950 px-3 py-2">• {tip}</li>)}</ul><div className="mt-5 flex flex-wrap gap-2"><VideoButton name={name} videoKey={item?.videoKey ?? item?.id ?? name} /></div></div></div>
+      <div className="grid gap-5 p-5 md:grid-cols-[0.9fr_1.1fr]"><div className="rounded-2xl bg-zinc-950 p-3"><img src={primaryMuscle.image} alt={primaryMuscle.title} className="h-full max-h-[360px] w-full object-contain" /></div><div><p className="text-base leading-relaxed text-zinc-300">{item?.description ?? "Informações completas ainda não cadastradas. Use esta alternativa como variação próxima ao exercício original e confirme a execução com um profissional."}</p><div className="mt-4 flex flex-wrap gap-2">{muscles.map((muscle) => <button key={muscle} onClick={() => onMuscleClick(muscle)} className="rounded-full bg-blue-950/40 px-3 py-1 text-xs font-black text-blue-200 ring-1 ring-blue-800">{muscleImages[muscle]?.title ?? muscle}</button>)}</div><ul className="mt-4 space-y-2 text-sm text-zinc-300">{(item?.tips ?? ["Controle o movimento.", "Use carga confortável.", "Pare se sentir dor articular."]).map((tip) => <li key={tip} className="rounded-xl bg-zinc-950 px-3 py-2">• {tip}</li>)}</ul><div className="mt-5 flex flex-wrap gap-2"><VideoButton name={name} videoKey={item?.videoKey ?? item?.id ?? name} onOpen={onMediaOpen} /></div></div></div>
+    </ModalShell>
+  );
+}
+
+function ExerciseMediaModal({ target, onClose, onMuscleClick }: { target: MediaTarget | null; onClose: () => void; onMuscleClick: (focus: string) => void }) {
+  if (!target) return null;
+  const item = findExerciseLibraryItem(target.videoKey ?? target.name) ?? (target.source ? findExerciseLibraryItem(target.source.id) : undefined);
+  const name = item?.name ?? target.name;
+  const focus = item?.focus ?? target.source?.focus ?? "Foco não cadastrado";
+  const muscles = item?.muscles?.length ? item.muscles : focusToTargets(`${name} ${focus}`).map((entry) => entry.key);
+  const primaryMuscle = muscleImages[muscles[0]] ?? muscleImages[focusToKey(focus)] ?? muscleImages.core;
+  const manual = getManualVideoLinks(name, item?.videoKey ?? target.videoKey);
+  const validUrl = (value?: string) => value?.trim() && /^https?:\/\//i.test(value) ? value.trim() : "";
+  const youtubeUrl = validUrl(manual?.youtube);
+  const tiktokUrl = validUrl(manual?.tiktok);
+  const searchUrl = youtubeSearch(item?.videoKey ?? target.videoKey ?? name);
+  const illustrations = item?.illustrations ?? [];
+  return (
+    <ModalShell onClose={onClose} wide>
+      <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-zinc-800 bg-zinc-900/95 p-5 backdrop-blur">
+        <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">Ver exercício</p><h2 className="mt-1 text-2xl font-black text-zinc-50">{name}</h2><p className="mt-2 text-sm text-zinc-400">{focus}</p></div>
+        <button onClick={onClose} className="rounded-full bg-zinc-800 p-2 text-zinc-300"><X className="h-5 w-5" /></button>
+      </div>
+      <div className="grid gap-5 p-5 lg:grid-cols-[0.95fr_1.05fr]">
+        <div className="grid gap-3">
+          <div className="rounded-2xl bg-zinc-950 p-3"><img src={primaryMuscle.image} alt={primaryMuscle.title} className="h-full max-h-[320px] w-full object-contain" /></div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {illustrations.length ? illustrations.map((src, index) => <div key={src} className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950"><img src={src} alt={`${name} passo ${index + 1}`} className="aspect-[4/3] w-full object-cover" /></div>) : <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-950 p-4 text-sm font-bold text-zinc-400 sm:col-span-3">Ilustrações ainda não cadastradas</div>}
+          </div>
+        </div>
+        <div>
+          <p className="text-base leading-relaxed text-zinc-300">{item?.description ?? "Informações completas ainda não cadastradas. Use os vídeos e o foco muscular como referência inicial."}</p>
+          <div className="mt-4 flex flex-wrap gap-2">{muscles.map((muscle) => <button key={muscle} onClick={() => onMuscleClick(muscle)} className="rounded-full bg-blue-950/40 px-3 py-1 text-xs font-black text-blue-200 ring-1 ring-blue-800">{muscleImages[muscle]?.title ?? muscle}</button>)}</div>
+          <ul className="mt-4 space-y-2 text-sm text-zinc-300">{(item?.tips ?? ["Controle o movimento.", "Use carga confortável.", "Pare se sentir dor articular."]).map((tip) => <li key={tip} className="rounded-xl bg-zinc-950 px-3 py-2">• {tip}</li>)}</ul>
+          <div className="mt-5 flex flex-wrap gap-2">
+            {youtubeUrl && <a href={youtubeUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl bg-red-600 px-4 py-3 text-sm font-black text-white"><Play className="h-4 w-4 fill-current" /> YouTube</a>}
+            {tiktokUrl && <a href={tiktokUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl bg-cyan-400 px-4 py-3 text-sm font-black text-zinc-950"><ExternalLink className="h-4 w-4" /> TikTok</a>}
+            <a href={searchUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-black text-zinc-100 hover:bg-zinc-800"><Search className="h-4 w-4" /> Buscar no YouTube</a>
+          </div>
+        </div>
+      </div>
     </ModalShell>
   );
 }
@@ -639,7 +665,7 @@ function TrainingEditor({ open, plans, activePlanId, onClose, onSave, onDelete }
   );
 }
 
-function QuickLogs({ painLogs, setPainLogs, cardioLogs, setCardioLogs }: { painLogs: PainLog[]; setPainLogs: React.Dispatch<React.SetStateAction<PainLog[]>>; cardioLogs: CardioLog[]; setCardioLogs: React.Dispatch<React.SetStateAction<CardioLog[]>> }) {
+function QuickLogs({ painLogs, setPainLogs, cardioLogs, setCardioLogs, mode = "both" }: { painLogs: PainLog[]; setPainLogs: React.Dispatch<React.SetStateAction<PainLog[]>>; cardioLogs: CardioLog[]; setCardioLogs: React.Dispatch<React.SetStateAction<CardioLog[]>>; mode?: "both" | "pain" | "cardio" }) {
   const today = todayInputValue();
   const [pain, setPain] = useState({ date: today, text: "", level: "0" });
   const [cardioDraft, setCardioDraft] = useState<CardioLog>({ date: today, minutes: "", type: "Caminhada", intensity: "Variável", lightMinutes: "", moderateMinutes: "", hardMinutes: "" });
@@ -651,9 +677,9 @@ function QuickLogs({ painLogs, setPainLogs, cardioLogs, setCardioLogs }: { painL
   const cardioTooltip = "Estimativa por MET usando tipo, intensidade, minutos e peso de referência de 70 kg. Pode variar conforme peso, condicionamento e aparelho.";
   const totalCardioMinutes = cardioMinutes(cardioDraft);
   return (
-    <section className="grid gap-4 lg:grid-cols-2">
-      <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-5"><h3 className="text-lg font-black text-zinc-50">Check de dor/desconforto</h3><div className="mt-3 grid gap-2 sm:grid-cols-[auto_auto_1fr_auto]"><input type="date" value={pain.date} onChange={(e) => setPain({ ...pain, date: e.target.value })} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" /><select value={pain.level} onChange={(e) => setPain({ ...pain, level: e.target.value })} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"><option value="0">Sem dor</option><option value="1">Leve</option><option value="2">Moderada</option><option value="3">Forte</option></select><input value={pain.text} onChange={(e) => setPain({ ...pain, text: e.target.value })} placeholder="Onde sentiu?" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" /><button onClick={() => { setPainLogs((items) => [pain, ...items].slice(0, 12)); setPain({ date: today, text: "", level: "0" }); }} className="rounded-xl bg-zinc-100 px-3 py-2 text-sm font-black text-zinc-950">Salvar</button></div>{painLogs[0] && <p className="mt-3 text-sm text-zinc-400">Último: {painLogs[0].date} · nível {painLogs[0].level} · {painLogs[0].text || "sem observação"}</p>}</div>
-      <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-5"><div className="flex items-center justify-between gap-3"><div><h3 className="text-lg font-black text-zinc-50">Cardio</h3><p className="mt-1 text-xs font-bold text-zinc-500">Hoje · {new Date(`${today}T00:00:00`).toLocaleDateString("pt-BR")}</p></div>{cardioCalories > 0 && <span title={cardioTooltip} className="rounded-full bg-amber-950/70 px-3 py-1 text-xs font-black text-amber-200 ring-1 ring-amber-800">~{formatCalories(cardioCalories)}</span>}</div><div className="mt-3 grid gap-3"><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{cardioTypeOptions.map((type) => <button key={type} onClick={() => setCardioDraft({ ...cardioDraft, type })} className={`rounded-2xl px-3 py-2 text-sm font-black ring-1 transition ${cardioDraft.type === type ? "bg-zinc-100 text-zinc-950 ring-zinc-100" : "bg-zinc-950 text-zinc-300 ring-zinc-700 hover:bg-zinc-800"}`}>{type}</button>)}</div>{cardioDraft.type === "Outro" && <input value={customCardioType} onChange={(e) => setCustomCardioType(e.target.value)} placeholder="Qual cardio?" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" />}<div className="grid gap-2 sm:grid-cols-3"><label className="grid gap-1 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">Leve<input value={cardioDraft.lightMinutes} onChange={(e) => setCardioDraft({ ...cardioDraft, lightMinutes: e.target.value })} placeholder="min" inputMode="numeric" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-zinc-100" /></label><label className="grid gap-1 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">Moderado<input value={cardioDraft.moderateMinutes} onChange={(e) => setCardioDraft({ ...cardioDraft, moderateMinutes: e.target.value })} placeholder="min" inputMode="numeric" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-zinc-100" /></label><label className="grid gap-1 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">Forte<input value={cardioDraft.hardMinutes} onChange={(e) => setCardioDraft({ ...cardioDraft, hardMinutes: e.target.value })} placeholder="min" inputMode="numeric" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-zinc-100" /></label></div><button disabled={!totalCardioMinutes || cardioDraft.type === "Outro" && !customCardioType.trim()} onClick={() => { setCardioLogs((items) => [{ ...cardioToEstimate, date: today, intensity: "Variável" }, ...items].slice(0, 12)); setCardioDraft({ date: today, minutes: "", type: "Caminhada", intensity: "Variável", lightMinutes: "", moderateMinutes: "", hardMinutes: "" }); setCustomCardioType(""); }} className="rounded-xl bg-zinc-100 px-3 py-3 text-sm font-black text-zinc-950 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500">Salvar {totalCardioMinutes ? `${totalCardioMinutes} min` : ""}</button></div>{cardioLogs[0] && <p className="mt-3 text-sm text-zinc-400">Último: {cardioLogs[0].date} · {cardioLogs[0].type} · {cardioMinutes(cardioLogs[0]) || "?"} min · variável{lastCardioCalories > 0 ? ` · ~${formatCalories(lastCardioCalories)}` : ""}</p>}</div>
+    <section className={`grid gap-4 ${mode === "both" ? "lg:grid-cols-2" : ""}`}>
+      {mode !== "cardio" && <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-5"><h3 className="text-lg font-black text-zinc-50">Check de dor/desconforto</h3><div className="mt-3 grid gap-2 sm:grid-cols-[auto_auto_1fr_auto]"><input type="date" value={pain.date} onChange={(e) => setPain({ ...pain, date: e.target.value })} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" /><select value={pain.level} onChange={(e) => setPain({ ...pain, level: e.target.value })} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"><option value="0">Sem dor</option><option value="1">Leve</option><option value="2">Moderada</option><option value="3">Forte</option></select><input value={pain.text} onChange={(e) => setPain({ ...pain, text: e.target.value })} placeholder="Onde sentiu?" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" /><button onClick={() => { setPainLogs((items) => [{ ...pain, id: makeEntryId("pain") }, ...items].slice(0, 12)); setPain({ date: today, text: "", level: "0" }); }} className="rounded-xl bg-zinc-100 px-3 py-2 text-sm font-black text-zinc-950">Salvar</button></div>{painLogs[0] && <p className="mt-3 text-sm text-zinc-400">Último: {painLogs[0].date} · nível {painLogs[0].level} · {painLogs[0].text || "sem observação"}</p>}</div>}
+      {mode !== "pain" && <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-5"><div className="flex items-center justify-between gap-3"><div><h3 className="text-lg font-black text-zinc-50">Cardio</h3><p className="mt-1 text-xs font-bold text-zinc-500">Hoje · {new Date(`${today}T00:00:00`).toLocaleDateString("pt-BR")}</p></div>{cardioCalories > 0 && <span title={cardioTooltip} className="rounded-full bg-amber-950/70 px-3 py-1 text-xs font-black text-amber-200 ring-1 ring-amber-800">~{formatCalories(cardioCalories)}</span>}</div><div className="mt-3 grid gap-3"><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{cardioTypeOptions.map((type) => <button key={type} onClick={() => setCardioDraft({ ...cardioDraft, type })} className={`rounded-2xl px-3 py-2 text-sm font-black ring-1 transition ${cardioDraft.type === type ? "bg-zinc-100 text-zinc-950 ring-zinc-100" : "bg-zinc-950 text-zinc-300 ring-zinc-700 hover:bg-zinc-800"}`}>{type}</button>)}</div>{cardioDraft.type === "Outro" && <input value={customCardioType} onChange={(e) => setCustomCardioType(e.target.value)} placeholder="Qual cardio?" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" />}<div className="grid gap-2 sm:grid-cols-3"><label className="grid gap-1 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">Leve<input value={cardioDraft.lightMinutes} onChange={(e) => setCardioDraft({ ...cardioDraft, lightMinutes: e.target.value })} placeholder="min" inputMode="numeric" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-zinc-100" /></label><label className="grid gap-1 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">Moderado<input value={cardioDraft.moderateMinutes} onChange={(e) => setCardioDraft({ ...cardioDraft, moderateMinutes: e.target.value })} placeholder="min" inputMode="numeric" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-zinc-100" /></label><label className="grid gap-1 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">Forte<input value={cardioDraft.hardMinutes} onChange={(e) => setCardioDraft({ ...cardioDraft, hardMinutes: e.target.value })} placeholder="min" inputMode="numeric" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-zinc-100" /></label></div><button disabled={!totalCardioMinutes || cardioDraft.type === "Outro" && !customCardioType.trim()} onClick={() => { setCardioLogs((items) => [{ ...cardioToEstimate, id: makeEntryId("cardio"), date: today, intensity: "Variável" }, ...items].slice(0, 12)); setCardioDraft({ date: today, minutes: "", type: "Caminhada", intensity: "Variável", lightMinutes: "", moderateMinutes: "", hardMinutes: "" }); setCustomCardioType(""); }} className="rounded-xl bg-zinc-100 px-3 py-3 text-sm font-black text-zinc-950 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500">Salvar {totalCardioMinutes ? `${totalCardioMinutes} min` : ""}</button></div>{cardioLogs[0] && <p className="mt-3 text-sm text-zinc-400">Último: {cardioLogs[0].date} · {cardioLogs[0].type} · {cardioMinutes(cardioLogs[0]) || "?"} min · variável{lastCardioCalories > 0 ? ` · ~${formatCalories(lastCardioCalories)}` : ""}</p>}</div>}
     </section>
   );
 }
@@ -673,10 +699,23 @@ export default function TrainingPlanApp() {
   const [lightMode, setLightMode] = useState(false);
   const [startDate, setStartDate] = useState(() => localStorage.getItem(START_DATE_KEY) ?? "");
   const [autoWeekEnabled, setAutoWeekEnabled] = useState(() => localStorage.getItem(AUTO_WEEK_KEY) !== "false");
-  const { logs, updateLog, clearLogs } = useLocalStorageLogs();
+  const { logs, setLogs, updateLog, clearLogs } = useLocalStorageLogs();
   const [painLogs, setPainLogs] = useStoredArray<PainLog>(PAIN_LOG_KEY);
   const [cardioLogs, setCardioLogs] = useStoredArray<CardioLog>(CARDIO_LOG_KEY);
   const [weeklySummaries, setWeeklySummaries] = useStoredArray<WeeklySummary>(WEEKLY_SUMMARY_KEY);
+  const [user, setUser] = useState<User | null>(null);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>("Local");
+  const [appView, setAppView] = useState<AppView>("training");
+  const [selectedMedia, setSelectedMedia] = useState<MediaTarget | null>(null);
+  const [quickLogModal, setQuickLogModal] = useState<"pain" | "cardio" | null>(null);
+  const [openDayIds, setOpenDayIds] = useState<Record<string, boolean>>({});
+  const [highlightedExerciseKey, setHighlightedExerciseKey] = useState<string | null>(null);
+  const [workoutMessage, setWorkoutMessage] = useState("");
+  const [pendingWorkoutJump, setPendingWorkoutJump] = useState(false);
+  const syncReadyRef = useRef(false);
+  const syncTimerRef = useRef<number | null>(null);
+  const exerciseRefs = useRef<Record<string, HTMLElement | null>>({});
 
   const availableWeeks = useMemo(() => getPlanWeeks(activePlan, activePlan.id === defaultTrainingPlan.id ? phase : undefined), [activePlan, phase]);
   const weekIds = availableWeeks.map((item) => item.id);
@@ -684,12 +723,83 @@ export default function TrainingPlanApp() {
   const autoWeek = calculateWeekFromStart(startDate, weekIds);
   const weekBlock = startDate ? calculateWeekBlockFromStart(startDate) : 0;
 
+  function buildSyncPayload(): UserAppData {
+    return normalizeUserAppData({
+      logs,
+      history: weeklySummaries,
+      pain_logs: painLogs,
+      cardio_logs: cardioLogs,
+      custom_plans: customPlans,
+      settings: { phase, week, startDate, autoWeekEnabled, activePlanId: activePlan.id },
+    });
+  }
+
+  function applySyncPayload(data: UserAppData) {
+    setLogs(data.logs);
+    setWeeklySummaries(data.history as WeeklySummary[]);
+    setPainLogs(data.pain_logs as PainLog[]);
+    setCardioLogs(data.cardio_logs as CardioLog[]);
+    setCustomPlans(data.custom_plans);
+    if (data.settings.phase === "fase1" || data.settings.phase === "fase2") setPhase(data.settings.phase);
+    if (typeof data.settings.week === "string") setWeek(data.settings.week);
+    if (typeof data.settings.startDate === "string") setStartDate(data.settings.startDate);
+    if (typeof data.settings.autoWeekEnabled === "boolean") setAutoWeekEnabled(data.settings.autoWeekEnabled);
+    if (typeof data.settings.activePlanId === "string") setActivePlanId(data.settings.activePlanId);
+  }
+
+  async function syncWithSupabase(currentUser = user, mode: "merge" | "push" = "push") {
+    if (!currentUser) {
+      setSyncStatus("Local");
+      return;
+    }
+    setSyncStatus("Sincronizando");
+    try {
+      const local = buildSyncPayload();
+      const remote = await getUserAppData(currentUser.id);
+      const next = mode === "merge" && hasRemoteData(remote) ? mergeUserAppData(local, remote) : local;
+      if (mode === "merge") applySyncPayload(next);
+      await saveUserAppData(currentUser.id, next);
+      syncReadyRef.current = true;
+      setSyncStatus("Sincronizado");
+    } catch (error) {
+      console.error(error);
+      setSyncStatus("Erro ao sincronizar");
+    }
+  }
+
   useEffect(() => localStorage.setItem(START_DATE_KEY, startDate), [startDate]);
   useEffect(() => localStorage.setItem(AUTO_WEEK_KEY, String(autoWeekEnabled)), [autoWeekEnabled]);
   useEffect(() => localStorage.setItem(ACTIVE_PLAN_KEY, activePlan.id), [activePlan.id]);
   useEffect(() => saveCustomPlans(customPlans), [customPlans]);
   useEffect(() => { if (autoWeekEnabled) setWeek(autoWeek); }, [autoWeekEnabled, autoWeek]);
   useEffect(() => { if (weekIds.length && !weekIds.includes(week)) setWeek(weekIds[0]); }, [weekIds.join("|"), week]);
+  useEffect(() => {
+    setOpenDayIds({});
+    setHighlightedExerciseKey(null);
+    setWorkoutMessage("");
+  }, [week, query, onlyToday, activePlan.id, phase, lightMode]);
+  useEffect(() => {
+    getCurrentSession().then((session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) void syncWithSupabase(session.user, "merge");
+    }).catch(() => setSyncStatus("Erro ao sincronizar"));
+    return onAuthSessionChange((session) => {
+      const nextUser = session?.user ?? null;
+      setUser(nextUser);
+      syncReadyRef.current = false;
+      setSyncStatus(nextUser ? "Sincronizando" : "Local");
+      if (nextUser) void syncWithSupabase(nextUser, "merge");
+    });
+  }, []);
+  useEffect(() => {
+    if (!user || !syncReadyRef.current) return;
+    setSyncStatus("Sincronizando");
+    if (syncTimerRef.current) window.clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = window.setTimeout(() => void syncWithSupabase(user, "push"), 900);
+    return () => {
+      if (syncTimerRef.current) window.clearTimeout(syncTimerRef.current);
+    };
+  }, [user, logs, painLogs, cardioLogs, customPlans, weeklySummaries, phase, week, startDate, autoWeekEnabled, activePlan.id]);
 
   const filteredPlans = useMemo(() => {
     return getPlanDays(activePlan, activePlan.id === defaultTrainingPlan.id ? phase : undefined, week).filter((plan) => {
@@ -699,6 +809,18 @@ export default function TrainingPlanApp() {
   }, [activePlan, phase, week, query, onlyToday, todayName]);
 
   const visibleExercises = filteredPlans.flatMap((plan) => (lightMode ? plan.exercises.slice(0, 4) : plan.exercises).map((exercise) => ({ plan, exercise })));
+  function getExerciseDomKey(plan: TrainingDay, exercise: Exercise) {
+    return `${plan.id}::${exercise.id ?? exercise.order}`;
+  }
+
+  function isDayOpen(plan: TrainingDay) {
+    return openDayIds[plan.id] ?? shouldDayStartOpen(plan.day, todayName, query, onlyToday);
+  }
+
+  function registerExerciseRef(key: string, element: HTMLElement | null) {
+    exerciseRefs.current[key] = element;
+  }
+
   function selectedWeekBlock(dateValue: string, selectedWeek: string) {
     if (!dateValue || weekIds.length === 0) return 0;
     const currentBlock = calculateWeekBlockFromStart(dateValue);
@@ -710,14 +832,33 @@ export default function TrainingPlanApp() {
     return currentBlock;
   }
 
+  function dateKeyForPlanDay(plan: TrainingDay, dateValue = startDate) {
+    if (!dateValue) return todayDateKey();
+    const block = selectedWeekBlock(dateValue, plan.week);
+    const dayIndex = Math.max(0, getDayIndex(plan.day));
+    return addDays(dateValue, block * 7 + dayIndex);
+  }
+
   function logKeyFor(plan: TrainingDay, exercise: Exercise, dateValue = startDate) {
-    const phaseKey = activePlan.id === defaultTrainingPlan.id ? phase : "custom";
-    const occurrence = dateValue ? `start:${dateValue}::block:${selectedWeekBlock(dateValue, plan.week)}` : `floating:${activePlan.id}:${phaseKey}:${plan.week}`;
-    return `${occurrence}::${exerciseKey(plan, exercise)}`;
+    return getCurrentDayLogKey({
+      userIdOrLocal: "local",
+      planId: activePlan.id,
+      dateKey: dateKeyForPlanDay(plan, dateValue),
+      weekId: plan.week,
+      dayName: plan.day,
+      exerciseId: exercise.id ?? exercise.order,
+    });
   }
 
   function exactLogKeyFor(plan: TrainingDay, exercise: Exercise, block: number) {
-    return `start:${startDate}::block:${block}::${exerciseKey(plan, exercise)}`;
+    return getCurrentDayLogKey({
+      userIdOrLocal: "local",
+      planId: activePlan.id,
+      dateKey: startDate ? addDays(startDate, block * 7 + Math.max(0, getDayIndex(plan.day))) : todayDateKey(),
+      weekId: plan.week,
+      dayName: plan.day,
+      exerciseId: exercise.id ?? exercise.order,
+    });
   }
 
   function getLog(plan: TrainingDay, exercise: Exercise) {
@@ -727,10 +868,39 @@ export default function TrainingPlanApp() {
   function updateExerciseLog(plan: TrainingDay, exercise: Exercise, patch: Partial<ExerciseLog>) {
     const shouldSetStartDate = !startDate && patch.done;
     const effectiveStartDate = shouldSetStartDate ? todayInputValue() : startDate;
-    const previousFloatingLog = shouldSetStartDate ? logs[logKeyFor(plan, exercise, "")] : undefined;
     if (shouldSetStartDate) setStartDate(effectiveStartDate);
-    updateLog(logKeyFor(plan, exercise, effectiveStartDate), { ...(previousFloatingLog ?? {}), ...patch });
+    updateLog(logKeyFor(plan, exercise, effectiveStartDate), patch);
   }
+
+  function goToNextExercise() {
+    const todayIndex = getDayIndex(todayName);
+    const navigationExercises = query.trim() ? visibleExercises : visibleExercises.filter(({ plan }) => getDayIndex(plan.day) >= todayIndex);
+    const target = navigationExercises.find(({ plan, exercise }) => !getLog(plan, exercise)?.done);
+    if (!target) {
+      setWorkoutMessage("Todos os exercícios visíveis foram concluídos.");
+      window.setTimeout(() => setWorkoutMessage(""), 2500);
+      return;
+    }
+    const domKey = getExerciseDomKey(target.plan, target.exercise);
+    setWorkoutMessage("");
+    setOpenDayIds((current) => ({ ...current, [target.plan.id]: true }));
+    setHighlightedExerciseKey(domKey);
+    window.setTimeout(() => exerciseRefs.current[domKey]?.scrollIntoView({ behavior: "smooth", block: "center" }), 120);
+    window.setTimeout(() => setHighlightedExerciseKey((current) => current === domKey ? null : current), 1500);
+  }
+
+  function startWorkout() {
+    setOnlyToday(true);
+    setWeek(autoWeek);
+    setAutoWeekEnabled(true);
+    setPendingWorkoutJump(true);
+  }
+
+  useEffect(() => {
+    if (!pendingWorkoutJump) return;
+    setPendingWorkoutJump(false);
+    window.setTimeout(goToNextExercise, 80);
+  }, [pendingWorkoutJump, filteredPlans, logs, lightMode]);
 
   const doneCount = visibleExercises.filter(({ plan, exercise }) => getLog(plan, exercise)?.done).length;
   const increaseCount = Object.values(logs).filter(shouldIncrease).length;
@@ -864,39 +1034,90 @@ export default function TrainingPlanApp() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#1e293b,transparent_34%),linear-gradient(180deg,#09090b,#18181b)] text-zinc-100">
-      <header className="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div><div className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1 text-xs font-bold text-zinc-950"><Dumbbell className="h-4 w-4" /> Plano de treino interativo</div><h1 className="mt-4 max-w-4xl text-4xl font-black tracking-tight text-zinc-50 sm:text-5xl">Treino com progresso, descanso e modo leve</h1><p className="mt-4 max-w-3xl text-base leading-7 text-zinc-400">Treino de musculação para o meu biricutico. Plano padrão ou personalizado, semana automática, vídeos, timer, biblioteca e registros locais.</p></div>
-            <div className="flex flex-wrap gap-2"><button onClick={() => setInfoModalOpen(true)} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-200 hover:bg-zinc-800"><Activity className="h-4 w-4" /> Informações</button><button onClick={exportData} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-200 hover:bg-zinc-800"><Download className="h-4 w-4" /> Exportar</button><label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-200 hover:bg-zinc-800"><Upload className="h-4 w-4" /> Importar<input type="file" accept="application/json" onChange={importData} className="hidden" /></label><button onClick={() => window.confirm("Apagar todo o progresso salvo neste navegador?") && clearLogs()} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-200 hover:bg-zinc-800"><Trash2 className="h-4 w-4" /> Limpar</button>{canDownloadWeeklySummary && <button onClick={downloadLatestWeeklySummary} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-200 hover:bg-zinc-800"><FileText className="h-4 w-4" /> Relatório semanal</button>}<button onClick={() => window.print()} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-200 hover:bg-zinc-800"><Printer className="h-4 w-4" /> Imprimir</button></div>
+      <header className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur">
+        <div className="mx-auto grid max-w-7xl gap-3 px-4 py-3 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-950 shadow-sm shadow-black/30"><Dumbbell className="h-5 w-5" /></span>
+              <div className="min-w-0"><p className="truncate text-sm font-black text-zinc-50">Treino Loloa</p><p className="truncate text-xs font-bold text-zinc-500">{activePlan.name} · Semana {week}</p></div>
+            </div>
+            <nav className="hidden rounded-xl bg-zinc-900 p-1 ring-1 ring-zinc-800 md:flex">
+              {([{ id: "training", label: "Treino" }, { id: "performance", label: "Desempenho" }] as const).map((item) => (
+                <button key={item.id} onClick={() => setAppView(item.id)} className={`rounded-lg px-4 py-2 text-sm font-black transition ${appView === item.id ? "bg-zinc-100 text-zinc-950 shadow-sm" : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"}`}>{item.label}</button>
+              ))}
+            </nav>
+            <div className="flex shrink-0 items-center gap-2">
+              <UserMenu user={user} syncStatus={syncStatus} onOpenAuth={() => setAuthOpen(true)} onSignOut={() => void signOut()} onSyncNow={() => void syncWithSupabase(user, "merge")} />
+              <details className="group relative">
+                <summary className="list-none"><span className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-200 transition hover:bg-zinc-800"><Settings className="h-5 w-5" /></span></summary>
+                <div className="absolute right-0 mt-3 max-h-[calc(100vh-7rem)] w-[min(92vw,520px)] overflow-y-auto rounded-3xl border border-zinc-800 bg-zinc-950 p-3 shadow-2xl shadow-black/60">
+                  <div className="grid gap-3">
+                    <div className="rounded-2xl bg-zinc-900/70 p-3 ring-1 ring-zinc-800">
+                      <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-zinc-500">Ajustes do treino</p>
+                      <div className="grid gap-3">
+                        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Plano<select value={activePlan.id} onChange={(event) => setActivePlanId(event.target.value)} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-black normal-case tracking-normal text-zinc-100 outline-none"><option value={defaultTrainingPlan.id}>Treino padrão</option>{customPlans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name}</option>)}</select></label>
+                        {activePlan.id === defaultTrainingPlan.id ? <Segmented value={phase} setValue={setPhase} options={[{ value: "fase1", label: "Meses 1-6" }, { value: "fase2", label: "Após 6 meses" }]} /> : <button onClick={() => setEditorOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm font-black text-zinc-200"><Library className="h-4 w-4" /> Editar personalizado</button>}
+                        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Data de início<input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-zinc-100 outline-none focus:border-zinc-400" /></label>
+                        <label className="relative block"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar exercício, músculo ou dia..." className="w-full rounded-xl border border-zinc-700 bg-zinc-950 py-2.5 pl-9 pr-3 text-sm text-zinc-100 placeholder:text-zinc-500 outline-none transition focus:border-zinc-400" /></label>
+                        <Segmented value={week} setValue={(next) => { setAutoWeekEnabled(false); setWeek(next); }} options={availableWeeks.map((item) => ({ value: item.id, label: item.label }))} />
+                      </div>
+                    </div>
+                    <div className="grid gap-2 rounded-2xl bg-zinc-900/70 p-3 ring-1 ring-zinc-800">
+                      <p className="text-xs font-black uppercase tracking-[0.16em] text-zinc-500">Preferências</p>
+                      <button onClick={() => setAutoWeekEnabled((value) => !value)} className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold transition ${autoWeekEnabled ? "bg-emerald-950/60 text-emerald-100 ring-1 ring-emerald-800" : "bg-zinc-950 text-zinc-300 ring-1 ring-zinc-800 hover:bg-zinc-800"}`}><span className="inline-flex items-center gap-2"><RotateCcw className="h-4 w-4" /> Semana automática</span><span className="text-xs">{autoWeekEnabled ? "ON" : "OFF"}</span></button>
+                      <button onClick={() => setOnlyToday((value) => !value)} className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold transition ${onlyToday ? "bg-blue-950/60 text-blue-100 ring-1 ring-blue-800" : "bg-zinc-950 text-zinc-300 ring-1 ring-zinc-800 hover:bg-zinc-800"}`}><span className="inline-flex items-center gap-2"><ClipboardCheck className="h-4 w-4" /> Mostrar só hoje</span><span className="text-xs">{onlyToday ? "ON" : "OFF"}</span></button>
+                      <button onClick={() => setLightMode((value) => !value)} className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold transition ${lightMode ? "bg-orange-950/60 text-orange-100 ring-1 ring-orange-800" : "bg-zinc-950 text-zinc-300 ring-1 ring-zinc-800 hover:bg-zinc-800"}`}><span className="inline-flex items-center gap-2"><Sparkles className="h-4 w-4" /> Modo leve</span><span className="text-xs">{lightMode ? "ON" : "OFF"}</span></button>
+                    </div>
+                    <div className="rounded-2xl bg-zinc-900/70 p-3 ring-1 ring-zinc-800">
+                      <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-zinc-500">Ferramentas</p>
+                      <div className="grid gap-1">
+                        <button onClick={() => setInfoModalOpen(true)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-zinc-200 hover:bg-zinc-800"><Activity className="h-4 w-4 text-zinc-400" /> Informações</button>
+                        <button onClick={createPlan} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-zinc-200 hover:bg-zinc-800"><Plus className="h-4 w-4 text-zinc-400" /> Novo treino personalizado</button>
+                        <button onClick={exportData} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-zinc-200 hover:bg-zinc-800"><Download className="h-4 w-4 text-zinc-400" /> Exportar progresso</button>
+                        <label className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-zinc-200 hover:bg-zinc-800"><Upload className="h-4 w-4 text-zinc-400" /> Importar progresso<input type="file" accept="application/json" onChange={importData} className="hidden" /></label>
+                        {canDownloadWeeklySummary && <button onClick={downloadLatestWeeklySummary} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-zinc-200 hover:bg-zinc-800"><FileText className="h-4 w-4 text-zinc-400" /> Baixar relatório semanal</button>}
+                        <button onClick={() => window.print()} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-zinc-200 hover:bg-zinc-800"><Printer className="h-4 w-4 text-zinc-400" /> Imprimir</button>
+                        <button onClick={() => window.confirm("Apagar todo o progresso salvo neste navegador?") && clearLogs()} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-red-200 hover:bg-red-950/40"><Trash2 className="h-4 w-4" /> Limpar progresso</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </details>
+            </div>
           </div>
-
-          <div className="grid gap-4 rounded-3xl border border-zinc-800 bg-zinc-900 p-4 shadow-sm xl:grid-cols-[auto_auto_1fr] xl:items-center">
-            <select value={activePlan.id} onChange={(event) => setActivePlanId(event.target.value)} className="rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-black text-zinc-100 outline-none"><option value={defaultTrainingPlan.id}>Treino padrão</option>{customPlans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name}</option>)}</select>
-            {activePlan.id === defaultTrainingPlan.id ? <Segmented value={phase} setValue={setPhase} options={[{ value: "fase1", label: "Meses 1-6" }, { value: "fase2", label: "Após 6 meses" }]} /> : <button onClick={() => setEditorOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-black text-zinc-200"><Library className="h-4 w-4" /> Treino personalizado</button>}
-            <label className="relative block"><Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar exercício, músculo ou dia..." className="w-full rounded-2xl border border-zinc-700 bg-zinc-950 py-3 pl-11 pr-4 text-sm text-zinc-100 placeholder:text-zinc-500 outline-none transition focus:border-zinc-400" /></label>
-          </div>
-
-          <div className="grid gap-3 rounded-3xl border border-zinc-800 bg-zinc-900 p-4 shadow-sm lg:grid-cols-[1fr_auto_auto_auto] lg:items-center">
-            <label className="grid gap-1 text-sm font-bold text-zinc-300">Data de início da Semana A<input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-semibold text-zinc-100 outline-none focus:border-zinc-400" /></label>
-            <button onClick={() => { setOnlyToday(true); setWeek(autoWeek); }} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-sm font-bold text-zinc-950 hover:bg-white"><CalendarDays className="h-4 w-4" /> Treino de hoje: {todayName} · {autoWeek}</button>
-            <button onClick={() => setAutoWeekEnabled((value) => !value)} className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold transition ${autoWeekEnabled ? "bg-emerald-700 text-white" : "border border-zinc-800 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}><RotateCcw className="h-4 w-4" /> Semana auto: {autoWeekEnabled ? "ON" : "OFF"}</button>
-            <div className="grid grid-cols-2 gap-2 lg:flex"><button onClick={() => setOnlyToday((value) => !value)} className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold transition ${onlyToday ? "bg-blue-700 text-white" : "border border-zinc-800 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}><ClipboardCheck className="h-4 w-4" /> Só hoje</button><button onClick={() => setLightMode((value) => !value)} className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold transition ${lightMode ? "bg-orange-600 text-white" : "border border-zinc-800 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"}`}><Sparkles className="h-4 w-4" /> Modo leve</button></div>
-          </div>
-          <div className="flex flex-wrap gap-2"><Segmented value={week} setValue={(next) => { setAutoWeekEnabled(false); setWeek(next); }} options={availableWeeks.map((item) => ({ value: item.id, label: item.label }))} /><button onClick={createPlan} className="inline-flex items-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-sm font-black text-zinc-950"><Plus className="h-4 w-4" /> Treino personalizado</button>{customPlans.length > 0 && <button onClick={() => setEditorOpen(true)} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-black text-zinc-200"><Library className="h-4 w-4" /> Editar personalizado</button>}</div>
+          <nav className="grid grid-cols-2 rounded-xl bg-zinc-900 p-1 ring-1 ring-zinc-800 md:hidden">
+            {([{ id: "training", label: "Treino" }, { id: "performance", label: "Desempenho" }] as const).map((item) => (
+              <button key={item.id} onClick={() => setAppView(item.id)} className={`rounded-lg px-3 py-2 text-sm font-black transition ${appView === item.id ? "bg-zinc-100 text-zinc-950 shadow-sm" : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"}`}>{item.label}</button>
+            ))}
+          </nav>
         </div>
       </header>
 
       <main className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 lg:px-8">
-        <section className="grid gap-4 md:grid-cols-4"><DashboardCard icon={<CheckCircle2 className="h-6 w-6" />} title="Feitos" value={`${doneCount}/${totalCount}`} description="Exercícios marcados como feitos na tela atual." /><DashboardCard icon={<Activity className="h-6 w-6" />} title="Progressão" value={`${increaseCount}`} description="Registros que bateram 3x15 e sugerem aumento de carga." /><DashboardCard icon={<TimerReset className="h-6 w-6" />} title="Descanso" value="60-120s" description="Timer por exercício, com presets rápidos." /><DashboardCard icon={<RotateCcw className="h-6 w-6" />} title="Plano" value={activePlan.name} description={`Semana automática alterna entre ${weekIds.join(", ") || "A"}; ocorrência atual: ${weekBlock + 1}.`} /></section>
-        <section className="rounded-3xl border border-zinc-800 bg-zinc-900 p-5 shadow-sm"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold uppercase tracking-[0.18em] text-zinc-500">Começar treino</p><h2 className="mt-1 text-xl font-black text-zinc-50">{activePlan.name} · Semana {week}</h2><p className="mt-2 text-sm text-zinc-400">Use “Só hoje” para focar no treino do dia, ou busque qualquer exercício da semana selecionada.</p></div><button onClick={() => { setOnlyToday(true); setWeek(autoWeek); }} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-sm font-black text-zinc-950 hover:bg-white"><CalendarDays className="h-4 w-4" /> Começar treino</button></div></section>
-        <QuickLogs painLogs={painLogs} setPainLogs={setPainLogs} cardioLogs={cardioLogs} setCardioLogs={setCardioLogs} />
-        <section className="space-y-5"><div className="flex items-end justify-between gap-4"><div><p className="text-sm font-bold uppercase tracking-[0.18em] text-zinc-500">Treinos</p><h2 className="text-2xl font-black text-zinc-50">{activePlan.id === defaultTrainingPlan.id ? (phase === "fase1" ? "Fase 1: meses 1 a 6" : "Fase 2: após 6 meses") : activePlan.name} · Semana {week}</h2></div><p className="hidden text-sm text-zinc-500 sm:block">{filteredPlans.length} bloco(s) encontrado(s)</p></div>{filteredPlans.length > 0 ? filteredPlans.map((plan) => <DayCard key={plan.id} plan={plan} logs={logs} getLog={getLog} updateExerciseLog={updateExerciseLog} onMuscleClick={setSelectedMuscle} onAlternativeClick={(idOrName, source) => setSelectedAlternative({ idOrName, source })} lightMode={lightMode} />) : <div className="rounded-3xl border border-dashed border-zinc-700 bg-zinc-900 p-10 text-center text-zinc-400">Nada encontrado para esta busca.</div>}</section>
+        {appView === "training" ? <>
+        <section className="grid gap-4 rounded-3xl border border-zinc-800 bg-zinc-900 p-5 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold uppercase tracking-[0.18em] text-zinc-500">Começar treino</p><h2 className="mt-1 text-xl font-black text-zinc-50">{activePlan.name} · Semana {week}</h2><p className="mt-2 text-sm text-zinc-400">Use "Só hoje" para focar no treino do dia, ou busque qualquer exercício da semana selecionada.</p></div><button onClick={startWorkout} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-sm font-black text-zinc-950 hover:bg-white"><CalendarDays className="h-4 w-4" /> Começar treino</button></div>
+          <div className="flex flex-wrap gap-2">
+            <StatBadge icon={<CheckCircle2 className="h-4 w-4" />} title="Feitos" value={`${doneCount}/${totalCount}`} tooltip="Exercícios marcados como feitos na tela atual." />
+            <StatBadge icon={<Activity className="h-4 w-4" />} title="Progressão" value={`${increaseCount}`} tooltip="Registros que bateram 3x15 e sugerem aumento de carga." />
+            <StatBadge icon={<TimerReset className="h-4 w-4" />} title="Descanso" value="60-120s" tooltip="Timer por exercício, com presets rápidos." />
+            <StatBadge icon={<RotateCcw className="h-4 w-4" />} title="Plano" value={activePlan.name} tooltip={`Semana automática alterna entre ${weekIds.join(", ") || "A"}; ocorrência atual: ${weekBlock + 1}.`} />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => setQuickLogModal("cardio")} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-black text-zinc-200 hover:bg-zinc-800"><Activity className="h-4 w-4" /> Registrar cardio</button>
+            <button onClick={() => setQuickLogModal("pain")} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-black text-zinc-200 hover:bg-zinc-800"><HeartPulse className="h-4 w-4" /> Check de dor</button>
+          </div>
+        </section>
+        <section className="space-y-5"><div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-bold uppercase tracking-[0.18em] text-zinc-500">Treinos</p><h2 className="text-2xl font-black text-zinc-50">{activePlan.id === defaultTrainingPlan.id ? (phase === "fase1" ? "Fase 1: meses 1 a 6" : "Fase 2: após 6 meses") : activePlan.name} · Semana {week}</h2><p className="mt-1 text-sm text-zinc-500">{filteredPlans.length} bloco(s) encontrado(s)</p></div><div className="flex flex-wrap items-center gap-2"><button onClick={goToNextExercise} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-sm font-black text-zinc-950 hover:bg-white"><ClipboardCheck className="h-4 w-4" /> Próximo exercício</button>{workoutMessage && <span className="rounded-2xl bg-zinc-950 px-3 py-2 text-xs font-bold text-zinc-300 ring-1 ring-zinc-800">{workoutMessage}</span>}</div></div>{filteredPlans.length > 0 ? filteredPlans.map((plan) => <DayCard key={plan.id} plan={plan} logs={logs} getLog={getLog} updateExerciseLog={updateExerciseLog} onMuscleClick={setSelectedMuscle} onAlternativeClick={(idOrName, source) => setSelectedAlternative({ idOrName, source })} onMediaOpen={setSelectedMedia} isOpen={isDayOpen(plan)} onToggle={() => setOpenDayIds((current) => ({ ...current, [plan.id]: !isDayOpen(plan) }))} getExerciseDomKey={getExerciseDomKey} getCurrentLogKey={logKeyFor} getDayDateKey={dateKeyForPlanDay} registerExerciseRef={registerExerciseRef} highlightedExerciseKey={highlightedExerciseKey} lightMode={lightMode} />) : <div className="rounded-3xl border border-dashed border-zinc-700 bg-zinc-900 p-10 text-center text-zinc-400">Nada encontrado para esta busca.</div>}</section>
+        </> : <PerformancePage logs={logs} cardioLogs={cardioLogs} painLogs={painLogs} loading={syncStatus === "Sincronizando" && Boolean(user)} />}
       </main>
 
       <InfoModal isOpen={infoModalOpen} onClose={() => setInfoModalOpen(false)} />
       <MuscleModal focus={selectedMuscle} onClose={() => setSelectedMuscle(null)} />
-      <AlternativeModal alternative={selectedAlternative} onClose={() => setSelectedAlternative(null)} onMuscleClick={setSelectedMuscle} />
+      <AlternativeModal alternative={selectedAlternative} onClose={() => setSelectedAlternative(null)} onMuscleClick={setSelectedMuscle} onMediaOpen={setSelectedMedia} />
+      <ExerciseMediaModal target={selectedMedia} onClose={() => setSelectedMedia(null)} onMuscleClick={setSelectedMuscle} />
+      {quickLogModal && <ModalShell onClose={() => setQuickLogModal(null)} wide><div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-zinc-800 bg-zinc-900/95 p-5 backdrop-blur"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">Registro rápido</p><h2 className="mt-1 text-2xl font-black text-zinc-50">{quickLogModal === "cardio" ? "Cardio diário" : "Check de dor/desconforto"}</h2></div><button onClick={() => setQuickLogModal(null)} className="rounded-full bg-zinc-800 p-2 text-zinc-300"><X className="h-5 w-5" /></button></div><div className="p-5"><QuickLogs painLogs={painLogs} setPainLogs={setPainLogs} cardioLogs={cardioLogs} setCardioLogs={setCardioLogs} mode={quickLogModal} /></div></ModalShell>}
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
       <TrainingEditor open={editorOpen} plans={customPlans} activePlanId={activePlanId} onClose={() => setEditorOpen(false)} onSave={saveCustomPlan} onDelete={deleteCustomPlan} />
     </div>
   );

@@ -1,4 +1,5 @@
 import type { CustomTrainingPlan, ExerciseLog, Logs, TrainingDay, WeekId } from "../types/training";
+import { getCurrentWeekId, getLocalDateKey, getWeeksElapsed } from "./schedule";
 
 export const STORAGE_KEY = "treino-loloa-logs-v2";
 export const START_DATE_KEY = "treino-loloa-start-week-a";
@@ -34,18 +35,11 @@ export function writeJson<T>(key: string, value: T) {
 export function calculateWeekFromStart(startDate: string, weekIds: WeekId[]): WeekId {
   const normalizedWeeks = weekIds.length > 0 ? weekIds : ["A"];
   if (!startDate) return normalizedWeeks[0];
-  const block = calculateWeekBlockFromStart(startDate);
-  return normalizedWeeks[block % normalizedWeeks.length];
+  return getCurrentWeekId(startDate, new Date(), normalizedWeeks);
 }
 
 export function calculateWeekBlockFromStart(startDate: string) {
-  if (!startDate) return 0;
-  const start = new Date(`${startDate}T00:00:00`);
-  const now = new Date();
-  const current = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  if (Number.isNaN(start.getTime())) return 0;
-  const diffDays = Math.floor((current.getTime() - start.getTime()) / 86400000);
-  return Math.floor(Math.max(0, diffDays) / 7);
+  return startDate ? getWeeksElapsed(startDate, new Date()) : 0;
 }
 
 export function getTodayName() {
@@ -55,6 +49,49 @@ export function getTodayName() {
 
 export function exerciseKey(plan: TrainingDay, exercise: { id?: string; order: number | string; name: string }) {
   return `${plan.id}::${exercise.id ?? exercise.order}::${exercise.name}`;
+}
+
+export function getCurrentDayLogKey({
+  userIdOrLocal,
+  planId,
+  dateKey,
+  weekId,
+  dayName,
+  exerciseId,
+}: {
+  userIdOrLocal: string;
+  planId: string;
+  dateKey: string;
+  weekId: string;
+  dayName: string;
+  exerciseId: string | number;
+}) {
+  return `${userIdOrLocal}:${planId}:${dateKey}:${weekId}:${dayName}:${exerciseId}`;
+}
+
+export function getExerciseHistoryKey(exerciseId: string | number) {
+  return `history:${exerciseId}`;
+}
+
+export function isDatedExerciseLogKey(key: string) {
+  return /^[^:]+:[^:]+:\d{4}-\d{2}-\d{2}:[^:]+:[^:]+:.+/.test(key);
+}
+
+export function getLastExerciseHistory(exerciseId: string | number, logs: Logs, excludeKey?: string) {
+  const id = String(exerciseId);
+  return Object.entries(logs)
+    .filter(([key, log]) => key !== excludeKey && Boolean(log.load || log.reps1 || log.reps2 || log.reps3 || log.done))
+    .filter(([key]) => {
+      if (isDatedExerciseLogKey(key)) return key.split(":").at(-1) === id;
+      const parts = key.split("::");
+      return parts.at(-2) === id || parts.at(-1) === id;
+    })
+    .sort(([, a], [, b]) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""))
+    .at(0)?.[1];
+}
+
+export function todayDateKey() {
+  return getLocalDateKey(new Date());
 }
 
 export function readCustomPlans() {
