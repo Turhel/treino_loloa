@@ -44,7 +44,6 @@ import {
   PAIN_LOG_KEY,
   START_DATE_KEY,
   STORAGE_KEY,
-  calculateWeekBlockFromStart,
   calculateWeekFromStart,
   emptyLog,
   exerciseKey,
@@ -58,14 +57,21 @@ import {
   todayDateKey,
   writeJson,
 } from "./utils/storage";
-import { addDays } from "./utils/schedule";
+import { getBusinessWeekBlock, getSessionDateForWeekDay, getWeekdayName } from "./utils/schedule";
 
 const weekdays = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+const trainingWeekdays = weekdays.slice(0, 5);
 type PainLog = { id?: string; date: string; level: string; text: string };
 type CardioLog = { id?: string; date: string; minutes: string; type: string; intensity: string; lightMinutes?: string; moderateMinutes?: string; hardMinutes?: string };
 type SyncStatus = "Local" | "Sincronizado" | "Sincronizando" | "Erro ao sincronizar";
 type MediaTarget = { name: string; videoKey?: string; source?: Exercise };
 type AppView = "training" | "performance";
+type ScheduledTrainingDay = TrainingDay & {
+  scheduledDate: string;
+  scheduledDayName: string;
+  blockIndex: number;
+  blockTotal: number;
+};
 type WeeklySummary = {
   id: string;
   generatedAt: string;
@@ -135,6 +141,20 @@ function shouldDayStartOpen(dayName: string, todayName: string, query: string, o
   if (query.trim()) return true;
   if (onlyToday) return dayName === todayName;
   return getDayIndex(dayName) === getDayIndex(todayName);
+}
+
+function scheduleTrainingDays(days: TrainingDay[], startDate: string, weekBlock: number): ScheduledTrainingDay[] {
+  const blockTotal = days.length;
+  return days.map((day, index) => {
+    const scheduledDate = startDate ? getSessionDateForWeekDay(startDate, weekBlock, index, blockTotal) : todayDateKey();
+    return {
+      ...day,
+      scheduledDate,
+      scheduledDayName: getWeekdayName(scheduledDate) || day.day,
+      blockIndex: index + 1,
+      blockTotal,
+    };
+  });
 }
 
 function makeEntryId(prefix: string) {
@@ -302,7 +322,7 @@ function makeCustomWeek(id: string): TrainingWeek {
   return {
     id,
     label: `Semana ${id}`,
-    days: weekdays.map((day) => ({
+    days: trainingWeekdays.map((day) => ({
       id: `custom-${id.toLowerCase()}-${videoKey(day)}`,
       week: id,
       day,
@@ -477,23 +497,21 @@ function DayCard({
   onToggle,
   getExerciseDomKey,
   getCurrentLogKey,
-  getDayDateKey,
   registerExerciseRef,
   highlightedExerciseKey,
   lightMode,
 }: {
-  plan: TrainingDay;
+  plan: ScheduledTrainingDay;
   logs: Logs;
-  getLog: (plan: TrainingDay, exercise: Exercise) => ExerciseLog | undefined;
-  updateExerciseLog: (plan: TrainingDay, exercise: Exercise, patch: Partial<ExerciseLog>) => void;
+  getLog: (plan: ScheduledTrainingDay, exercise: Exercise) => ExerciseLog | undefined;
+  updateExerciseLog: (plan: ScheduledTrainingDay, exercise: Exercise, patch: Partial<ExerciseLog>) => void;
   onMuscleClick: (focus: string) => void;
   onAlternativeClick: (idOrName: string, source: Exercise) => void;
   onMediaOpen: (target: MediaTarget) => void;
   isOpen: boolean;
   onToggle: () => void;
-  getExerciseDomKey: (plan: TrainingDay, exercise: Exercise) => string;
-  getCurrentLogKey: (plan: TrainingDay, exercise: Exercise) => string;
-  getDayDateKey: (plan: TrainingDay) => string;
+  getExerciseDomKey: (plan: ScheduledTrainingDay, exercise: Exercise) => string;
+  getCurrentLogKey: (plan: ScheduledTrainingDay, exercise: Exercise) => string;
   registerExerciseRef: (key: string, element: HTMLElement | null) => void;
   highlightedExerciseKey: string | null;
   lightMode: boolean;
@@ -503,20 +521,21 @@ function DayCard({
   const done = exercises.filter((exercise) => getLog(plan, exercise)?.done).length;
   const hasProgression = exercises.some((exercise) => shouldIncrease(getLog(plan, exercise)));
   const estimatedCalories = exercises.reduce((sum, exercise) => sum + estimateExerciseCalories(getLog(plan, exercise)), 0);
-  const sessionDateKey = getDayDateKey(plan);
+  const sessionDateKey = plan.scheduledDate;
   const calorieTooltip = "Estimativa simples baseada em volume registrado: carga x repetições x fator metabólico. Só entra no cálculo quando há carga e pelo menos 1 repetição.";
   return (
     <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className={`overflow-hidden rounded-3xl border-l-8 ${style.border} border-y border-r border-zinc-800 bg-zinc-900 shadow-sm`}>
-      <div className={`flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-start sm:justify-between ${style.soft}`}>
-        <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-400">{plan.day}</p>
-          <h3 className="mt-1 max-w-3xl text-lg font-black leading-snug text-zinc-50">{plan.title}</h3>
+      <div className={`grid gap-3 px-5 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start ${style.soft}`}>
+        <div className="min-w-0 pr-1">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-400">{plan.scheduledDayName}</p>
+          <h3 className="mt-1 text-lg font-black leading-snug text-zinc-50 sm:text-xl">{plan.title}</h3>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 lg:justify-end">
           <span className="rounded-full bg-zinc-950/80 px-3 py-1 text-xs font-black text-zinc-300 ring-1 ring-zinc-800">{done}/{exercises.length} feitos</span>
           {hasProgression && <span className="rounded-full bg-emerald-950/70 px-3 py-1 text-xs font-black text-emerald-200 ring-1 ring-emerald-800">Progressão</span>}
           {estimatedCalories > 0 && <span title={calorieTooltip} className="rounded-full bg-amber-950/70 px-3 py-1 text-xs font-black text-amber-200 ring-1 ring-amber-800">~{formatCalories(estimatedCalories)}</span>}
           <span title="Data usada na chave desta sessão" className="rounded-full bg-zinc-950/80 px-3 py-1 text-xs font-black text-zinc-300 ring-1 ring-zinc-800">{sessionDateKey === todayDateKey() ? "Hoje" : sessionDateKey}</span>
+          <span className="rounded-full bg-zinc-950/80 px-3 py-1 text-xs font-black text-zinc-300 ring-1 ring-zinc-800">Bloco {plan.blockIndex}/{plan.blockTotal}</span>
           <span className={`w-fit rounded-full px-3 py-1 text-xs font-bold ring-1 ${style.chip}`}>{style.label}</span>
           <button type="button" onClick={onToggle} className="inline-flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-950 px-3 py-1 text-xs font-black text-zinc-200 transition hover:bg-zinc-800">
             {isOpen ? "Recolher" : "Expandir"} <ChevronDown className={`h-3.5 w-3.5 transition ${isOpen ? "rotate-180" : ""}`} />
@@ -716,12 +735,13 @@ export default function TrainingPlanApp() {
   const syncReadyRef = useRef(false);
   const syncTimerRef = useRef<number | null>(null);
   const exerciseRefs = useRef<Record<string, HTMLElement | null>>({});
+  const startDateInputRef = useRef<HTMLInputElement | null>(null);
 
   const availableWeeks = useMemo(() => getPlanWeeks(activePlan, activePlan.id === defaultTrainingPlan.id ? phase : undefined), [activePlan, phase]);
   const weekIds = availableWeeks.map((item) => item.id);
   const todayName = getTodayName();
   const autoWeek = calculateWeekFromStart(startDate, weekIds);
-  const weekBlock = startDate ? calculateWeekBlockFromStart(startDate) : 0;
+  const weekBlock = startDate ? getBusinessWeekBlock(startDate, new Date()) : 0;
 
   function buildSyncPayload(): UserAppData {
     return normalizeUserAppData({
@@ -805,14 +825,16 @@ export default function TrainingPlanApp() {
   }, [user, logs, painLogs, cardioLogs, customPlans, weeklySummaries, phase, week, startDate, autoWeekEnabled, activePlan.id]);
 
   const filteredPlans = useMemo(() => {
-    return getPlanDays(activePlan, activePlan.id === defaultTrainingPlan.id ? phase : undefined, week).filter((plan) => {
+    const days = getPlanDays(activePlan, activePlan.id === defaultTrainingPlan.id ? phase : undefined, week);
+    const scheduledDays = scheduleTrainingDays(days, startDate, selectedWeekBlock(startDate, week));
+    return scheduledDays.filter((plan) => {
       const searchable = `${plan.day} ${plan.title} ${plan.type} ${plan.exercises.map((exercise) => `${exercise.name} ${exercise.focus}`).join(" ")}`.toLowerCase();
-      return searchable.includes(query.toLowerCase()) && (!onlyToday || plan.day === todayName);
+      return searchable.includes(query.toLowerCase()) && (!onlyToday || plan.scheduledDate === todayDateKey());
     });
-  }, [activePlan, phase, week, query, onlyToday, todayName]);
+  }, [activePlan, phase, week, query, onlyToday, startDate, todayName, weekIds.join("|")]);
 
   const visibleExercises = filteredPlans.flatMap((plan) => (lightMode ? plan.exercises.slice(0, 4) : plan.exercises).map((exercise) => ({ plan, exercise })));
-  function getExerciseDomKey(plan: TrainingDay, exercise: Exercise) {
+  function getExerciseDomKey(plan: ScheduledTrainingDay, exercise: Exercise) {
     return `${plan.id}::${exercise.id ?? exercise.order}`;
   }
 
@@ -826,7 +848,7 @@ export default function TrainingPlanApp() {
 
   function selectedWeekBlock(dateValue: string, selectedWeek: string) {
     if (!dateValue || weekIds.length === 0) return 0;
-    const currentBlock = calculateWeekBlockFromStart(dateValue);
+    const currentBlock = getBusinessWeekBlock(dateValue, new Date());
     if (weekIds[currentBlock % weekIds.length] === selectedWeek) return currentBlock;
     for (let offset = 1; offset <= weekIds.length; offset += 1) {
       const candidate = Math.max(0, currentBlock - offset);
@@ -835,49 +857,43 @@ export default function TrainingPlanApp() {
     return currentBlock;
   }
 
-  function dateKeyForPlanDay(plan: TrainingDay, dateValue = startDate) {
-    if (!dateValue) return todayDateKey();
-    const block = selectedWeekBlock(dateValue, plan.week);
-    const dayIndex = Math.max(0, getDayIndex(plan.day));
-    return addDays(dateValue, block * 7 + dayIndex);
-  }
-
-  function logKeyFor(plan: TrainingDay, exercise: Exercise, dateValue = startDate) {
+  function logKeyFor(plan: ScheduledTrainingDay, exercise: Exercise) {
     return getCurrentDayLogKey({
       userIdOrLocal: "local",
       planId: activePlan.id,
-      dateKey: dateKeyForPlanDay(plan, dateValue),
+      dateKey: plan.scheduledDate,
       weekId: plan.week,
-      dayName: plan.day,
+      dayName: plan.scheduledDayName,
       exerciseId: exercise.id ?? exercise.order,
     });
   }
 
   function exactLogKeyFor(plan: TrainingDay, exercise: Exercise, block: number) {
+    const days = getPlanDays(activePlan, activePlan.id === defaultTrainingPlan.id ? phase : undefined, plan.week);
+    const scheduled = scheduleTrainingDays(days, startDate, block).find((day) => day.id === plan.id);
     return getCurrentDayLogKey({
       userIdOrLocal: "local",
       planId: activePlan.id,
-      dateKey: startDate ? addDays(startDate, block * 7 + Math.max(0, getDayIndex(plan.day))) : todayDateKey(),
+      dateKey: scheduled?.scheduledDate ?? todayDateKey(),
       weekId: plan.week,
-      dayName: plan.day,
+      dayName: scheduled?.scheduledDayName ?? plan.day,
       exerciseId: exercise.id ?? exercise.order,
     });
   }
 
-  function getLog(plan: TrainingDay, exercise: Exercise) {
+  function getLog(plan: ScheduledTrainingDay, exercise: Exercise) {
     return logs[logKeyFor(plan, exercise)];
   }
 
-  function updateExerciseLog(plan: TrainingDay, exercise: Exercise, patch: Partial<ExerciseLog>) {
+  function updateExerciseLog(plan: ScheduledTrainingDay, exercise: Exercise, patch: Partial<ExerciseLog>) {
     const shouldSetStartDate = !startDate && patch.done;
     const effectiveStartDate = shouldSetStartDate ? todayInputValue() : startDate;
     if (shouldSetStartDate) setStartDate(effectiveStartDate);
-    updateLog(logKeyFor(plan, exercise, effectiveStartDate), patch);
+    updateLog(logKeyFor(plan, exercise), patch);
   }
 
   function goToNextExercise() {
-    const todayIndex = getDayIndex(todayName);
-    const navigationExercises = query.trim() ? visibleExercises : visibleExercises.filter(({ plan }) => getDayIndex(plan.day) >= todayIndex);
+    const navigationExercises = query.trim() ? visibleExercises : visibleExercises.filter(({ plan }) => plan.scheduledDate >= todayDateKey());
     const target = navigationExercises.find(({ plan, exercise }) => !getLog(plan, exercise)?.done);
     if (!target) {
       setWorkoutMessage("Todos os exercícios visíveis foram concluídos.");
@@ -1035,6 +1051,18 @@ export default function TrainingPlanApp() {
     setEditorOpen(false);
   }
 
+  function openStartDatePicker() {
+    const input = startDateInputRef.current;
+    if (!input) return;
+    const inputWithPicker = input as HTMLInputElement & { showPicker?: () => void };
+    if (typeof inputWithPicker.showPicker === "function") {
+      inputWithPicker.showPicker();
+      return;
+    }
+    input.focus();
+    input.click();
+  }
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#1e293b,transparent_34%),linear-gradient(180deg,#09090b,#18181b)] text-zinc-100">
       <header className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur">
@@ -1060,7 +1088,7 @@ export default function TrainingPlanApp() {
                       <div className="grid gap-3">
                         <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Plano<select value={activePlan.id} onChange={(event) => setActivePlanId(event.target.value)} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-black normal-case tracking-normal text-zinc-100 outline-none"><option value={defaultTrainingPlan.id}>Treino padrão</option>{customPlans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name}</option>)}</select></label>
                         {activePlan.id === defaultTrainingPlan.id ? <Segmented value={phase} setValue={setPhase} options={[{ value: "fase1", label: "Meses 1-6" }, { value: "fase2", label: "Após 6 meses" }]} /> : <button onClick={() => setEditorOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm font-black text-zinc-200"><Library className="h-4 w-4" /> Editar personalizado</button>}
-                        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Data de início<input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-zinc-100 outline-none focus:border-zinc-400" /></label>
+                        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Data de início<span className="grid gap-2 sm:grid-cols-[1fr_auto]"><input ref={startDateInputRef} type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="min-w-0 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-zinc-100 outline-none focus:border-zinc-400" /><button type="button" onClick={openStartDatePicker} className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-black normal-case tracking-normal text-zinc-200 hover:bg-zinc-800"><CalendarDays className="h-4 w-4" /> Selecionar</button></span></label>
                         <label className="relative block"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar exercício, músculo ou dia..." className="w-full rounded-xl border border-zinc-700 bg-zinc-950 py-2.5 pl-9 pr-3 text-sm text-zinc-100 placeholder:text-zinc-500 outline-none transition focus:border-zinc-400" /></label>
                         <Segmented value={week} setValue={(next) => { setAutoWeekEnabled(false); setWeek(next); }} options={availableWeeks.map((item) => ({ value: item.id, label: item.label }))} />
                       </div>
@@ -1111,7 +1139,7 @@ export default function TrainingPlanApp() {
             <button onClick={() => setQuickLogModal("pain")} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-black text-zinc-200 hover:bg-zinc-800"><HeartPulse className="h-4 w-4" /> Check de dor</button>
           </div>
         </section>
-        <section className="space-y-5"><div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-bold uppercase tracking-[0.18em] text-zinc-500">Treinos</p><h2 className="text-2xl font-black text-zinc-50">{activePlan.id === defaultTrainingPlan.id ? (phase === "fase1" ? "Fase 1: meses 1 a 6" : "Fase 2: após 6 meses") : activePlan.name} · Semana {week}</h2><p className="mt-1 text-sm text-zinc-500">{filteredPlans.length} bloco(s) encontrado(s)</p></div><div className="flex flex-wrap items-center gap-2"><button onClick={goToNextExercise} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-sm font-black text-zinc-950 hover:bg-white"><ClipboardCheck className="h-4 w-4" /> Próximo exercício</button>{workoutMessage && <span className="rounded-2xl bg-zinc-950 px-3 py-2 text-xs font-bold text-zinc-300 ring-1 ring-zinc-800">{workoutMessage}</span>}</div></div>{filteredPlans.length > 0 ? filteredPlans.map((plan) => <DayCard key={plan.id} plan={plan} logs={logs} getLog={getLog} updateExerciseLog={updateExerciseLog} onMuscleClick={setSelectedMuscle} onAlternativeClick={(idOrName, source) => setSelectedAlternative({ idOrName, source })} onMediaOpen={setSelectedMedia} isOpen={isDayOpen(plan)} onToggle={() => setOpenDayIds((current) => ({ ...current, [plan.id]: !isDayOpen(plan) }))} getExerciseDomKey={getExerciseDomKey} getCurrentLogKey={logKeyFor} getDayDateKey={dateKeyForPlanDay} registerExerciseRef={registerExerciseRef} highlightedExerciseKey={highlightedExerciseKey} lightMode={lightMode} />) : <div className="rounded-3xl border border-dashed border-zinc-700 bg-zinc-900 p-10 text-center text-zinc-400">Nada encontrado para esta busca.</div>}</section>
+        <section className="space-y-5"><div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-bold uppercase tracking-[0.18em] text-zinc-500">Treinos</p><h2 className="text-2xl font-black text-zinc-50">{activePlan.id === defaultTrainingPlan.id ? (phase === "fase1" ? "Fase 1: meses 1 a 6" : "Fase 2: após 6 meses") : activePlan.name} · Semana {week}</h2><p className="mt-1 text-sm text-zinc-500">{filteredPlans.length} bloco(s) encontrado(s)</p></div><div className="flex flex-wrap items-center gap-2"><button onClick={goToNextExercise} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-sm font-black text-zinc-950 hover:bg-white"><ClipboardCheck className="h-4 w-4" /> Próximo exercício</button>{workoutMessage && <span className="rounded-2xl bg-zinc-950 px-3 py-2 text-xs font-bold text-zinc-300 ring-1 ring-zinc-800">{workoutMessage}</span>}</div></div>{filteredPlans.length > 0 ? filteredPlans.map((plan) => <DayCard key={plan.id} plan={plan} logs={logs} getLog={getLog} updateExerciseLog={updateExerciseLog} onMuscleClick={setSelectedMuscle} onAlternativeClick={(idOrName, source) => setSelectedAlternative({ idOrName, source })} onMediaOpen={setSelectedMedia} isOpen={isDayOpen(plan)} onToggle={() => setOpenDayIds((current) => ({ ...current, [plan.id]: !isDayOpen(plan) }))} getExerciseDomKey={getExerciseDomKey} getCurrentLogKey={logKeyFor} registerExerciseRef={registerExerciseRef} highlightedExerciseKey={highlightedExerciseKey} lightMode={lightMode} />) : <div className="rounded-3xl border border-dashed border-zinc-700 bg-zinc-900 p-10 text-center text-zinc-400">Nada encontrado para esta busca.</div>}</section>
         </> : <PerformancePage logs={logs} cardioLogs={cardioLogs} painLogs={painLogs} loading={syncStatus === "Sincronizando" && Boolean(user)} />}
       </main>
 

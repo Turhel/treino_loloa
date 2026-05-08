@@ -1,5 +1,5 @@
 import type { CustomTrainingPlan, ExerciseLog, Logs, TrainingDay, WeekId } from "../types/training";
-import { getCurrentWeekId, getLocalDateKey, getWeeksElapsed } from "./schedule";
+import { getBusinessWeekBlock, getLocalDateKey } from "./schedule";
 
 export const STORAGE_KEY = "treino-loloa-logs-v2";
 export const START_DATE_KEY = "treino-loloa-start-week-a";
@@ -35,11 +35,11 @@ export function writeJson<T>(key: string, value: T) {
 export function calculateWeekFromStart(startDate: string, weekIds: WeekId[]): WeekId {
   const normalizedWeeks = weekIds.length > 0 ? weekIds : ["A"];
   if (!startDate) return normalizedWeeks[0];
-  return getCurrentWeekId(startDate, new Date(), normalizedWeeks);
+  return normalizedWeeks[getBusinessWeekBlock(startDate, new Date()) % normalizedWeeks.length] ?? normalizedWeeks[0];
 }
 
 export function calculateWeekBlockFromStart(startDate: string) {
-  return startDate ? getWeeksElapsed(startDate, new Date()) : 0;
+  return startDate ? getBusinessWeekBlock(startDate, new Date()) : 0;
 }
 
 export function getTodayName() {

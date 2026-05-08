@@ -128,19 +128,6 @@ const legacyDayPlans: TrainingDay[] = [
     ],
   },
   {
-    id: "fase1-a-sabado",
-    phase: "fase1",
-    week: "A",
-    day: "Sábado",
-    title: "Cardio, mobilidade e recuperação ativa",
-    type: "cardio",
-    exercises: [
-      ex("Cardio", "25 a 40 minutos de caminhada inclinada, bike ou elíptico", "Resistência", "-"),
-      ex("Mobilidade", "Quadril, tornozelo e coluna torácica", "Mobilidade", "-"),
-      ex("Core opcional", "Dead bug, Pallof press e prancha inclinada", "Core", "dead bug pallof press prancha inclinada"),
-    ],
-  },
-  {
     id: "fase1-b-segunda",
     phase: "fase1",
     week: "B",
@@ -228,19 +215,6 @@ const legacyDayPlans: TrainingDay[] = [
       ex(5, "Rosca martelo no cabo", "Bíceps e braquial"),
       ex(6, "Rosca direta no cabo", "Bíceps"),
       ex(7, "Tríceps corda", "Tríceps"),
-    ],
-  },
-  {
-    id: "fase1-b-sabado",
-    phase: "fase1",
-    week: "B",
-    day: "Sábado",
-    title: "Cardio maior",
-    type: "cardio",
-    exercises: [
-      ex("Cardio", "30 a 45 minutos moderado", "Resistência", "-"),
-      ex("Mobilidade", "Quadril, posterior, peitoral e dorsal", "Mobilidade", "-"),
-      ex("Core opcional", "Pallof press e dead bug", "Core", "pallof press dead bug"),
     ],
   },
   {
