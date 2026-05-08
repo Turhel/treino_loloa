@@ -4,6 +4,7 @@ import { calculateCardioStats, calculateConsistency, calculateMuscleVolume, calc
 
 describe("performance calculations", () => {
   it("processa dados longos sem NaN ou undefined", () => {
+    const startedAt = performance.now();
     const data = makeFakePerformanceData("2024-01-01", 104);
     const entries = normalizeExerciseHistory(data.logs);
     const filtered = filterExerciseEntries(entries, { period: "all", exerciseId: "", muscle: "", trainingType: "", onlyWithHistory: true });
@@ -16,5 +17,6 @@ describe("performance calculations", () => {
     expect(records.length).toBeGreaterThan(0);
     expect(consistency.days.length).toBeGreaterThan(0);
     expect(cardio.totalMinutes).toBeGreaterThan(0);
-  });
+    expect(performance.now() - startedAt).toBeLessThan(12000);
+  }, 15000);
 });

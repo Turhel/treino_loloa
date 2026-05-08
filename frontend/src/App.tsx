@@ -730,7 +730,7 @@ export default function TrainingPlanApp() {
       pain_logs: painLogs,
       cardio_logs: cardioLogs,
       custom_plans: customPlans,
-      settings: { phase, week, startDate, autoWeekEnabled, activePlanId: activePlan.id },
+      settings: { phase, startDate, autoWeekEnabled, activePlanId: activePlan.id },
     });
   }
 
@@ -762,7 +762,7 @@ export default function TrainingPlanApp() {
       syncReadyRef.current = true;
       setSyncStatus("Sincronizado");
     } catch (error) {
-      console.error(error);
+      console.error("[Supabase sync] Não foi possível sincronizar os dados.", error);
       setSyncStatus("Erro ao sincronizar");
     }
   }
@@ -782,7 +782,10 @@ export default function TrainingPlanApp() {
     getCurrentSession().then((session) => {
       setUser(session?.user ?? null);
       if (session?.user) void syncWithSupabase(session.user, "merge");
-    }).catch(() => setSyncStatus("Erro ao sincronizar"));
+    }).catch((error) => {
+      console.error("[Supabase auth] Não foi possível restaurar a sessão.", error);
+      setSyncStatus("Erro ao sincronizar");
+    });
     return onAuthSessionChange((session) => {
       const nextUser = session?.user ?? null;
       setUser(nextUser);
