@@ -20,7 +20,7 @@ export function PerformanceFilterBar({
 }) {
   const fieldClass = "rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-semibold text-zinc-100 outline-none focus:border-zinc-400";
   return (
-    <section className="grid gap-3 rounded-3xl border border-zinc-800 bg-zinc-900 p-4 shadow-sm lg:grid-cols-[auto_1fr_1fr_auto_auto] lg:items-center">
+    <section className="cute-card grid gap-3 rounded-3xl border border-zinc-800 bg-zinc-900 p-4 shadow-sm lg:grid-cols-[auto_1fr_1fr_auto_auto] lg:items-center">
       <select value={filters.period} onChange={(event) => onChange({ ...filters, period: event.target.value as PerformancePeriod })} className={fieldClass}>
         {periods.map((period) => <option key={period.value} value={period.value}>{period.label}</option>)}
       </select>

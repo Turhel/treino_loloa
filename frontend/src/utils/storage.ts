@@ -10,7 +10,7 @@ export const PAIN_LOG_KEY = "treino-loloa-pain-v1";
 export const CARDIO_LOG_KEY = "treino-loloa-cardio-v1";
 
 export function emptyLog(): ExerciseLog {
-  return { done: false, load: "", reps1: "", reps2: "", reps3: "", note: "" };
+  return { done: false, skipped: false, load: "", reps1: "", reps2: "", reps3: "", note: "" };
 }
 
 export function shouldIncrease(log?: ExerciseLog) {

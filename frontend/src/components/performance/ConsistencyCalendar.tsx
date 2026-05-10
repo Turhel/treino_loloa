@@ -3,7 +3,7 @@ import type { ConsistencyStats } from "../../utils/performance";
 export function ConsistencyCalendar({ stats }: { stats: ConsistencyStats }) {
   const colorFor = (day: { training: boolean; cardio: boolean }) => day.training && day.cardio ? "bg-violet-500" : day.training ? "bg-emerald-500" : day.cardio ? "bg-teal-500" : "bg-zinc-800";
   return (
-    <section className="rounded-3xl border border-zinc-800 bg-zinc-900 p-5 shadow-sm">
+    <section className="cute-card rounded-3xl border border-zinc-800 bg-zinc-900 p-5 shadow-sm">
       <h2 className="text-xl font-black text-zinc-50">Consistência</h2>
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <span className="rounded-2xl bg-zinc-950 p-3 text-sm font-bold text-zinc-300">Sequência atual<br /><strong className="text-xl text-zinc-50">{stats.currentStreak}</strong></span>

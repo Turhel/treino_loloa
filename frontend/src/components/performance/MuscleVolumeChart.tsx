@@ -2,7 +2,7 @@ import type { MuscleVolumeItem } from "../../utils/performance";
 
 export function MuscleVolumeChart({ items }: { items: MuscleVolumeItem[] }) {
   return (
-    <section className="rounded-3xl border border-zinc-800 bg-zinc-900 p-5 shadow-sm">
+    <section className="cute-card rounded-3xl border border-zinc-800 bg-zinc-900 p-5 shadow-sm">
       <h2 className="text-xl font-black text-zinc-50">Volume por grupo muscular</h2>
       <div className="mt-4 grid gap-3">
         {items.length ? items.map((item) => (

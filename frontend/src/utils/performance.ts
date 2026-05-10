@@ -1,5 +1,6 @@
 import { exerciseLibrary, exerciseLibraryList, findExerciseLibraryItem } from "../data/exerciseLibrary";
-import type { ExerciseLog, Logs, TrainingType } from "../types/training";
+import type { ExerciseLog, ExerciseTimerSession, Logs, TrainingType } from "../types/training";
+import { estimateKcalFromLoggedExercise } from "./energy";
 import { focusToKey, focusToTargets } from "./focus";
 import { shouldIncrease } from "./storage";
 
@@ -93,6 +94,23 @@ export type PersonalRecord = {
   date: string;
 };
 
+export type WeeklyCaloriesItem = {
+  weekStart: string;
+  label: string;
+  trainingCalories: number;
+  cardioCalories: number;
+  totalCalories: number;
+};
+
+export type TimerPerformanceStats = {
+  sessions: number;
+  totalTensionSeconds: number;
+  totalRestSeconds: number;
+  averageRestSeconds: number;
+  estimatedKcal: number;
+  topByTension: { exerciseName: string; seconds: number; averageSecondsPerRep: number | null }[];
+};
+
 export function parseNumber(value?: string): number | null {
   if (!value) return null;
   const parsed = Number(value.replace(",", "."));
@@ -110,6 +128,8 @@ export function calculateExerciseVolume(log?: ExerciseLog): number {
 export function getEntryDate(entry: { updatedAt?: string; date?: string }, key?: string): string {
   if (entry.date) return entry.date;
   if (entry.updatedAt) return entry.updatedAt.slice(0, 10);
+  const dailyKeyDate = key?.match(/:(\d{4}-\d{2}-\d{2}):/);
+  if (dailyKeyDate) return dailyKeyDate[1];
   const match = key?.match(/start:(\d{4}-\d{2}-\d{2})::block:(\d+)/);
   if (!match) return "";
   const date = new Date(`${match[1]}T00:00:00`);
@@ -136,13 +156,36 @@ function hasExerciseData(log: ExerciseLog) {
   return log.done || Boolean(log.load || log.reps1 || log.reps2 || log.reps3 || log.note);
 }
 
+function humanizeExerciseId(value: string) {
+  const clean = value
+    .replace(/^local:/, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return clean ? clean.charAt(0).toUpperCase() + clean.slice(1) : "Exercício sem nome";
+}
+
+function parseExerciseIdentity(key: string) {
+  if (key.includes("::")) {
+    const parts = key.split("::");
+    const rawName = parts[parts.length - 1] || "Exercício sem nome";
+    const rawId = parts[parts.length - 2] || rawName;
+    const item = findExerciseLibraryItem(rawId) ?? findExerciseLibraryItem(rawName);
+    return { exerciseId: rawId, exerciseName: item?.name ?? humanizeExerciseId(rawName) };
+  }
+
+  const parts = key.split(":");
+  const dateIndex = parts.findIndex((part) => /^\d{4}-\d{2}-\d{2}$/.test(part));
+  const rawId = dateIndex >= 0 && parts.length > dateIndex + 3 ? parts.slice(dateIndex + 3).join(":") : parts[parts.length - 1] || key;
+  const item = findExerciseLibraryItem(rawId);
+  return { exerciseId: rawId, exerciseName: item?.name ?? humanizeExerciseId(rawId) };
+}
+
 export function normalizeExerciseHistory(logs: Logs): PerformanceExerciseEntry[] {
   return Object.entries(logs)
     .filter(([, log]) => hasExerciseData(log))
     .map(([key, log]) => {
-      const parts = key.split("::");
-      const exerciseName = parts[parts.length - 1] || "Exercício sem nome";
-      const exerciseId = parts[parts.length - 2] || exerciseName;
+      const { exerciseId, exerciseName } = parseExerciseIdentity(key);
       return {
         key,
         exerciseId,
@@ -269,6 +312,126 @@ function cardioMinutes(entry: CardioPerformanceLog) {
   return split || parseNumber(entry.minutes) || 0;
 }
 
+export function calculateExerciseCalories(entryOrLog?: PerformanceExerciseEntry | ExerciseLog, bodyWeightKg?: number | null) {
+  if (!entryOrLog) return 0;
+  if ("log" in entryOrLog) {
+    return estimateKcalFromLoggedExercise({
+      log: entryOrLog.log,
+      exerciseId: entryOrLog.exerciseId,
+      exerciseName: entryOrLog.exerciseName,
+      bodyWeightKg,
+    });
+  }
+  return estimateKcalFromLoggedExercise({ log: entryOrLog, bodyWeightKg });
+}
+
+function calculateCardioCalories(entry: CardioPerformanceLog, bodyWeightKg?: number | null) {
+  const minutes = cardioMinutes(entry);
+  if (!minutes) return 0;
+  const type = entry.type.toLowerCase();
+  const intensity = entry.intensity.toLowerCase();
+  const met = /corrida|running/.test(type)
+    ? 8
+    : /bike|bicicleta/.test(type)
+      ? 5.8
+      : /el[ií]ptico/.test(type)
+        ? 5
+        : /forte/.test(intensity)
+          ? 6
+          : /leve/.test(intensity)
+            ? 3.2
+            : 4.2;
+  const weight = bodyWeightKg && bodyWeightKg > 0 ? bodyWeightKg : 70;
+  return Math.round((met * 3.5 * weight * minutes) / 200);
+}
+
+function getMondayKey(dateKey: string) {
+  const date = new Date(`${dateKey}T12:00:00`);
+  const day = date.getDay() || 7;
+  date.setDate(date.getDate() - day + 1);
+  return date.toISOString().slice(0, 10);
+}
+
+function formatWeekLabel(weekStart: string) {
+  const [, month, day] = weekStart.split("-");
+  return `${day}/${month}`;
+}
+
+export function calculateWeeklyCalories(entries: PerformanceExerciseEntry[], cardioLogs: CardioPerformanceLog[], period: PerformancePeriod, bodyWeightKg?: number | null, timerSessions: ExerciseTimerSession[] = []): WeeklyCaloriesItem[] {
+  const weeks = new Map<string, WeeklyCaloriesItem>();
+  const ensureWeek = (date: string) => {
+    const weekStart = getMondayKey(date);
+    const current = weeks.get(weekStart) ?? { weekStart, label: formatWeekLabel(weekStart), trainingCalories: 0, cardioCalories: 0, totalCalories: 0 };
+    weeks.set(weekStart, current);
+    return current;
+  };
+  const timerCalories = new Map<string, number>();
+  for (const session of timerSessions) {
+    if (session.status !== "completed" || !isWithinPeriod(session.dateKey, period) || !session.estimatedKcal) continue;
+    const key = `${session.dateKey}::${session.exerciseId}`;
+    timerCalories.set(key, (timerCalories.get(key) ?? 0) + session.estimatedKcal);
+  }
+  const consumedTimerKeys = new Set<string>();
+
+  for (const entry of entries) {
+    if (!isWithinPeriod(entry.date, period)) continue;
+    const timerKey = `${entry.date}::${entry.exerciseId}`;
+    const calories = timerCalories.get(timerKey) ?? calculateExerciseCalories(entry, bodyWeightKg);
+    if (!calories) continue;
+    consumedTimerKeys.add(timerKey);
+    ensureWeek(entry.date).trainingCalories += calories;
+  }
+
+  for (const session of timerSessions) {
+    if (session.status !== "completed" || !isWithinPeriod(session.dateKey, period) || !session.estimatedKcal) continue;
+    const timerKey = `${session.dateKey}::${session.exerciseId}`;
+    if (consumedTimerKeys.has(timerKey)) continue;
+    ensureWeek(session.dateKey).trainingCalories += session.estimatedKcal;
+  }
+
+  for (const entry of cardioLogs) {
+    if (!isWithinPeriod(entry.date, period)) continue;
+    const calories = calculateCardioCalories(entry, bodyWeightKg);
+    if (!calories) continue;
+    ensureWeek(entry.date).cardioCalories += calories;
+  }
+
+  return [...weeks.values()]
+    .map((week) => ({ ...week, totalCalories: week.trainingCalories + week.cardioCalories }))
+    .sort((a, b) => a.weekStart.localeCompare(b.weekStart));
+}
+
+export function calculateTimerStats(timerSessions: ExerciseTimerSession[], period: PerformancePeriod): TimerPerformanceStats {
+  const sessions = timerSessions.filter((session) => session.status === "completed" && isWithinPeriod(session.dateKey, period));
+  const byExercise = new Map<string, { exerciseName: string; seconds: number; reps: number }>();
+  let totalTensionSeconds = 0;
+  let totalRestSeconds = 0;
+  let estimatedKcal = 0;
+
+  for (const session of sessions) {
+    totalTensionSeconds += session.totalTensionSeconds || 0;
+    totalRestSeconds += session.totalRestSeconds || 0;
+    estimatedKcal += session.estimatedKcal ?? 0;
+    const key = session.executedExerciseId || session.exerciseId;
+    const current = byExercise.get(key) ?? { exerciseName: session.executedExerciseName || session.exerciseName, seconds: 0, reps: 0 };
+    current.seconds += session.totalTensionSeconds || 0;
+    current.reps += session.sets.reduce((sum, set) => sum + (set.reps ?? 0), 0);
+    byExercise.set(key, current);
+  }
+
+  return {
+    sessions: sessions.length,
+    totalTensionSeconds,
+    totalRestSeconds,
+    averageRestSeconds: sessions.length ? Math.round(totalRestSeconds / sessions.length) : 0,
+    estimatedKcal: Math.round(estimatedKcal),
+    topByTension: [...byExercise.values()]
+      .sort((a, b) => b.seconds - a.seconds)
+      .slice(0, 5)
+      .map((item) => ({ exerciseName: item.exerciseName, seconds: item.seconds, averageSecondsPerRep: item.reps ? Math.round((item.seconds / item.reps) * 10) / 10 : null })),
+  };
+}
+
 export function calculateCardioStats(cardioLogs: CardioPerformanceLog[], period: PerformancePeriod): CardioStats {
   const logs = cardioLogs.filter((entry) => isWithinPeriod(entry.date, period));
   const totalMinutes = logs.reduce((sum, entry) => sum + cardioMinutes(entry), 0);
@@ -364,7 +527,7 @@ export function calculatePersonalRecords(entries: PerformanceExerciseEntry[]): P
     if (bestVolume?.volume) records.push({ exerciseId, exerciseName: name, type: "Volume", value: `${bestVolume.volume} kg`, date: bestVolume.date });
     if (bestReps?.repsTotal) records.push({ exerciseId, exerciseName: name, type: "Reps", value: `${bestReps.repsTotal} reps`, date: bestReps.date });
   }
-  return records.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+  return records.sort((a, b) => b.date.localeCompare(a.date));
 }
 
 export function buildPerformanceInsights({

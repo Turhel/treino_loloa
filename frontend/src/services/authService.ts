@@ -16,7 +16,12 @@ export function onAuthSessionChange(callback: (session: Session | null) => void)
 
 export async function signUpWithEmail(email: string, password: string) {
   if (!supabase) throw new Error("Supabase não está configurado.");
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const emailRedirectTo = getAuthRedirectTo();
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: emailRedirectTo ? { emailRedirectTo } : undefined,
+  });
   if (error) throw error;
   if (data.user) await ensureProfile(data.user).catch(() => undefined);
   return data;
@@ -43,4 +48,12 @@ async function ensureProfile(user: User) {
     display_name: user.email?.split("@")[0] ?? null,
     updated_at: new Date().toISOString(),
   });
+}
+
+function getAuthRedirectTo() {
+  const configured = (import.meta.env.VITE_SUPABASE_AUTH_REDIRECT_URL || import.meta.env.VITE_PUBLIC_APP_URL) as string | undefined;
+  if (configured) return configured.replace(/\/$/, "");
+  if (typeof window === "undefined") return undefined;
+  const isLocalhost = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+  return isLocalhost ? undefined : window.location.origin;
 }

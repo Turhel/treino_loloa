@@ -22,9 +22,17 @@ Crie `frontend/.env.local`:
 ```env
 VITE_SUPABASE_URL=https://seu-projeto.supabase.co
 VITE_SUPABASE_ANON_KEY=sua-anon-key
+VITE_SUPABASE_AUTH_REDIRECT_URL=https://seu-site.com
 ```
 
 Use apenas a `anon key` no frontend. Nunca coloque `service_role` no app.
+
+`VITE_SUPABASE_AUTH_REDIRECT_URL` é opcional no desenvolvimento local, mas deve ser configurada no deploy para a URL pública do app. Assim, o email de confirmação de conta não manda o usuário para `127.0.0.1` ou `localhost`.
+
+No painel do Supabase, confira também `Authentication > URL Configuration`:
+
+- `Site URL`: URL pública do app.
+- `Redirect URLs`: inclua a mesma URL pública usada em `VITE_SUPABASE_AUTH_REDIRECT_URL`.
 
 No painel do Supabase, abra o SQL Editor e execute:
 

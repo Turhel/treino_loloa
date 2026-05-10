@@ -11,6 +11,7 @@ import {
   ExternalLink,
   FileText,
   HeartPulse,
+  ImageOff,
   Library,
   Play,
   Plus,
@@ -28,12 +29,15 @@ import {
 import type { User } from "@supabase/supabase-js";
 import { AuthModal } from "./components/AuthModal";
 import { UserMenu } from "./components/UserMenu";
+import { ExerciseTimerModal } from "./components/timer/ExerciseTimerModal";
 import { cardio, defaultTrainingPlan, getPlanDays, getPlanWeeks, overview, progression, recovery } from "./data/trainingPlans";
 import { exerciseLibrary, exerciseLibraryList, findExerciseLibraryItem, toPlanExercise } from "./data/exerciseLibrary";
 import { muscleImages } from "./data/muscleData";
-import type { CustomTrainingPlan, Exercise, ExerciseLog, Logs, Phase, TrainingDay, TrainingType, TrainingWeek } from "./types/training";
+import type { CustomTrainingPlan, Exercise, ExerciseLog, ExerciseTimerSession, Logs, MuscleInfo, Phase, TrainingDay, TrainingType, TrainingWeek, WeightEntry } from "./types/training";
 import { focusToKey, focusToTargets } from "./utils/focus";
 import { getManualVideoLinks, videoKey, youtubeSearch } from "./utils/video";
+import { estimateKcalFromLoggedExercise } from "./utils/energy";
+import { deleteWeightEntry, normalizeWeightHistory, sortWeightHistory } from "./utils/weight";
 import { getCurrentSession, onAuthSessionChange, signOut } from "./services/authService";
 import { getUserAppData, hasRemoteData, mergeUserAppData, normalizeUserAppData, saveUserAppData, type UserAppData } from "./services/userDataService";
 import { PerformancePage } from "./pages/PerformancePage";
@@ -72,6 +76,15 @@ type ScheduledTrainingDay = TrainingDay & {
   blockIndex: number;
   blockTotal: number;
 };
+type ExtraWorkout = {
+  id: string;
+  planId: string;
+  week: string;
+  date: string;
+  title: string;
+  exercises: Exercise[];
+  createdAt: string;
+};
 type WeeklySummary = {
   id: string;
   generatedAt: string;
@@ -93,8 +106,18 @@ type WeeklySummary = {
   improveExercise?: string;
   weeklyLoads?: { label: string; totalLoad: number; calories?: number }[];
 };
+type TimerTarget = {
+  plan: ScheduledTrainingDay;
+  exercise: Exercise;
+};
 
 const WEEKLY_SUMMARY_KEY = "treino-loloa-weekly-summaries-v1";
+const TIMER_SESSION_KEY = "treino-loloa-timer-sessions-v1";
+const BODY_WEIGHT_KEY = "treino-loloa-body-weight-v1";
+const BODY_HEIGHT_KEY = "treino-loloa-body-height-v1";
+const BODY_WEIGHT_WEEK_KEY = "treino-loloa-body-weight-week-v1";
+const EXTRA_WORKOUT_KEY = "treino-loloa-extra-workouts-v1";
+const WEIGHT_HISTORY_KEY = "treino-loloa-weight-history-v1";
 const cardioTypeOptions = ["Caminhada", "Esteira", "Corrida", "Bicicleta", "Elíptico", "Escada", "Outro"];
 
 const typeStyle: Record<TrainingType, { label: string; chip: string; border: string; soft: string; icon: string }> = {
@@ -167,12 +190,8 @@ function numericValue(value: string) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
-function estimateExerciseCalories(log?: ExerciseLog) {
-  if (!log) return 0;
-  const load = numericValue(log.load);
-  const reps = [log.reps1, log.reps2, log.reps3].reduce((sum, value) => sum + numericValue(value), 0);
-  if (!load || !reps) return 0;
-  return Math.round(Math.max(1, load * reps * 0.005 + reps * 0.08));
+function estimateExerciseCalories(log?: ExerciseLog, exercise?: Exercise, bodyWeightKg?: number | null) {
+  return estimateKcalFromLoggedExercise({ log, exerciseId: exercise?.id, exerciseName: exercise?.name, bodyWeightKg });
 }
 
 function exerciseVolume(log?: ExerciseLog) {
@@ -193,7 +212,7 @@ function cardioMinutes(entry: { minutes?: string; lightMinutes?: string; moderat
   return splitTotal || numericValue(entry.minutes ?? "");
 }
 
-function estimateCardioCalories(entry: { minutes?: string; type: string; intensity?: string; lightMinutes?: string; moderateMinutes?: string; hardMinutes?: string }) {
+function estimateCardioCalories(entry: { minutes?: string; type: string; intensity?: string; lightMinutes?: string; moderateMinutes?: string; hardMinutes?: string }, bodyWeightKg?: number | null) {
   const lightMinutes = numericValue(entry.lightMinutes ?? "");
   const moderateMinutes = numericValue(entry.moderateMinutes ?? "");
   const hardMinutes = numericValue(entry.hardMinutes ?? "");
@@ -202,7 +221,7 @@ function estimateCardioCalories(entry: { minutes?: string; type: string; intensi
   if (!splitTotal && !fallbackMinutes) return 0;
   const type = entry.type.toLowerCase();
   const baseMet = type.includes("corrida") ? 8 : type.includes("bike") || type.includes("bicicleta") ? 5.8 : type.includes("elíptico") || type.includes("eliptico") ? 5 : 3.8;
-  const referenceWeightKg = 70;
+  const referenceWeightKg = bodyWeightKg && bodyWeightKg > 0 ? bodyWeightKg : 70;
   const caloriesFor = (minutes: number, multiplier: number) => ((baseMet * multiplier * 3.5 * referenceWeightKg) / 200) * minutes;
   if (splitTotal) return Math.round(caloriesFor(lightMinutes, 0.85) + caloriesFor(moderateMinutes, 1.1) + caloriesFor(hardMinutes, 1.35));
   const intensity = (entry.intensity ?? "Leve").toLowerCase();
@@ -345,9 +364,9 @@ function nextWeekId(weeks: TrainingWeek[]) {
 
 function Segmented<T extends string>({ value, setValue, options }: { value: T; setValue: (v: T) => void; options: { value: T; label: string }[] }) {
   return (
-    <div className="inline-flex max-w-full overflow-x-auto rounded-2xl bg-zinc-950 p-1 ring-1 ring-zinc-800">
+    <div className="cute-segmented inline-flex max-w-full overflow-x-auto p-1">
       {options.map((option) => (
-        <button key={option.value} onClick={() => setValue(option.value)} className={`whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold transition ${value === option.value ? "bg-zinc-800 text-zinc-50" : "text-zinc-400 hover:text-zinc-100"}`}>
+        <button key={option.value} onClick={() => setValue(option.value)} className={`whitespace-nowrap rounded-xl px-4 py-2 text-sm font-black transition ${value === option.value ? "cute-primary shadow-sm" : "text-zinc-400 hover:text-zinc-100"}`}>
           {option.label}
         </button>
       ))}
@@ -356,11 +375,11 @@ function Segmented<T extends string>({ value, setValue, options }: { value: T; s
 }
 
 function StatBadge({ icon, title, value, tooltip }: { icon: React.ReactNode; title: string; value: string; tooltip: string }) {
-  return <span title={tooltip} className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950/80 px-3 py-2 text-xs font-black text-zinc-200 shadow-sm shadow-black/20"><span className="text-zinc-400">{icon}</span><span className="text-zinc-500">{title}</span><span className="text-zinc-50">{value}</span></span>;
+  return <span title={tooltip} className="cute-pop inline-flex min-w-0 max-w-full items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-950/80 px-3 py-2 text-xs font-black text-zinc-200 shadow-sm shadow-black/20"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-rose-950/70 text-rose-200 ring-1 ring-rose-800">{icon}</span><span className="grid min-w-0"><span className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">{title}</span><span className="min-w-0 truncate text-sm text-zinc-50">{value}</span></span></span>;
 }
 
 function LogInputs({ log, onLog, compact = false }: { log: ExerciseLog; onLog: (patch: Partial<ExerciseLog>) => void; compact?: boolean }) {
-  const inputClass = "min-w-0 rounded-xl border border-zinc-700 bg-zinc-950 px-2 py-2 text-xs text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-zinc-400";
+  const inputClass = "cute-input px-2 py-2 text-xs placeholder:text-zinc-500 focus:border-zinc-400";
   return (
     <div className="grid gap-2">
       <div className={`grid gap-2 ${compact ? "grid-cols-4" : "grid-cols-2 sm:grid-cols-4"}`}>
@@ -369,7 +388,7 @@ function LogInputs({ log, onLog, compact = false }: { log: ExerciseLog; onLog: (
         <input value={log.reps2} onChange={(event) => onLog({ reps2: event.target.value })} placeholder="R2" inputMode="numeric" className={inputClass} />
         <input value={log.reps3} onChange={(event) => onLog({ reps3: event.target.value })} placeholder="R3" inputMode="numeric" className={inputClass} />
       </div>
-      <input value={log.note} onChange={(event) => onLog({ note: event.target.value })} placeholder="Observação" className={inputClass} />
+      <input value={log.note} onChange={(event) => onLog({ note: event.target.value })} placeholder="Observação" className={`${inputClass} col-span-full`} />
     </div>
   );
 }
@@ -389,10 +408,10 @@ function RestTimer({ defaultSeconds }: { defaultSeconds: number }) {
   if (!defaultSeconds) return <span className="text-zinc-500">-</span>;
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button onClick={() => setRunning((value) => !value)} className={`rounded-xl px-3 py-2 text-xs font-black ${running ? "bg-orange-950/70 text-orange-200" : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"}`}>
+      <button onClick={() => setRunning((value) => !value)} className={`rounded-full px-3 py-2 text-xs font-black shadow-sm ${running ? "bg-orange-950/70 text-orange-200 ring-1 ring-orange-800" : "cute-secondary hover:bg-zinc-800"}`}>
         {String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}
       </button>
-      {[60, 90, 120].map((preset) => <button key={preset} onClick={() => { setSeconds(preset); setRunning(true); }} className="rounded-lg bg-zinc-950 px-2 py-1 text-[11px] font-bold text-zinc-300 ring-1 ring-zinc-700 hover:bg-zinc-800">{preset}s</button>)}
+      {[60, 90, 120].map((preset) => <button key={preset} onClick={() => { setSeconds(preset); setRunning(true); }} className="rounded-full bg-zinc-950 px-3 py-1 text-[11px] font-bold text-zinc-300 ring-1 ring-zinc-700 hover:bg-zinc-800">{preset}s</button>)}
     </div>
   );
 }
@@ -401,7 +420,7 @@ function FocusLinks({ focus, onMuscleClick, compact = false }: { focus: string; 
   return (
     <div className={`flex flex-wrap gap-2 ${compact ? "mt-3" : ""}`}>
       {focusToTargets(focus).map((target) => (
-        <button key={`${focus}-${target.key}`} onClick={() => onMuscleClick(target.key)} className={`${compact ? "rounded-xl bg-blue-950/40 px-3 py-2 text-left text-sm font-black text-blue-200 ring-1 ring-blue-800" : "rounded-full bg-blue-950/40 px-3 py-1 text-xs font-black text-blue-200 ring-1 ring-blue-800 transition hover:bg-blue-900/60 hover:text-blue-100"}`}>
+        <button key={`${focus}-${target.key}`} onClick={() => onMuscleClick(target.key)} className={`${compact ? "rounded-2xl bg-blue-950/40 px-3 py-2 text-left text-sm font-black text-blue-200 ring-1 ring-blue-800" : "cute-badge cute-badge-blue transition"}`}>
           {target.label}
         </button>
       ))}
@@ -416,9 +435,9 @@ function VideoButton({ name, videoKey: explicitVideoKey, compact = false, onOpen
       type="button"
       onClick={() => onOpen({ name, videoKey: explicitVideoKey })}
       aria-label={`Ver exercício ${name}`}
-      className={`${compact ? "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full p-0" : "inline-flex h-10 items-center gap-2 rounded-full px-3"} border border-zinc-700/80 bg-zinc-950/95 text-xs font-black text-zinc-100 shadow-sm shadow-black/20 outline-none ring-1 ring-white/5 transition hover:border-zinc-500 hover:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-zinc-400`}
+      className={`${compact ? "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full p-0" : "cute-button cute-button-primary h-11 px-4"} text-xs outline-none focus-visible:ring-2 focus-visible:ring-zinc-400`}
     >
-      <span className={`${compact ? "" : "flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 text-zinc-950"}`}>
+      <span className={`${compact ? "grid h-9 w-9 place-items-center rounded-full bg-zinc-100 text-zinc-950" : "flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 text-zinc-950"}`}>
         <Play className={`${compact ? "h-4 w-4" : "h-3.5 w-3.5"} translate-x-px fill-current`} />
       </span>
       {!compact && <span>Ver exercício</span>}
@@ -430,7 +449,7 @@ function AlternativeChips({ exercise, onAlternativeClick }: { exercise: Exercise
     <div className="mt-2 flex flex-wrap gap-2">
       {(exercise.alternatives ?? []).map((alt) => {
         const item = findExerciseLibraryItem(alt);
-        return <button key={alt} type="button" onClick={(event) => { event.stopPropagation(); onAlternativeClick(alt, exercise); }} className="min-h-8 rounded-full bg-zinc-800 px-3 py-1 text-left text-xs font-bold text-zinc-200 transition hover:bg-zinc-700 hover:text-white">{item?.name ?? alt}</button>;
+        return <button key={alt} type="button" onClick={(event) => { event.stopPropagation(); onAlternativeClick(alt, exercise); }} className="cute-badge cute-badge-lavender min-h-8 text-left transition">{item?.name ?? alt}</button>;
       })}
     </div>
   );
@@ -449,28 +468,28 @@ function ExerciseHistory({ logs, exercise, currentLogKey }: { logs: Logs; exerci
   );
 }
 
-function ExerciseRow({ exercise, log, logs, onLog, onMuscleClick, onAlternativeClick, onMediaOpen, lightMode, exerciseDomKey, registerExerciseRef, highlighted, currentLogKey }: { exercise: Exercise; log: ExerciseLog; logs: Logs; onLog: (patch: Partial<ExerciseLog>) => void; onMuscleClick: (muscleKey: string) => void; onAlternativeClick: (idOrName: string, source: Exercise) => void; onMediaOpen: (target: MediaTarget) => void; lightMode: boolean; exerciseDomKey: string; registerExerciseRef: (key: string, element: HTMLElement | null) => void; highlighted: boolean; currentLogKey: string }) {
+function ExerciseRow({ exercise, log, logs, onLog, onMuscleClick, onAlternativeClick, onMediaOpen, onTimerOpen, lightMode, exerciseDomKey, registerExerciseRef, highlighted, currentLogKey }: { exercise: Exercise; log: ExerciseLog; logs: Logs; onLog: (patch: Partial<ExerciseLog>) => void; onMuscleClick: (muscleKey: string) => void; onAlternativeClick: (idOrName: string, source: Exercise) => void; onMediaOpen: (target: MediaTarget) => void; onTimerOpen: () => void; lightMode: boolean; exerciseDomKey: string; registerExerciseRef: (key: string, element: HTMLElement | null) => void; highlighted: boolean; currentLogKey: string }) {
   const increase = shouldIncrease(log);
   return (
     <tr ref={(element) => registerExerciseRef(exerciseDomKey, element)} className={`scroll-mt-28 align-top transition ${highlighted ? "bg-blue-950/60 ring-2 ring-blue-400" : log.done ? "bg-emerald-950/30" : "hover:bg-zinc-800/50"}`}>
-      <td className="px-4 py-3 font-semibold text-zinc-400"><label className="flex items-center gap-2"><input type="checkbox" checked={log.done} onChange={(event) => onLog({ done: event.target.checked })} className="h-4 w-4 rounded border-zinc-700 accent-emerald-500" />{exercise.order}</label></td>
-      <td className="px-4 py-3"><p className="font-bold text-zinc-100">{exercise.name}</p><details className="mt-2 text-xs text-zinc-400"><summary className="cursor-pointer font-bold text-zinc-300">Alternativas</summary><AlternativeChips exercise={exercise} onAlternativeClick={onAlternativeClick} /></details><ExerciseHistory logs={logs} exercise={exercise} currentLogKey={currentLogKey} /></td>
+      <td className="px-4 py-3 font-semibold text-zinc-400"><label className="flex items-center gap-2"><input type="checkbox" checked={log.done} onChange={(event) => onLog({ done: event.target.checked, skipped: event.target.checked ? false : log.skipped })} className="h-5 w-5 rounded-lg border-zinc-700 accent-emerald-500" /><span className="cute-badge cute-badge-neutral px-2">{exercise.order}</span></label></td>
+      <td className="px-4 py-3"><p className="font-bold text-zinc-100">{exercise.name}</p>{log.skipped && !log.done && <span className="mt-2 inline-flex rounded-full bg-zinc-800 px-3 py-1 text-xs font-black text-zinc-300 ring-1 ring-zinc-700">Pulado por enquanto</span>}<details className="mt-2 text-xs text-zinc-400"><summary className="cursor-pointer font-bold text-zinc-300">Alternativas</summary><AlternativeChips exercise={exercise} onAlternativeClick={onAlternativeClick} /></details><ExerciseHistory logs={logs} exercise={exercise} currentLogKey={currentLogKey} /></td>
       <td className="px-4 py-3"><FocusLinks focus={`${exercise.name} ${exercise.focus}`} onMuscleClick={onMuscleClick} /></td>
       <td className="px-4 py-3"><LogInputs log={log} onLog={onLog} />{increase && <p className="mt-2 rounded-xl bg-emerald-950/70 px-2 py-1 text-xs font-black text-emerald-200">Bateu 3x15. Próximo treino: aumentar carga.</p>}{lightMode && <p className="mt-2 text-xs font-semibold text-orange-300">Modo leve ativo: foco em execução limpa.</p>}</td>
       <td className="px-4 py-3"><RestTimer defaultSeconds={exercise.rest ?? 60} /></td>
-      <td className="px-4 py-3"><VideoButton name={exercise.name} videoKey={exercise.videoKey} onOpen={onMediaOpen} /></td>
+      <td className="px-4 py-3"><div className="grid gap-2"><button onClick={onTimerOpen} className="cute-button cute-button-secondary min-h-0 px-3 py-2 text-xs"><TimerReset className="h-3.5 w-3.5" /> Iniciar</button><button type="button" onClick={() => onLog({ skipped: !log.skipped, done: false })} className="cute-button cute-button-secondary min-h-0 px-3 py-2 text-xs">{log.skipped ? "Retomar" : "Pular"}</button><VideoButton name={exercise.name} videoKey={exercise.videoKey} onOpen={onMediaOpen} /></div></td>
     </tr>
   );
 }
 
 function ExerciseMobileCard(props: Parameters<typeof ExerciseRow>[0]) {
-  const { exercise, log, logs, onLog, onMuscleClick, onAlternativeClick, onMediaOpen, lightMode, exerciseDomKey, registerExerciseRef, highlighted, currentLogKey } = props;
+  const { exercise, log, logs, onLog, onMuscleClick, onAlternativeClick, onMediaOpen, onTimerOpen, lightMode, exerciseDomKey, registerExerciseRef, highlighted, currentLogKey } = props;
   const increase = shouldIncrease(log);
   return (
-    <article ref={(element) => registerExerciseRef(exerciseDomKey, element)} className={`scroll-mt-28 rounded-2xl border p-4 shadow-sm transition ${highlighted ? "border-blue-400 bg-blue-950/50 ring-2 ring-blue-400" : log.done ? "border-emerald-800 bg-emerald-950/30" : "border-zinc-800 bg-zinc-950/70"}`}>
+    <article ref={(element) => registerExerciseRef(exerciseDomKey, element)} className={`cute-exercise-card cute-pop scroll-mt-28 rounded-2xl border p-4 shadow-sm transition ${highlighted ? "border-blue-400 bg-blue-950/50 ring-2 ring-blue-400" : log.done ? "border-emerald-800 bg-emerald-950/30" : log.skipped ? "border-zinc-700 bg-zinc-900/60 opacity-80" : "border-zinc-800 bg-zinc-950/70"}`}>
       <div className="flex items-start justify-between gap-3">
-        <label className="flex min-w-0 items-start gap-3"><input type="checkbox" checked={log.done} onChange={(event) => onLog({ done: event.target.checked })} className="mt-1 h-5 w-5 shrink-0 rounded border-zinc-700 accent-emerald-500" /><span className="min-w-0"><span className="block text-xs font-black uppercase tracking-[0.14em] text-zinc-500">{exercise.order}</span><span className="block text-base font-black leading-snug text-zinc-50">{exercise.name}</span></span></label>
-        <VideoButton name={exercise.name} videoKey={exercise.videoKey} compact onOpen={onMediaOpen} />
+        <label className="flex min-w-0 items-start gap-3"><input type="checkbox" checked={log.done} onChange={(event) => onLog({ done: event.target.checked, skipped: event.target.checked ? false : log.skipped })} className="mt-1 h-6 w-6 shrink-0 rounded-lg border-zinc-700 accent-emerald-500" /><span className="min-w-0"><span className="cute-badge cute-badge-pink mb-2 px-2 py-0.5">{exercise.order}</span><span className="block text-base font-black leading-snug text-zinc-50">{exercise.name}</span>{log.skipped && !log.done && <span className="mt-2 inline-flex rounded-full bg-zinc-800 px-3 py-1 text-xs font-black text-zinc-300 ring-1 ring-zinc-700">Pulado por enquanto</span>}</span></label>
+        <div className="flex shrink-0 gap-2"><button onClick={onTimerOpen} className="grid h-11 w-11 place-items-center rounded-full bg-emerald-950/70 text-emerald-200 ring-1 ring-emerald-800"><TimerReset className="h-4 w-4" /></button><VideoButton name={exercise.name} videoKey={exercise.videoKey} compact onOpen={onMediaOpen} /></div>
       </div>
       <FocusLinks focus={`${exercise.name} ${exercise.focus}`} onMuscleClick={onMuscleClick} compact />
       <div className="mt-4 grid gap-3">
@@ -478,6 +497,7 @@ function ExerciseMobileCard(props: Parameters<typeof ExerciseRow>[0]) {
         {increase && <p className="rounded-xl bg-emerald-950/70 px-3 py-2 text-xs font-black text-emerald-200">Bateu 3x15. Próximo treino: aumentar carga.</p>}
         {lightMode && <p className="text-xs font-semibold text-orange-300">Modo leve ativo: foco em execução limpa.</p>}
         <div><p className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">Descanso</p><RestTimer defaultSeconds={exercise.rest ?? 60} /></div>
+        <button type="button" onClick={() => onLog({ skipped: !log.skipped, done: false })} className="cute-button cute-button-secondary w-full">{log.skipped ? "Retomar exercício" : "Pular por enquanto"}</button>
         <details className="text-xs text-zinc-400"><summary className="cursor-pointer font-bold text-zinc-300">Alternativas se a máquina estiver ocupada</summary><AlternativeChips exercise={exercise} onAlternativeClick={onAlternativeClick} /></details>
         <ExerciseHistory logs={logs} exercise={exercise} currentLogKey={currentLogKey} />
       </div>
@@ -493,6 +513,7 @@ function DayCard({
   onMuscleClick,
   onAlternativeClick,
   onMediaOpen,
+  onTimerOpen,
   isOpen,
   onToggle,
   getExerciseDomKey,
@@ -500,6 +521,8 @@ function DayCard({
   registerExerciseRef,
   highlightedExerciseKey,
   lightMode,
+  bodyWeightKg,
+  timerSessions,
 }: {
   plan: ScheduledTrainingDay;
   logs: Logs;
@@ -508,6 +531,7 @@ function DayCard({
   onMuscleClick: (focus: string) => void;
   onAlternativeClick: (idOrName: string, source: Exercise) => void;
   onMediaOpen: (target: MediaTarget) => void;
+  onTimerOpen: (plan: ScheduledTrainingDay, exercise: Exercise) => void;
   isOpen: boolean;
   onToggle: () => void;
   getExerciseDomKey: (plan: ScheduledTrainingDay, exercise: Exercise) => string;
@@ -515,42 +539,76 @@ function DayCard({
   registerExerciseRef: (key: string, element: HTMLElement | null) => void;
   highlightedExerciseKey: string | null;
   lightMode: boolean;
+  bodyWeightKg: number | null;
+  timerSessions: ExerciseTimerSession[];
 }) {
   const style = typeStyle[plan.type] ?? typeStyle.superior;
   const exercises = lightMode && plan.exercises.length > 4 ? plan.exercises.slice(0, 4) : plan.exercises;
   const done = exercises.filter((exercise) => getLog(plan, exercise)?.done).length;
   const hasProgression = exercises.some((exercise) => shouldIncrease(getLog(plan, exercise)));
-  const estimatedCalories = exercises.reduce((sum, exercise) => sum + estimateExerciseCalories(getLog(plan, exercise)), 0);
+  const estimatedCalories = exercises.reduce((sum, exercise) => {
+    const timerCalories = timerSessions
+      .filter((session) => session.status === "completed" && session.dateKey === plan.scheduledDate && session.exerciseId === exercise.id)
+      .reduce((total, session) => total + (session.estimatedKcal ?? 0), 0);
+    return sum + (timerCalories || estimateExerciseCalories(getLog(plan, exercise), exercise, bodyWeightKg));
+  }, 0);
   const sessionDateKey = plan.scheduledDate;
-  const calorieTooltip = "Estimativa simples baseada em volume registrado: carga x repetições x fator metabólico. Só entra no cálculo quando há carga e pelo menos 1 repetição.";
+  const progressPercent = exercises.length ? Math.round((done / exercises.length) * 100) : 0;
+  const calorieTooltip = "Usa kcal do timer quando existir. Sem timer, estima por MET com peso corporal atual, carga e repetições.";
   return (
-    <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className={`overflow-hidden rounded-3xl border-l-8 ${style.border} border-y border-r border-zinc-800 bg-zinc-900 shadow-sm`}>
-      <div className={`grid gap-3 px-5 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start ${style.soft}`}>
+    <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className={`cute-day-card cute-pop overflow-hidden rounded-3xl border-l-8 ${style.border} border-y border-r border-zinc-800 bg-zinc-900 shadow-sm`}>
+      <div className={`cute-day-header grid gap-3 px-5 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start ${style.soft}`}>
         <div className="min-w-0 pr-1">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-400">{plan.scheduledDayName}</p>
           <h3 className="mt-1 text-lg font-black leading-snug text-zinc-50 sm:text-xl">{plan.title}</h3>
+          <div className="cute-progress mt-3">
+            <div className="cute-progress-fill" style={{ width: `${progressPercent}%` }} />
+          </div>
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-2 lg:justify-end">
-          <span className="rounded-full bg-zinc-950/80 px-3 py-1 text-xs font-black text-zinc-300 ring-1 ring-zinc-800">{done}/{exercises.length} feitos</span>
+          <span className="cute-badge cute-badge-lavender">{done}/{exercises.length} feitos</span>
           {hasProgression && <span className="rounded-full bg-emerald-950/70 px-3 py-1 text-xs font-black text-emerald-200 ring-1 ring-emerald-800">Progressão</span>}
           {estimatedCalories > 0 && <span title={calorieTooltip} className="rounded-full bg-amber-950/70 px-3 py-1 text-xs font-black text-amber-200 ring-1 ring-amber-800">~{formatCalories(estimatedCalories)}</span>}
-          <span title="Data usada na chave desta sessão" className="rounded-full bg-zinc-950/80 px-3 py-1 text-xs font-black text-zinc-300 ring-1 ring-zinc-800">{sessionDateKey === todayDateKey() ? "Hoje" : sessionDateKey}</span>
-          <span className="rounded-full bg-zinc-950/80 px-3 py-1 text-xs font-black text-zinc-300 ring-1 ring-zinc-800">Bloco {plan.blockIndex}/{plan.blockTotal}</span>
+          <span title="Data usada na chave desta sessão" className={`${sessionDateKey === todayDateKey() ? "bg-rose-950/70 text-rose-200 ring-rose-800" : "bg-zinc-950/80 text-zinc-300 ring-zinc-800"} rounded-full px-3 py-1 text-xs font-black ring-1`}>{sessionDateKey === todayDateKey() ? "Hoje" : sessionDateKey}</span>
+          <span className="cute-badge cute-badge-neutral">Bloco {plan.blockIndex}/{plan.blockTotal}</span>
           <span className={`w-fit rounded-full px-3 py-1 text-xs font-bold ring-1 ${style.chip}`}>{style.label}</span>
-          <button type="button" onClick={onToggle} className="inline-flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-950 px-3 py-1 text-xs font-black text-zinc-200 transition hover:bg-zinc-800">
+          <button type="button" onClick={onToggle} className="cute-button cute-button-secondary min-h-0 px-3 py-1 text-xs">
             {isOpen ? "Recolher" : "Expandir"} <ChevronDown className={`h-3.5 w-3.5 transition ${isOpen ? "rotate-180" : ""}`} />
           </button>
         </div>
       </div>
-      {isOpen && <><div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[1080px] text-left text-sm"><thead className="border-y border-zinc-800 bg-zinc-950 text-xs uppercase tracking-wide text-zinc-400"><tr><th className="w-24 px-4 py-3">Feito</th><th className="px-4 py-3">Exercício</th><th className="px-4 py-3">Foco</th><th className="w-80 px-4 py-3">Carga/reps</th><th className="w-52 px-4 py-3">Descanso</th><th className="w-28 px-4 py-3">Vídeo</th></tr></thead><tbody className="divide-y divide-zinc-800">{exercises.map((exercise) => { const key = exerciseKey(plan, exercise); const domKey = getExerciseDomKey(plan, exercise); const currentLogKey = getCurrentLogKey(plan, exercise); return <ExerciseRow key={key} currentLogKey={currentLogKey} exerciseDomKey={domKey} registerExerciseRef={registerExerciseRef} highlighted={highlightedExerciseKey === domKey} exercise={exercise} log={getLog(plan, exercise) ?? emptyLog()} logs={logs} onLog={(patch) => updateExerciseLog(plan, exercise, patch)} onMuscleClick={onMuscleClick} onAlternativeClick={onAlternativeClick} onMediaOpen={onMediaOpen} lightMode={lightMode} />; })}</tbody></table></div>
-      <div className="grid gap-3 p-4 md:hidden">{exercises.map((exercise) => { const key = exerciseKey(plan, exercise); const domKey = getExerciseDomKey(plan, exercise); const currentLogKey = getCurrentLogKey(plan, exercise); return <ExerciseMobileCard key={key} currentLogKey={currentLogKey} exerciseDomKey={domKey} registerExerciseRef={registerExerciseRef} highlighted={highlightedExerciseKey === domKey} exercise={exercise} log={getLog(plan, exercise) ?? emptyLog()} logs={logs} onLog={(patch) => updateExerciseLog(plan, exercise, patch)} onMuscleClick={onMuscleClick} onAlternativeClick={onAlternativeClick} onMediaOpen={onMediaOpen} lightMode={lightMode} />; })}</div>
+      {isOpen && <><div className="hidden overflow-x-auto md:block"><table className="cute-table w-full min-w-[1080px] text-left text-sm"><thead className="border-y border-zinc-800 bg-zinc-950 text-xs uppercase tracking-wide text-zinc-400"><tr><th className="w-24 px-4 py-3">Feito</th><th className="px-4 py-3">Exercício</th><th className="px-4 py-3">Foco</th><th className="w-80 px-4 py-3">Carga/reps</th><th className="w-52 px-4 py-3">Descanso</th><th className="w-28 px-4 py-3">Vídeo</th></tr></thead><tbody className="divide-y divide-zinc-800">{exercises.map((exercise) => { const key = exerciseKey(plan, exercise); const domKey = getExerciseDomKey(plan, exercise); const currentLogKey = getCurrentLogKey(plan, exercise); return <ExerciseRow key={key} currentLogKey={currentLogKey} exerciseDomKey={domKey} registerExerciseRef={registerExerciseRef} highlighted={highlightedExerciseKey === domKey} exercise={exercise} log={getLog(plan, exercise) ?? emptyLog()} logs={logs} onLog={(patch) => updateExerciseLog(plan, exercise, patch)} onMuscleClick={onMuscleClick} onAlternativeClick={onAlternativeClick} onMediaOpen={onMediaOpen} onTimerOpen={() => onTimerOpen(plan, exercise)} lightMode={lightMode} />; })}</tbody></table></div>
+      <div className="grid gap-3 p-4 md:hidden">{exercises.map((exercise) => { const key = exerciseKey(plan, exercise); const domKey = getExerciseDomKey(plan, exercise); const currentLogKey = getCurrentLogKey(plan, exercise); return <ExerciseMobileCard key={key} currentLogKey={currentLogKey} exerciseDomKey={domKey} registerExerciseRef={registerExerciseRef} highlighted={highlightedExerciseKey === domKey} exercise={exercise} log={getLog(plan, exercise) ?? emptyLog()} logs={logs} onLog={(patch) => updateExerciseLog(plan, exercise, patch)} onMuscleClick={onMuscleClick} onAlternativeClick={onAlternativeClick} onMediaOpen={onMediaOpen} onTimerOpen={() => onTimerOpen(plan, exercise)} lightMode={lightMode} />; })}</div>
       {plan.optional && <div className="border-t border-zinc-800 px-5 py-4 text-sm text-zinc-400"><span className="font-black text-zinc-100">Opcionais:</span> {plan.optional}</div>}</>}
     </motion.section>
   );
 }
 
 function ModalShell({ children, onClose, wide = false }: { children: React.ReactNode; onClose: () => void; wide?: boolean }) {
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={onClose}><motion.div initial={{ opacity: 0, scale: 0.96, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} className={`max-h-[92vh] w-full overflow-y-auto rounded-3xl border border-zinc-800 bg-zinc-900 shadow-2xl ${wide ? "max-w-6xl" : "max-w-4xl"}`} onClick={(event) => event.stopPropagation()}>{children}</motion.div></div>;
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={onClose}><motion.div initial={{ opacity: 0, scale: 0.96, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} className={`cute-card-elevated max-h-[92vh] w-full overflow-y-auto rounded-3xl border border-zinc-800 bg-zinc-900 shadow-2xl ${wide ? "max-w-6xl" : "max-w-4xl"}`} onClick={(event) => event.stopPropagation()}>{children}</motion.div></div>;
+}
+
+function MuscleFigure({ info, compact = false }: { info: MuscleInfo; compact?: boolean }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <div className={`relative flex w-full items-center justify-center overflow-hidden rounded-2xl bg-zinc-950/90 p-3 ring-1 ring-zinc-800/80 ${compact ? "min-h-[15rem]" : "min-h-[18rem] sm:min-h-[22rem]"}`}>
+      {!failed ? (
+        <img
+          src={info.image}
+          alt={info.title}
+          loading="eager"
+          decoding="async"
+          onError={() => setFailed(true)}
+          className={`block h-auto w-full object-contain ${compact ? "max-h-[18rem]" : "max-h-[min(58vh,420px)]"}`}
+        />
+      ) : (
+        <div className="grid place-items-center gap-3 text-center text-sm font-bold text-zinc-400">
+          <ImageOff className="h-8 w-8 text-zinc-500" />
+          <span>Imagem indisponível no momento.</span>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function MuscleModal({ focus, onClose }: { focus: string | null; onClose: () => void }) {
@@ -559,7 +617,7 @@ function MuscleModal({ focus, onClose }: { focus: string | null; onClose: () => 
   return (
     <ModalShell onClose={onClose}>
       <div className="flex items-start justify-between gap-4 border-b border-zinc-800 p-5"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">Foco selecionado</p><h2 className="mt-1 text-2xl font-black text-zinc-50">{info.title}</h2><p className="mt-2 text-sm text-zinc-400">Imagem do músculo trabalhado</p></div><button onClick={onClose} className="rounded-full bg-zinc-800 p-2 text-zinc-300"><X className="h-5 w-5" /></button></div>
-      <div className="grid gap-5 p-5 md:grid-cols-[1fr_1.1fr]"><div className="overflow-hidden rounded-2xl bg-zinc-950 p-3"><img src={info.image} alt={info.title} className="h-full max-h-[420px] w-full object-contain" /></div><div><p className="text-base leading-relaxed text-zinc-300">{info.description}</p><ul className="mt-4 space-y-2 text-sm text-zinc-300">{info.tips.map((tip) => <li key={tip} className="rounded-xl bg-zinc-950 px-3 py-2">• {tip}</li>)}</ul></div></div>
+      <div className="grid gap-5 p-5 md:grid-cols-[1fr_1.1fr]"><MuscleFigure info={info} /><div><p className="text-base leading-relaxed text-zinc-300">{info.description}</p><ul className="mt-4 space-y-2 text-sm text-zinc-300">{info.tips.map((tip) => <li key={tip} className="rounded-xl bg-zinc-950 px-3 py-2">• {tip}</li>)}</ul></div></div>
     </ModalShell>
   );
 }
@@ -574,7 +632,131 @@ function AlternativeModal({ alternative, onClose, onMuscleClick, onMediaOpen }: 
   return (
     <ModalShell onClose={onClose}>
       <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-zinc-800 bg-zinc-900/95 p-5 backdrop-blur"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">Alternativa</p><h2 className="mt-1 text-2xl font-black text-zinc-50">{name}</h2><p className="mt-2 text-sm text-zinc-400">{focus}</p></div><button onClick={onClose} className="rounded-full bg-zinc-800 p-2 text-zinc-300"><X className="h-5 w-5" /></button></div>
-      <div className="grid gap-5 p-5 md:grid-cols-[0.9fr_1.1fr]"><div className="rounded-2xl bg-zinc-950 p-3"><img src={primaryMuscle.image} alt={primaryMuscle.title} className="h-full max-h-[360px] w-full object-contain" /></div><div><p className="text-base leading-relaxed text-zinc-300">{item?.description ?? "Informações completas ainda não cadastradas. Use esta alternativa como variação próxima ao exercício original e confirme a execução com um profissional."}</p><div className="mt-4 flex flex-wrap gap-2">{muscles.map((muscle) => <button key={muscle} onClick={() => onMuscleClick(muscle)} className="rounded-full bg-blue-950/40 px-3 py-1 text-xs font-black text-blue-200 ring-1 ring-blue-800">{muscleImages[muscle]?.title ?? muscle}</button>)}</div><ul className="mt-4 space-y-2 text-sm text-zinc-300">{(item?.tips ?? ["Controle o movimento.", "Use carga confortável.", "Pare se sentir dor articular."]).map((tip) => <li key={tip} className="rounded-xl bg-zinc-950 px-3 py-2">• {tip}</li>)}</ul><div className="mt-5 flex flex-wrap gap-2"><VideoButton name={name} videoKey={item?.videoKey ?? item?.id ?? name} onOpen={onMediaOpen} /></div></div></div>
+      <div className="grid gap-5 p-5 md:grid-cols-[0.9fr_1.1fr]"><MuscleFigure info={primaryMuscle} compact /><div><p className="text-base leading-relaxed text-zinc-300">{item?.description ?? "Informações completas ainda não cadastradas. Use esta alternativa como variação próxima ao exercício original e confirme a execução com um profissional."}</p><div className="mt-4 flex flex-wrap gap-2">{muscles.map((muscle) => <button key={muscle} onClick={() => onMuscleClick(muscle)} className="rounded-full bg-blue-950/40 px-3 py-1 text-xs font-black text-blue-200 ring-1 ring-blue-800">{muscleImages[muscle]?.title ?? muscle}</button>)}</div><ul className="mt-4 space-y-2 text-sm text-zinc-300">{(item?.tips ?? ["Controle o movimento.", "Use carga confortável.", "Pare se sentir dor articular."]).map((tip) => <li key={tip} className="rounded-xl bg-zinc-950 px-3 py-2">• {tip}</li>)}</ul><div className="mt-5 flex flex-wrap gap-2"><VideoButton name={name} videoKey={item?.videoKey ?? item?.id ?? name} onOpen={onMediaOpen} /></div></div></div>
+    </ModalShell>
+  );
+}
+
+function BodyCheckModal({
+  mode,
+  initialWeight,
+  initialHeight,
+  weekLabel,
+  onSave,
+  onClose,
+}: {
+  mode: "signup" | "weekly";
+  initialWeight: number | "";
+  initialHeight: number | "";
+  weekLabel: string;
+  onSave: (values: { weightKg: number; heightCm?: number }) => void;
+  onClose?: () => void;
+}) {
+  const [weight, setWeight] = useState(initialWeight === "" ? "" : String(initialWeight));
+  const [height, setHeight] = useState(initialHeight === "" ? "" : String(initialHeight));
+  const parsedWeight = numericValue(weight);
+  const parsedHeight = numericValue(height);
+  const needsHeight = mode === "signup";
+  const canSave = parsedWeight > 0 && (!needsHeight || parsedHeight > 0);
+  const title = mode === "signup" ? "Dados iniciais" : "Peso da semana";
+  const description = mode === "signup"
+    ? "Informe peso e altura para personalizar melhor as estimativas do app."
+    : `Atualize o peso atual para liberar a ${weekLabel}.`;
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-4" onClick={onClose}>
+      <div onClick={(event) => event.stopPropagation()} className="cute-card-elevated w-full max-w-md rounded-3xl border border-zinc-800 bg-zinc-900 shadow-2xl">
+        <div className="cute-modal-header flex items-start justify-between gap-4 border-b border-zinc-800 p-5">
+          <div><p className="cute-eyebrow">Atualização corporal</p><h2 className="mt-1 text-2xl font-black text-zinc-50">{title}</h2><p className="mt-2 text-sm text-zinc-400">{description}</p></div>
+          {onClose && <button type="button" onClick={onClose} className="rounded-full bg-zinc-800 p-2 text-zinc-300"><X className="h-5 w-5" /></button>}
+        </div>
+        <div className="grid gap-4 p-5">
+          <label className="grid gap-1 text-sm font-bold text-zinc-300">Peso corporal atual<input value={weight} onChange={(event) => setWeight(event.target.value)} inputMode="decimal" placeholder="kg" className="cute-input" /></label>
+          {mode === "signup" && <label className="grid gap-1 text-sm font-bold text-zinc-300">Altura<input value={height} onChange={(event) => setHeight(event.target.value)} inputMode="decimal" placeholder="cm" className="cute-input" /></label>}
+          {mode === "weekly" && <p className="rounded-2xl bg-zinc-950 p-3 text-sm font-bold text-zinc-400 ring-1 ring-zinc-800">A altura fica salva no cadastro. A cada nova semana, pedimos só o peso atual.</p>}
+          <button type="button" disabled={!canSave} onClick={() => onSave({ weightKg: parsedWeight, heightCm: parsedHeight || undefined })} className="cute-button cute-button-primary disabled:cursor-not-allowed disabled:opacity-50">Salvar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ExtraWorkoutModal({
+  open,
+  activePlanId,
+  week,
+  onClose,
+  onSave,
+}: {
+  open: boolean;
+  activePlanId: string;
+  week: string;
+  onClose: () => void;
+  onSave: (workout: ExtraWorkout) => void;
+}) {
+  const [date, setDate] = useState(todayDateKey());
+  const [title, setTitle] = useState("Treino extra");
+  const [selectedExercise, setSelectedExercise] = useState(exerciseLibraryList[0]?.id ?? "");
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    setDate(todayDateKey());
+    setTitle("Treino extra");
+    setSelectedExercise(exerciseLibraryList[0]?.id ?? "");
+    setExercises([]);
+  }, [open]);
+
+  if (!open) return null;
+
+  function addExercise() {
+    const item = exerciseLibrary[selectedExercise];
+    if (!item) return;
+    setExercises((current) => [...current, toPlanExercise(item, current.length + 1)]);
+  }
+
+  function removeExercise(index: number) {
+    setExercises((current) => current.filter((_, itemIndex) => itemIndex !== index).map((exercise, orderIndex) => ({ ...exercise, order: orderIndex + 1 })));
+  }
+
+  function save() {
+    if (!exercises.length) return;
+    onSave({
+      id: makeEntryId("extra-workout"),
+      planId: activePlanId,
+      week,
+      date,
+      title: title.trim() || "Treino extra",
+      exercises,
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  return (
+    <ModalShell onClose={onClose}>
+      <div className="cute-modal-header flex items-start justify-between gap-4 border-b border-zinc-800 p-5">
+        <div><p className="cute-eyebrow">Dia extra</p><h2 className="mt-1 text-2xl font-black text-zinc-50">Adicionar exercícios extras</h2><p className="mt-2 text-sm text-zinc-400">Use para sábado, domingo ou qualquer treino fora do plano da semana.</p></div>
+        <button type="button" onClick={onClose} className="rounded-full bg-zinc-800 p-2 text-zinc-300"><X className="h-5 w-5" /></button>
+      </div>
+      <div className="grid gap-4 p-5">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1 text-sm font-bold text-zinc-300">Data<input type="date" value={date} onChange={(event) => setDate(event.target.value)} className="cute-input" /></label>
+          <label className="grid gap-1 text-sm font-bold text-zinc-300">Nome do bloco<input value={title} onChange={(event) => setTitle(event.target.value)} className="cute-input" /></label>
+        </div>
+        <div className="grid gap-2 rounded-2xl bg-zinc-950/70 p-3 ring-1 ring-zinc-800">
+          <label className="grid gap-1 text-sm font-bold text-zinc-300">Exercício<select value={selectedExercise} onChange={(event) => setSelectedExercise(event.target.value)} className="cute-input">{exerciseLibraryList.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.focus}</option>)}</select></label>
+          <button type="button" onClick={addExercise} className="cute-button cute-button-secondary"><Plus className="h-4 w-4" /> Adicionar exercício</button>
+        </div>
+        <div className="grid gap-2">
+          {exercises.length ? exercises.map((exercise, index) => (
+            <div key={`${exercise.id}-${index}`} className="flex items-center justify-between gap-3 rounded-2xl bg-zinc-950 px-3 py-2 ring-1 ring-zinc-800">
+              <div className="min-w-0"><p className="truncate text-sm font-black text-zinc-100">{index + 1}. {exercise.name}</p><p className="truncate text-xs font-bold text-zinc-500">{exercise.focus}</p></div>
+              <button type="button" onClick={() => removeExercise(index)} className="rounded-xl px-2 py-1 text-xs font-black text-red-200 hover:bg-red-950/40">Remover</button>
+            </div>
+          )) : <p className="cute-empty">Escolha pelo menos um exercício para criar o bloco extra.</p>}
+        </div>
+        <button type="button" disabled={!exercises.length} onClick={save} className="cute-button cute-button-primary disabled:cursor-not-allowed disabled:opacity-50"><Save className="h-4 w-4" /> Criar bloco extra</button>
+      </div>
     </ModalShell>
   );
 }
@@ -600,7 +782,7 @@ function ExerciseMediaModal({ target, onClose, onMuscleClick }: { target: MediaT
       </div>
       <div className="grid gap-5 p-5 lg:grid-cols-[0.95fr_1.05fr]">
         <div className="grid gap-3">
-          <div className="rounded-2xl bg-zinc-950 p-3"><img src={primaryMuscle.image} alt={primaryMuscle.title} className="h-full max-h-[320px] w-full object-contain" /></div>
+          <MuscleFigure info={primaryMuscle} compact />
           <div className="grid gap-3 sm:grid-cols-3">
             {illustrations.length ? illustrations.map((src, index) => <div key={src} className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950"><img src={src} alt={`${name} passo ${index + 1}`} className="aspect-[4/3] w-full object-cover" /></div>) : <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-950 p-4 text-sm font-bold text-zinc-400 sm:col-span-3">Ilustrações ainda não cadastradas</div>}
           </div>
@@ -691,9 +873,13 @@ function QuickLogs({ painLogs, setPainLogs, cardioLogs, setCardioLogs, mode = "b
   const [customCardioType, setCustomCardioType] = useState("");
   const selectedCardioType = cardioDraft.type === "Outro" ? customCardioType.trim() || "Outro" : cardioDraft.type;
   const cardioToEstimate = { ...cardioDraft, type: selectedCardioType, minutes: String(cardioMinutes(cardioDraft)) };
-  const cardioCalories = estimateCardioCalories(cardioToEstimate);
-  const lastCardioCalories = cardioLogs[0] ? estimateCardioCalories(cardioLogs[0]) : 0;
-  const cardioTooltip = "Estimativa por MET usando tipo, intensidade, minutos e peso de referência de 70 kg. Pode variar conforme peso, condicionamento e aparelho.";
+  const currentBodyWeightKg = readJson<number | "">(BODY_WEIGHT_KEY, "");
+  const bodyWeightForCardio = typeof currentBodyWeightKg === "number" ? currentBodyWeightKg : null;
+  const cardioCalories = estimateCardioCalories(cardioToEstimate, bodyWeightForCardio);
+  const lastCardioCalories = cardioLogs[0] ? estimateCardioCalories(cardioLogs[0], bodyWeightForCardio) : 0;
+  const cardioTooltip = bodyWeightForCardio
+    ? "Estimativa por MET usando tipo, intensidade, minutos e peso corporal atual."
+    : "Estimativa por MET usando tipo, intensidade e minutos. Adicione o peso corporal atual para refinar.";
   const totalCardioMinutes = cardioMinutes(cardioDraft);
   return (
     <section className={`grid gap-4 ${mode === "both" ? "lg:grid-cols-2" : ""}`}>
@@ -722,14 +908,25 @@ export default function TrainingPlanApp() {
   const [painLogs, setPainLogs] = useStoredArray<PainLog>(PAIN_LOG_KEY);
   const [cardioLogs, setCardioLogs] = useStoredArray<CardioLog>(CARDIO_LOG_KEY);
   const [weeklySummaries, setWeeklySummaries] = useStoredArray<WeeklySummary>(WEEKLY_SUMMARY_KEY);
+  const [timerSessions, setTimerSessions] = useStoredArray<ExerciseTimerSession>(TIMER_SESSION_KEY);
+  const [weightHistory, setWeightHistory] = useStoredArray<WeightEntry>(WEIGHT_HISTORY_KEY);
+  const [extraWorkouts, setExtraWorkouts] = useStoredArray<ExtraWorkout>(EXTRA_WORKOUT_KEY);
+  const [bodyWeightKg, setBodyWeightKg] = useState<number | "">(() => readJson<number | "">(BODY_WEIGHT_KEY, ""));
+  const [bodyHeightCm, setBodyHeightCm] = useState<number | "">(() => readJson<number | "">(BODY_HEIGHT_KEY, ""));
+  const [bodyWeightWeekBlock, setBodyWeightWeekBlock] = useState(() => readJson<number>(BODY_WEIGHT_WEEK_KEY, -1));
   const [user, setUser] = useState<User | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("Local");
   const [appView, setAppView] = useState<AppView>("training");
   const [selectedMedia, setSelectedMedia] = useState<MediaTarget | null>(null);
+  const [selectedTimer, setSelectedTimer] = useState<TimerTarget | null>(null);
   const [quickLogModal, setQuickLogModal] = useState<"pain" | "cardio" | null>(null);
+  const [bodyCheckMode, setBodyCheckMode] = useState<"signup" | "weekly" | null>(null);
+  const [extraWorkoutOpen, setExtraWorkoutOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [openDayIds, setOpenDayIds] = useState<Record<string, boolean>>({});
   const [highlightedExerciseKey, setHighlightedExerciseKey] = useState<string | null>(null);
+  const [activeExerciseKey, setActiveExerciseKey] = useState<string | null>(null);
   const [workoutMessage, setWorkoutMessage] = useState("");
   const [pendingWorkoutJump, setPendingWorkoutJump] = useState(false);
   const syncReadyRef = useRef(false);
@@ -749,8 +946,19 @@ export default function TrainingPlanApp() {
       history: weeklySummaries,
       pain_logs: painLogs,
       cardio_logs: cardioLogs,
+      timer_sessions: timerSessions,
+      weight_history: weightHistory,
       custom_plans: customPlans,
-      settings: { phase, startDate, autoWeekEnabled, activePlanId: activePlan.id },
+      settings: {
+        phase,
+        startDate,
+        autoWeekEnabled,
+        activePlanId: activePlan.id,
+        bodyWeightKg: typeof bodyWeightKg === "number" ? bodyWeightKg : undefined,
+        bodyHeightCm: typeof bodyHeightCm === "number" ? bodyHeightCm : undefined,
+        bodyWeightWeekBlock,
+        extraWorkouts,
+      },
     });
   }
 
@@ -759,12 +967,18 @@ export default function TrainingPlanApp() {
     setWeeklySummaries(data.history as WeeklySummary[]);
     setPainLogs(data.pain_logs as PainLog[]);
     setCardioLogs(data.cardio_logs as CardioLog[]);
+    setTimerSessions(data.timer_sessions);
+    setWeightHistory(data.weight_history);
     setCustomPlans(data.custom_plans);
     if (data.settings.phase === "fase1" || data.settings.phase === "fase2") setPhase(data.settings.phase);
     if (typeof data.settings.week === "string") setWeek(data.settings.week);
     if (typeof data.settings.startDate === "string") setStartDate(data.settings.startDate);
     if (typeof data.settings.autoWeekEnabled === "boolean") setAutoWeekEnabled(data.settings.autoWeekEnabled);
     if (typeof data.settings.activePlanId === "string") setActivePlanId(data.settings.activePlanId);
+    if (typeof data.settings.bodyWeightKg === "number") setBodyWeightKg(data.settings.bodyWeightKg);
+    if (typeof data.settings.bodyHeightCm === "number") setBodyHeightCm(data.settings.bodyHeightCm);
+    if (typeof data.settings.bodyWeightWeekBlock === "number") setBodyWeightWeekBlock(data.settings.bodyWeightWeekBlock);
+    if (Array.isArray(data.settings.extraWorkouts)) setExtraWorkouts(data.settings.extraWorkouts as ExtraWorkout[]);
   }
 
   async function syncWithSupabase(currentUser = user, mode: "merge" | "push" = "push") {
@@ -790,6 +1004,9 @@ export default function TrainingPlanApp() {
   useEffect(() => localStorage.setItem(START_DATE_KEY, startDate), [startDate]);
   useEffect(() => localStorage.setItem(AUTO_WEEK_KEY, String(autoWeekEnabled)), [autoWeekEnabled]);
   useEffect(() => localStorage.setItem(ACTIVE_PLAN_KEY, activePlan.id), [activePlan.id]);
+  useEffect(() => writeJson(BODY_WEIGHT_KEY, bodyWeightKg), [bodyWeightKg]);
+  useEffect(() => writeJson(BODY_HEIGHT_KEY, bodyHeightCm), [bodyHeightCm]);
+  useEffect(() => writeJson(BODY_WEIGHT_WEEK_KEY, bodyWeightWeekBlock), [bodyWeightWeekBlock]);
   useEffect(() => saveCustomPlans(customPlans), [customPlans]);
   useEffect(() => { if (autoWeekEnabled) setWeek(autoWeek); }, [autoWeekEnabled, autoWeek]);
   useEffect(() => { if (weekIds.length && !weekIds.includes(week)) setWeek(weekIds[0]); }, [weekIds.join("|"), week]);
@@ -822,18 +1039,44 @@ export default function TrainingPlanApp() {
     return () => {
       if (syncTimerRef.current) window.clearTimeout(syncTimerRef.current);
     };
-  }, [user, logs, painLogs, cardioLogs, customPlans, weeklySummaries, phase, week, startDate, autoWeekEnabled, activePlan.id]);
+  }, [user, logs, painLogs, cardioLogs, timerSessions, weightHistory, extraWorkouts, customPlans, weeklySummaries, phase, week, startDate, autoWeekEnabled, activePlan.id, bodyWeightKg, bodyHeightCm, bodyWeightWeekBlock]);
 
   const filteredPlans = useMemo(() => {
     const days = getPlanDays(activePlan, activePlan.id === defaultTrainingPlan.id ? phase : undefined, week);
     const scheduledDays = scheduleTrainingDays(days, startDate, selectedWeekBlock(startDate, week));
-    return scheduledDays.filter((plan) => {
+    const extras: ScheduledTrainingDay[] = extraWorkouts
+      .filter((item) => item.planId === activePlan.id && item.week === week)
+      .map((item, index) => ({
+        id: item.id,
+        phase: activePlan.id === defaultTrainingPlan.id ? phase : undefined,
+        week,
+        day: getWeekdayName(item.date) || "Extra",
+        scheduledDayName: getWeekdayName(item.date) || "Extra",
+        scheduledDate: item.date,
+        title: item.title,
+        type: "superior" as TrainingType,
+        exercises: item.exercises,
+        blockIndex: scheduledDays.length + index + 1,
+        blockTotal: scheduledDays.length + extraWorkouts.filter((extra) => extra.planId === activePlan.id && extra.week === week).length,
+      }));
+    return [...scheduledDays, ...extras].filter((plan) => {
       const searchable = `${plan.day} ${plan.title} ${plan.type} ${plan.exercises.map((exercise) => `${exercise.name} ${exercise.focus}`).join(" ")}`.toLowerCase();
       return searchable.includes(query.toLowerCase()) && (!onlyToday || plan.scheduledDate === todayDateKey());
     });
-  }, [activePlan, phase, week, query, onlyToday, startDate, todayName, weekIds.join("|")]);
+  }, [activePlan, extraWorkouts, phase, week, query, onlyToday, startDate, todayName, weekIds.join("|")]);
 
   const visibleExercises = filteredPlans.flatMap((plan) => (lightMode ? plan.exercises.slice(0, 4) : plan.exercises).map((exercise) => ({ plan, exercise })));
+  const todayExercises = visibleExercises.filter(({ plan }) => plan.scheduledDate === todayDateKey());
+  const allTodayExercisesDone = todayExercises.length > 0 && todayExercises.every(({ plan, exercise }) => getLog(plan, exercise)?.done);
+  const allTodayExercisesHandled = todayExercises.length > 0 && todayExercises.every(({ plan, exercise }) => {
+    const log = getLog(plan, exercise);
+    return Boolean(log?.done || log?.skipped);
+  });
+
+  useEffect(() => {
+    if (allTodayExercisesHandled) setWorkoutMessage("");
+  }, [allTodayExercisesHandled]);
+
   function getExerciseDomKey(plan: ScheduledTrainingDay, exercise: Exercise) {
     return `${plan.id}::${exercise.id ?? exercise.order}`;
   }
@@ -886,17 +1129,43 @@ export default function TrainingPlanApp() {
   }
 
   function updateExerciseLog(plan: ScheduledTrainingDay, exercise: Exercise, patch: Partial<ExerciseLog>) {
-    const shouldSetStartDate = !startDate && patch.done;
+    const current = getLog(plan, exercise) ?? emptyLog();
+    const next = { ...current, ...patch };
+    const shouldAutoDone = Boolean(numericValue(next.load) && [next.reps1, next.reps2, next.reps3].some((value) => numericValue(value) > 0));
+    const finalPatch = shouldAutoDone ? { ...patch, done: true, skipped: false } : patch;
+    const shouldSetStartDate = !startDate && finalPatch.done;
     const effectiveStartDate = shouldSetStartDate ? todayInputValue() : startDate;
     if (shouldSetStartDate) setStartDate(effectiveStartDate);
-    updateLog(logKeyFor(plan, exercise), patch);
+    updateLog(logKeyFor(plan, exercise), finalPatch);
+  }
+
+  function handleTimerComplete(session: ExerciseTimerSession, patch: { load: string; reps1: string; reps2: string; reps3: string; done: boolean; skipped?: boolean }) {
+    if (selectedTimer) updateExerciseLog(selectedTimer.plan, selectedTimer.exercise, patch);
+    setTimerSessions((current) => [session, ...current.filter((item) => item.id !== session.id)].slice(0, 500));
+    setSelectedTimer(null);
   }
 
   function goToNextExercise() {
-    const navigationExercises = query.trim() ? visibleExercises : visibleExercises.filter(({ plan }) => plan.scheduledDate >= todayDateKey());
-    const target = navigationExercises.find(({ plan, exercise }) => !getLog(plan, exercise)?.done);
+    if (todayExercises.length === 0) {
+      setWorkoutMessage("Nenhum exercício para hoje.");
+      window.setTimeout(() => setWorkoutMessage(""), 2500);
+      return;
+    }
+    const isPending = ({ plan, exercise }: { plan: ScheduledTrainingDay; exercise: Exercise }) => {
+      const log = getLog(plan, exercise);
+      return !log?.done && !log?.skipped;
+    };
+    const activeIndex = activeExerciseKey ? todayExercises.findIndex(({ plan, exercise }) => getExerciseDomKey(plan, exercise) === activeExerciseKey) : -1;
+    if (activeIndex >= 0) {
+      const current = todayExercises[activeIndex];
+      const currentLog = getLog(current.plan, current.exercise);
+      if (!currentLog?.done && !currentLog?.skipped) updateLog(logKeyFor(current.plan, current.exercise), { skipped: true, done: false });
+    }
+    const searchStart = activeIndex >= 0 ? activeIndex + 1 : 0;
+    const target = todayExercises.slice(searchStart).find(isPending) ?? todayExercises.slice(0, searchStart).find(isPending);
     if (!target) {
-      setWorkoutMessage("Todos os exercícios visíveis foram concluídos.");
+      setActiveExerciseKey(null);
+      setWorkoutMessage("Sem pendências hoje.");
       window.setTimeout(() => setWorkoutMessage(""), 2500);
       return;
     }
@@ -904,6 +1173,7 @@ export default function TrainingPlanApp() {
     setWorkoutMessage("");
     setOpenDayIds((current) => ({ ...current, [target.plan.id]: true }));
     setHighlightedExerciseKey(domKey);
+    setActiveExerciseKey(domKey);
     window.setTimeout(() => exerciseRefs.current[domKey]?.scrollIntoView({ behavior: "smooth", block: "center" }), 120);
     window.setTimeout(() => setHighlightedExerciseKey((current) => current === domKey ? null : current), 1500);
   }
@@ -920,6 +1190,64 @@ export default function TrainingPlanApp() {
     setPendingWorkoutJump(false);
     window.setTimeout(goToNextExercise, 80);
   }, [pendingWorkoutJump, filteredPlans, logs, lightMode]);
+
+  useEffect(() => {
+    if (!startDate || weekBlock <= 0) return;
+    if (bodyWeightWeekBlock === weekBlock) return;
+    setBodyCheckMode("weekly");
+  }, [bodyWeightWeekBlock, startDate, weekBlock]);
+
+  function saveBodyCheck(values: { weightKg: number; heightCm?: number }) {
+    setBodyWeightKg(values.weightKg);
+    if (values.heightCm) setBodyHeightCm(values.heightCm);
+    setBodyWeightWeekBlock(weekBlock);
+    addWeightEntry({ weightKg: values.weightKg, heightCm: values.heightCm ?? (typeof bodyHeightCm === "number" ? bodyHeightCm : undefined), source: bodyCheckMode === "signup" ? "signup" : "weekly-checkin" });
+    setBodyCheckMode(null);
+  }
+
+  function addWeightEntry(entry: { weightKg: number; heightCm?: number; source?: WeightEntry["source"]; date?: string; note?: string }) {
+    const now = new Date().toISOString();
+    const date = entry.date ?? todayDateKey();
+    const item: WeightEntry = {
+      id: makeEntryId("weight"),
+      date,
+      weightKg: entry.weightKg,
+      heightCm: entry.heightCm,
+      source: entry.source,
+      note: entry.note,
+      createdAt: now,
+      updatedAt: now,
+    };
+    saveWeightEntry(item);
+  }
+
+  function updateBodyFromWeightHistory(history: WeightEntry[]) {
+    const latest = normalizeWeightHistory(history).at(-1);
+    setBodyWeightKg(latest?.weightKg ?? "");
+    if (latest?.heightCm) setBodyHeightCm(latest.heightCm);
+  }
+
+  function saveWeightEntry(entry: WeightEntry) {
+    setWeightHistory((current) => {
+      const next = sortWeightHistory([entry, ...current.filter((value) => value.id !== entry.id && !(value.date === entry.date && value.weightKg === entry.weightKg && !value.deletedAt))]);
+      updateBodyFromWeightHistory(next);
+      return next;
+    });
+  }
+
+  function removeWeightEntry(entryId: string) {
+    setWeightHistory((current) => {
+      const next = deleteWeightEntry(current, entryId);
+      updateBodyFromWeightHistory(next);
+      return next;
+    });
+  }
+
+  function saveExtraWorkout(workout: ExtraWorkout) {
+    setExtraWorkouts((current) => [...current, workout]);
+    setOpenDayIds((current) => ({ ...current, [workout.id]: true }));
+    setExtraWorkoutOpen(false);
+  }
 
   const doneCount = visibleExercises.filter(({ plan, exercise }) => getLog(plan, exercise)?.done).length;
   const increaseCount = Object.values(logs).filter(shouldIncrease).length;
@@ -940,10 +1268,10 @@ export default function TrainingPlanApp() {
     const skipped = exercises.filter(({ log }) => !log?.done).slice(0, 12).map(({ exercise }) => exercise.name);
     const pain = painLogs.filter((entry) => isDateInWeek(entry.date, startDate, block) && entry.level !== "0").map((entry) => `${entry.date}: nível ${entry.level}${entry.text ? ` · ${entry.text}` : ""}`);
     const weekCardioLogs = cardioLogs.filter((entry) => isDateInWeek(entry.date, startDate, block));
-    const calories = exercises.reduce((sum, item) => sum + estimateExerciseCalories(item.log), 0);
-    const cardioCalories = weekCardioLogs.reduce((sum, entry) => sum + estimateCardioCalories(entry), 0);
+    const calories = exercises.reduce((sum, item) => sum + estimateExerciseCalories(item.log, item.exercise, typeof bodyWeightKg === "number" ? bodyWeightKg : null), 0);
+    const cardioCalories = weekCardioLogs.reduce((sum, entry) => sum + estimateCardioCalories(entry, typeof bodyWeightKg === "number" ? bodyWeightKg : null), 0);
     const notePain = doneExercises.filter(({ log }) => log?.note.toLowerCase().includes("dor") || log?.note.toLowerCase().includes("desconforto")).map(({ exercise }) => exercise.name);
-    const exerciseStats = doneExercises.map(({ exercise, log }) => ({ exercise, log, volume: exerciseVolume(log), calories: estimateExerciseCalories(log), avgReps: averageReps(log) }));
+    const exerciseStats = doneExercises.map(({ exercise, log }) => ({ exercise, log, volume: exerciseVolume(log), calories: estimateExerciseCalories(log, exercise, typeof bodyWeightKg === "number" ? bodyWeightKg : null), avgReps: averageReps(log) }));
     const best = [...exerciseStats].sort((a, b) => b.volume - a.volume)[0];
     const topCalories = [...exerciseStats].sort((a, b) => b.calories - a.calories)[0];
     const improve = [...exerciseStats].filter((item) => item.avgReps > 0).sort((a, b) => a.avgReps - b.avgReps)[0];
@@ -952,7 +1280,7 @@ export default function TrainingPlanApp() {
       const weekDays = getPlanDays(activePlan, activePlan.id === defaultTrainingPlan.id ? phase : undefined, weekId);
       const weeklyEntries = weekDays.flatMap((day) => day.exercises.map((exercise) => logs[exactLogKeyFor(day, exercise, index)]));
       const totalLoad = weeklyEntries.reduce((sum, log) => sum + exerciseVolume(log), 0);
-      const calories = weeklyEntries.reduce((sum, log) => sum + estimateExerciseCalories(log), 0);
+      const calories = weeklyEntries.reduce((sum, log) => sum + estimateExerciseCalories(log, undefined, typeof bodyWeightKg === "number" ? bodyWeightKg : null), 0);
       return { label: `Semana ${index + 1}`, totalLoad, calories };
     });
     const weeklyLoads = allWeeklyLoads.slice(-4);
@@ -1064,31 +1392,39 @@ export default function TrainingPlanApp() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#1e293b,transparent_34%),linear-gradient(180deg,#09090b,#18181b)] text-zinc-100">
-      <header className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur">
-        <div className="mx-auto grid max-w-7xl gap-3 px-4 py-3 sm:px-6 lg:px-8">
+    <div className="min-h-screen w-full overflow-x-hidden bg-[radial-gradient(circle_at_top_left,rgba(201,182,255,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(244,166,193,0.12),transparent_28%),linear-gradient(180deg,#141218,#17131d)] text-zinc-100">
+      <header className="cute-topbar sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur">
+        <div className="mx-auto grid w-full max-w-7xl gap-3 px-3 py-3 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-950 shadow-sm shadow-black/30"><Dumbbell className="h-5 w-5" /></span>
-              <div className="min-w-0"><p className="truncate text-sm font-black text-zinc-50">Treino Loloa</p><p className="truncate text-xs font-bold text-zinc-500">{activePlan.name} · Semana {week}</p></div>
+              <span className="cute-logo inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-950 shadow-sm shadow-black/30"><Dumbbell className="h-5 w-5" /></span>
+              <div className="min-w-0"><p className="cute-title-gradient truncate text-base font-black">Treino Loloa</p><p className="truncate text-xs font-bold text-zinc-500">{activePlan.name} · Semana {week}</p></div>
             </div>
-            <nav className="hidden rounded-xl bg-zinc-900 p-1 ring-1 ring-zinc-800 md:flex">
+            <nav className="cute-segmented hidden p-1 md:flex">
               {([{ id: "training", label: "Treino" }, { id: "performance", label: "Desempenho" }] as const).map((item) => (
-                <button key={item.id} onClick={() => setAppView(item.id)} className={`rounded-lg px-4 py-2 text-sm font-black transition ${appView === item.id ? "bg-zinc-100 text-zinc-950 shadow-sm" : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"}`}>{item.label}</button>
+                <button key={item.id} onClick={() => setAppView(item.id)} className={`rounded-xl px-4 py-2 text-sm font-black transition ${appView === item.id ? "cute-primary shadow-sm" : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"}`}>{item.label}</button>
               ))}
             </nav>
             <div className="flex shrink-0 items-center gap-2">
               <UserMenu user={user} syncStatus={syncStatus} onOpenAuth={() => setAuthOpen(true)} onSignOut={() => void signOut()} onSyncNow={() => void syncWithSupabase(user, "merge")} />
-              <details className="group relative">
-                <summary className="list-none"><span className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-200 transition hover:bg-zinc-800"><Settings className="h-5 w-5" /></span></summary>
-                <div className="absolute right-0 mt-3 max-h-[calc(100vh-7rem)] w-[min(92vw,520px)] overflow-y-auto rounded-3xl border border-zinc-800 bg-zinc-950 p-3 shadow-2xl shadow-black/60">
+              <div className="settings-details relative">
+                <button type="button" aria-label="Abrir configurações" onClick={() => setSettingsOpen((value) => !value)} className="cute-pop inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900 text-zinc-200 transition hover:bg-zinc-800"><Settings className="h-5 w-5" /></button>
+                {settingsOpen && <>
+                <button type="button" aria-label="Fechar configurações" onClick={() => setSettingsOpen(false)} className="settings-backdrop" />
+                <div className="settings-panel cute-card-elevated rounded-3xl border border-zinc-800 bg-zinc-950 p-3 shadow-2xl shadow-black/60">
                   <div className="grid gap-3">
+                    <div className="flex items-center justify-between gap-3 px-1 pb-1">
+                      <div><p className="cute-eyebrow">Configurações</p><p className="text-sm font-bold text-zinc-400">Ajustes rápidos do treino</p></div>
+                      <button type="button" onClick={() => setSettingsOpen(false)} className="grid h-10 w-10 place-items-center rounded-2xl border border-zinc-800 bg-zinc-900 text-zinc-300"><X className="h-5 w-5" /></button>
+                    </div>
                     <div className="rounded-2xl bg-zinc-900/70 p-3 ring-1 ring-zinc-800">
                       <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-zinc-500">Ajustes do treino</p>
                       <div className="grid gap-3">
                         <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Plano<select value={activePlan.id} onChange={(event) => setActivePlanId(event.target.value)} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-black normal-case tracking-normal text-zinc-100 outline-none"><option value={defaultTrainingPlan.id}>Treino padrão</option>{customPlans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name}</option>)}</select></label>
                         {activePlan.id === defaultTrainingPlan.id ? <Segmented value={phase} setValue={setPhase} options={[{ value: "fase1", label: "Meses 1-6" }, { value: "fase2", label: "Após 6 meses" }]} /> : <button onClick={() => setEditorOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm font-black text-zinc-200"><Library className="h-4 w-4" /> Editar personalizado</button>}
                         <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Data de início<span className="grid gap-2 sm:grid-cols-[1fr_auto]"><input ref={startDateInputRef} type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="min-w-0 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-zinc-100 outline-none focus:border-zinc-400" /><button type="button" onClick={openStartDatePicker} className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-black normal-case tracking-normal text-zinc-200 hover:bg-zinc-800"><CalendarDays className="h-4 w-4" /> Selecionar</button></span></label>
+                        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Peso corporal atual<input value={bodyWeightKg} onChange={(event) => setBodyWeightKg(event.target.value ? Number(event.target.value.replace(",", ".")) : "")} inputMode="decimal" placeholder="kg" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-zinc-100 outline-none focus:border-zinc-400" /></label>
+                        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Altura<input value={bodyHeightCm} onChange={(event) => setBodyHeightCm(event.target.value ? Number(event.target.value.replace(",", ".")) : "")} inputMode="decimal" placeholder="cm" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-zinc-100 outline-none focus:border-zinc-400" /></label>
                         <label className="relative block"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar exercício, músculo ou dia..." className="w-full rounded-xl border border-zinc-700 bg-zinc-950 py-2.5 pl-9 pr-3 text-sm text-zinc-100 placeholder:text-zinc-500 outline-none transition focus:border-zinc-400" /></label>
                         <Segmented value={week} setValue={(next) => { setAutoWeekEnabled(false); setWeek(next); }} options={availableWeeks.map((item) => ({ value: item.id, label: item.label }))} />
                       </div>
@@ -1113,21 +1449,25 @@ export default function TrainingPlanApp() {
                     </div>
                   </div>
                 </div>
-              </details>
+                </>}
+              </div>
             </div>
           </div>
-          <nav className="grid grid-cols-2 rounded-xl bg-zinc-900 p-1 ring-1 ring-zinc-800 md:hidden">
+          <nav className="cute-segmented grid grid-cols-2 p-1 md:hidden">
             {([{ id: "training", label: "Treino" }, { id: "performance", label: "Desempenho" }] as const).map((item) => (
-              <button key={item.id} onClick={() => setAppView(item.id)} className={`rounded-lg px-3 py-2 text-sm font-black transition ${appView === item.id ? "bg-zinc-100 text-zinc-950 shadow-sm" : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"}`}>{item.label}</button>
+              <button key={item.id} onClick={() => setAppView(item.id)} className={`rounded-xl px-3 py-2 text-sm font-black transition ${appView === item.id ? "cute-primary shadow-sm" : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"}`}>{item.label}</button>
             ))}
           </nav>
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto grid w-full max-w-7xl gap-8 px-3 py-8 sm:px-6 lg:px-8">
         {appView === "training" ? <>
-        <section className="grid gap-4 rounded-3xl border border-zinc-800 bg-zinc-900 p-5 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold uppercase tracking-[0.18em] text-zinc-500">Começar treino</p><h2 className="mt-1 text-xl font-black text-zinc-50">{activePlan.name} · Semana {week}</h2><p className="mt-2 text-sm text-zinc-400">Use "Só hoje" para focar no treino do dia, ou busque qualquer exercício da semana selecionada.</p></div><button onClick={startWorkout} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-sm font-black text-zinc-950 hover:bg-white"><CalendarDays className="h-4 w-4" /> Começar treino</button></div>
+        <section className="cute-hero grid gap-5 p-5 sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="cute-eyebrow">Começar treino</p><h2 className="mt-1 text-2xl font-black leading-tight text-zinc-50 sm:text-3xl">{activePlan.name} · Semana {week}</h2><p className="mt-2 text-sm leading-6 text-zinc-400">Use "Só hoje" para focar no treino do dia, ou busque qualquer exercício da semana selecionada.</p></div><button onClick={startWorkout} className="cute-button cute-button-primary px-5"><CalendarDays className="h-4 w-4" /> Começar treino</button></div>
+          <div className="cute-progress">
+            <div className="cute-progress-fill" style={{ width: `${totalCount ? Math.round((doneCount / totalCount) * 100) : 0}%` }} />
+          </div>
           <div className="flex flex-wrap gap-2">
             <StatBadge icon={<CheckCircle2 className="h-4 w-4" />} title="Feitos" value={`${doneCount}/${totalCount}`} tooltip="Exercícios marcados como feitos na tela atual." />
             <StatBadge icon={<Activity className="h-4 w-4" />} title="Progressão" value={`${increaseCount}`} tooltip="Registros que bateram 3x15 e sugerem aumento de carga." />
@@ -1135,20 +1475,23 @@ export default function TrainingPlanApp() {
             <StatBadge icon={<RotateCcw className="h-4 w-4" />} title="Plano" value={activePlan.name} tooltip={`Semana automática alterna entre ${weekIds.join(", ") || "A"}; ocorrência atual: ${weekBlock + 1}.`} />
           </div>
           <div className="flex flex-wrap gap-2">
-            <button onClick={() => setQuickLogModal("cardio")} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-black text-zinc-200 hover:bg-zinc-800"><Activity className="h-4 w-4" /> Registrar cardio</button>
-            <button onClick={() => setQuickLogModal("pain")} className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-black text-zinc-200 hover:bg-zinc-800"><HeartPulse className="h-4 w-4" /> Check de dor</button>
+            <button onClick={() => setQuickLogModal("cardio")} className="cute-button cute-button-secondary"><Activity className="h-4 w-4" /> Registrar cardio</button>
+            <button onClick={() => setQuickLogModal("pain")} className="cute-button cute-button-secondary"><HeartPulse className="h-4 w-4" /> Check de dor</button>
           </div>
         </section>
-        <section className="space-y-5"><div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-bold uppercase tracking-[0.18em] text-zinc-500">Treinos</p><h2 className="text-2xl font-black text-zinc-50">{activePlan.id === defaultTrainingPlan.id ? (phase === "fase1" ? "Fase 1: meses 1 a 6" : "Fase 2: após 6 meses") : activePlan.name} · Semana {week}</h2><p className="mt-1 text-sm text-zinc-500">{filteredPlans.length} bloco(s) encontrado(s)</p></div><div className="flex flex-wrap items-center gap-2"><button onClick={goToNextExercise} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-sm font-black text-zinc-950 hover:bg-white"><ClipboardCheck className="h-4 w-4" /> Próximo exercício</button>{workoutMessage && <span className="rounded-2xl bg-zinc-950 px-3 py-2 text-xs font-bold text-zinc-300 ring-1 ring-zinc-800">{workoutMessage}</span>}</div></div>{filteredPlans.length > 0 ? filteredPlans.map((plan) => <DayCard key={plan.id} plan={plan} logs={logs} getLog={getLog} updateExerciseLog={updateExerciseLog} onMuscleClick={setSelectedMuscle} onAlternativeClick={(idOrName, source) => setSelectedAlternative({ idOrName, source })} onMediaOpen={setSelectedMedia} isOpen={isDayOpen(plan)} onToggle={() => setOpenDayIds((current) => ({ ...current, [plan.id]: !isDayOpen(plan) }))} getExerciseDomKey={getExerciseDomKey} getCurrentLogKey={logKeyFor} registerExerciseRef={registerExerciseRef} highlightedExerciseKey={highlightedExerciseKey} lightMode={lightMode} />) : <div className="rounded-3xl border border-dashed border-zinc-700 bg-zinc-900 p-10 text-center text-zinc-400">Nada encontrado para esta busca.</div>}</section>
-        </> : <PerformancePage logs={logs} cardioLogs={cardioLogs} painLogs={painLogs} loading={syncStatus === "Sincronizando" && Boolean(user)} />}
+        <section className="space-y-5"><div className="cute-section-header flex-col items-start sm:flex-row sm:items-end"><div><p className="cute-eyebrow">Treinos</p><h2>{activePlan.id === defaultTrainingPlan.id ? (phase === "fase1" ? "Fase 1: meses 1 a 6" : "Fase 2: após 6 meses") : activePlan.name} · Semana {week}</h2><p>{filteredPlans.length} bloco(s) encontrado(s)</p></div><div className="next-exercise-actions"><button onClick={goToNextExercise} disabled={todayExercises.length === 0 || allTodayExercisesHandled} className="cute-button cute-button-primary next-exercise-button disabled:cursor-not-allowed disabled:opacity-50"><ClipboardCheck className="h-4 w-4" /> {todayExercises.length === 0 ? "Sem treino hoje" : allTodayExercisesHandled ? (allTodayExercisesDone ? "Dia concluído" : "Sem pendências") : "Próximo exercício"}</button>{!allTodayExercisesHandled && workoutMessage && <span className="cute-badge cute-badge-lavender next-exercise-feedback">{workoutMessage}</span>}</div></div>{filteredPlans.length > 0 ? filteredPlans.map((plan) => <DayCard key={plan.id} plan={plan} logs={logs} getLog={getLog} updateExerciseLog={updateExerciseLog} onMuscleClick={setSelectedMuscle} onAlternativeClick={(idOrName, source) => setSelectedAlternative({ idOrName, source })} onMediaOpen={setSelectedMedia} onTimerOpen={(timerPlan, exercise) => setSelectedTimer({ plan: timerPlan, exercise })} isOpen={isDayOpen(plan)} onToggle={() => setOpenDayIds((current) => ({ ...current, [plan.id]: !isDayOpen(plan) }))} getExerciseDomKey={getExerciseDomKey} getCurrentLogKey={logKeyFor} registerExerciseRef={registerExerciseRef} highlightedExerciseKey={highlightedExerciseKey} lightMode={lightMode} bodyWeightKg={typeof bodyWeightKg === "number" ? bodyWeightKg : null} timerSessions={timerSessions} />) : <div className="cute-empty">Nenhum treino encontrado por aqui 💗</div>}<div className="cute-card rounded-3xl border border-dashed border-zinc-700 bg-zinc-900/70 p-4 text-center"><p className="text-sm font-bold text-zinc-400">Vai treinar fora do plano da semana?</p><button type="button" onClick={() => setExtraWorkoutOpen(true)} className="cute-button cute-button-secondary mx-auto mt-3"><Plus className="h-4 w-4" /> Adicionar exercícios extras</button></div></section>
+        </> : <PerformancePage logs={logs} cardioLogs={cardioLogs} painLogs={painLogs} timerSessions={timerSessions} weightHistory={weightHistory} bodyWeightKg={typeof bodyWeightKg === "number" ? bodyWeightKg : null} bodyHeightCm={typeof bodyHeightCm === "number" ? bodyHeightCm : null} onSaveWeightEntry={saveWeightEntry} onDeleteWeightEntry={removeWeightEntry} loading={syncStatus === "Sincronizando" && Boolean(user)} />}
       </main>
 
       <InfoModal isOpen={infoModalOpen} onClose={() => setInfoModalOpen(false)} />
       <MuscleModal focus={selectedMuscle} onClose={() => setSelectedMuscle(null)} />
       <AlternativeModal alternative={selectedAlternative} onClose={() => setSelectedAlternative(null)} onMuscleClick={setSelectedMuscle} onMediaOpen={setSelectedMedia} />
       <ExerciseMediaModal target={selectedMedia} onClose={() => setSelectedMedia(null)} onMuscleClick={setSelectedMuscle} />
+      <ExerciseTimerModal target={selectedTimer ? { planId: activePlan.id, weekId: selectedTimer.plan.week, dayName: selectedTimer.plan.scheduledDayName, dateKey: selectedTimer.plan.scheduledDate, exercise: selectedTimer.exercise } : null} bodyWeightKg={typeof bodyWeightKg === "number" ? bodyWeightKg : null} onClose={() => setSelectedTimer(null)} onComplete={handleTimerComplete} />
       {quickLogModal && <ModalShell onClose={() => setQuickLogModal(null)} wide><div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-zinc-800 bg-zinc-900/95 p-5 backdrop-blur"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">Registro rápido</p><h2 className="mt-1 text-2xl font-black text-zinc-50">{quickLogModal === "cardio" ? "Cardio diário" : "Check de dor/desconforto"}</h2></div><button onClick={() => setQuickLogModal(null)} className="rounded-full bg-zinc-800 p-2 text-zinc-300"><X className="h-5 w-5" /></button></div><div className="p-5"><QuickLogs painLogs={painLogs} setPainLogs={setPainLogs} cardioLogs={cardioLogs} setCardioLogs={setCardioLogs} mode={quickLogModal} /></div></ModalShell>}
-      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+      {bodyCheckMode && <BodyCheckModal mode={bodyCheckMode} initialWeight={bodyWeightKg} initialHeight={bodyHeightCm} weekLabel={`Semana ${week}`} onSave={saveBodyCheck} onClose={bodyCheckMode === "signup" ? () => setBodyCheckMode(null) : undefined} />}
+      <ExtraWorkoutModal open={extraWorkoutOpen} activePlanId={activePlan.id} week={week} onClose={() => setExtraWorkoutOpen(false)} onSave={saveExtraWorkout} />
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} onSignedUp={() => { setAuthOpen(false); setBodyCheckMode("signup"); }} />
       <TrainingEditor open={editorOpen} plans={customPlans} activePlanId={activePlanId} onClose={() => setEditorOpen(false)} onSave={saveCustomPlan} onDelete={deleteCustomPlan} />
     </div>
   );

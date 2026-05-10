@@ -3,7 +3,7 @@ import type { CardioStats } from "../../utils/performance";
 export function CardioProgressChart({ stats }: { stats: CardioStats }) {
   const maxDaily = Math.max(...stats.daily.map((item) => item.minutes), 1);
   return (
-    <section className="rounded-3xl border border-zinc-800 bg-zinc-900 p-5 shadow-sm">
+    <section className="cute-card rounded-3xl border border-zinc-800 bg-zinc-900 p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-xl font-black text-zinc-50">Cardio</h2><p className="mt-1 text-sm text-zinc-400">{stats.sessions} sessão(ões), média de {stats.averageMinutes} min</p></div><span className="rounded-full bg-teal-950/70 px-3 py-1 text-xs font-black text-teal-200 ring-1 ring-teal-800">{stats.totalMinutes} min</span></div>
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <div className="grid gap-3">

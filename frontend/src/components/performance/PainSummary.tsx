@@ -2,7 +2,7 @@ import type { PainStats } from "../../utils/performance";
 
 export function PainSummary({ stats }: { stats: PainStats }) {
   return (
-    <section className="rounded-3xl border border-zinc-800 bg-zinc-900 p-5 shadow-sm">
+    <section className="cute-card rounded-3xl border border-zinc-800 bg-zinc-900 p-5 shadow-sm">
       <h2 className="text-xl font-black text-zinc-50">Dor/desconforto</h2>
       {stats.alerts.length > 0 && <div className="mt-4 grid gap-2">{stats.alerts.map((alert) => <p key={alert} className="rounded-2xl border border-orange-900 bg-orange-950/40 px-4 py-3 text-sm font-bold text-orange-100">{alert}</p>)}</div>}
       <div className="mt-4 grid gap-4 lg:grid-cols-2">

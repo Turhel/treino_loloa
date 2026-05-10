@@ -66,10 +66,13 @@ export type ExerciseLibraryItem = {
   rest?: number;
   videoKey?: string;
   illustrations?: string[];
+  met?: number;
+  exerciseKind?: "isolador" | "composto" | "cardio" | "mobilidade";
 };
 
 export type ExerciseLog = {
   done: boolean;
+  skipped?: boolean;
   load: string;
   reps1: string;
   reps2: string;
@@ -79,3 +82,52 @@ export type ExerciseLog = {
 };
 
 export type Logs = Record<string, ExerciseLog>;
+
+export type ExerciseTimerStatus = "idle" | "preparing" | "working" | "resting" | "paused" | "completed" | "skipped";
+
+export type ExerciseTimerSet = {
+  setNumber: number;
+  loadKg: number | null;
+  reps: number | null;
+  startedAt: string;
+  endedAt: string;
+  tensionSeconds: number;
+  restSeconds: number;
+};
+
+export type ExerciseTimerSession = {
+  id: string;
+  dateKey: string;
+  planId: string;
+  weekId: string;
+  dayName: string;
+  exerciseId: string;
+  exerciseName: string;
+  status: ExerciseTimerStatus;
+  preparationSeconds: number;
+  defaultRestSeconds: number;
+  currentSet: number;
+  targetSets: number;
+  sameLoadForAllSets: boolean;
+  defaultLoadKg?: number | null;
+  sets: ExerciseTimerSet[];
+  totalTensionSeconds: number;
+  totalRestSeconds: number;
+  estimatedKcal: number | null;
+  executedExerciseId?: string;
+  executedExerciseName?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type WeightEntry = {
+  id: string;
+  date: string;
+  weightKg: number;
+  heightCm?: number;
+  source?: "signup" | "weekly-checkin" | "manual" | "sync";
+  note?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+};

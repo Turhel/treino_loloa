@@ -1,0 +1,40 @@
+export const cuteTheme = {
+  dark: {
+    background: "#141218",
+    surface: "#1E1A24",
+    surfaceDeep: "#100D15",
+    border: "#2A2433",
+    text: "#FFF7FB",
+    muted: "#B9AABE",
+    pink: "#F4A6C1",
+    lavender: "#C9B6FF",
+    violet: "#A98BFF",
+    peach: "#FFC8A2",
+    mint: "#9ED8B5",
+    blue: "#A9D6FF",
+  },
+  light: {
+    background: "#FFF7FB",
+    surface: "#FFFFFF",
+    surfaceDeep: "#F8EEF6",
+    border: "#EADCEA",
+    text: "#2B2031",
+    muted: "#7C6C83",
+    pink: "#D85F8A",
+    lavender: "#8A6BE8",
+    violet: "#7652DD",
+    peach: "#D9814B",
+    mint: "#4C9B6E",
+    blue: "#4E91CB",
+  },
+} as const;
+
+export const cuteTrainingTypeTone = {
+  puxar: "blue",
+  empurrar: "pink",
+  gluteo: "peach",
+  inferior: "mint",
+  superior: "lavender",
+  cardio: "teal",
+  descanso: "neutral",
+} as const;
