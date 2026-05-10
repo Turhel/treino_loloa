@@ -37,6 +37,7 @@ import type { CustomTrainingPlan, Exercise, ExerciseLog, ExerciseTimerSession, L
 import { focusToKey, focusToTargets } from "./utils/focus";
 import { getManualVideoLinks, videoKey, youtubeSearch } from "./utils/video";
 import { estimateKcalFromLoggedExercise } from "./utils/energy";
+import { filterAvailableExercises, getEquipmentName, getMissingEquipment, isExerciseAvailable } from "./utils/equipment";
 import { deleteWeightEntry, normalizeWeightHistory, sortWeightHistory } from "./utils/weight";
 import { getCurrentSession, onAuthSessionChange, signOut } from "./services/authService";
 import { getUserAppData, hasRemoteData, mergeUserAppData, normalizeUserAppData, saveUserAppData, type UserAppData } from "./services/userDataService";
@@ -61,7 +62,7 @@ import {
   todayDateKey,
   writeJson,
 } from "./utils/storage";
-import { getBusinessWeekBlock, getSessionDateForWeekDay, getWeekdayName } from "./utils/schedule";
+import { addDays, getBusinessWeekBlock, getSessionDateForWeekDay, getWeekdayName, getWeekBlockStartDate } from "./utils/schedule";
 
 const weekdays = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
 const trainingWeekdays = weekdays.slice(0, 5);
@@ -118,7 +119,7 @@ const BODY_HEIGHT_KEY = "treino-loloa-body-height-v1";
 const BODY_WEIGHT_WEEK_KEY = "treino-loloa-body-weight-week-v1";
 const EXTRA_WORKOUT_KEY = "treino-loloa-extra-workouts-v1";
 const WEIGHT_HISTORY_KEY = "treino-loloa-weight-history-v1";
-const cardioTypeOptions = ["Caminhada", "Esteira", "Corrida", "Bicicleta", "Elíptico", "Escada", "Outro"];
+const cardioTypeOptions = ["Caminhada", "Esteira", "Corrida", "Bicicleta", "Outro"];
 
 const typeStyle: Record<TrainingType, { label: string; chip: string; border: string; soft: string; icon: string }> = {
   puxar: { label: "Puxar", chip: "bg-blue-950/70 text-blue-200 ring-blue-800", border: "border-blue-500", soft: "bg-blue-950/30", icon: "" },
@@ -126,6 +127,8 @@ const typeStyle: Record<TrainingType, { label: string; chip: string; border: str
   gluteo: { label: "Posterior/glúteos", chip: "bg-orange-950/70 text-orange-200 ring-orange-800", border: "border-orange-500", soft: "bg-orange-950/30", icon: "" },
   inferior: { label: "Inferiores", chip: "bg-emerald-950/70 text-emerald-200 ring-emerald-800", border: "border-emerald-500", soft: "bg-emerald-950/30", icon: "" },
   superior: { label: "Superiores/acessórios", chip: "bg-violet-950/70 text-violet-200 ring-violet-800", border: "border-violet-500", soft: "bg-violet-950/30", icon: "" },
+  core: { label: "Core", chip: "bg-fuchsia-950/70 text-fuchsia-200 ring-fuchsia-800", border: "border-fuchsia-500", soft: "bg-fuchsia-950/30", icon: "" },
+  mobilidade: { label: "Mobilidade", chip: "bg-sky-950/70 text-sky-200 ring-sky-800", border: "border-sky-500", soft: "bg-sky-950/30", icon: "" },
   cardio: { label: "Cardio/mobilidade", chip: "bg-teal-950/70 text-teal-200 ring-teal-800", border: "border-teal-500", soft: "bg-teal-950/30", icon: "" },
   descanso: { label: "Descanso", chip: "bg-zinc-800 text-zinc-300 ring-zinc-700", border: "border-zinc-500", soft: "bg-zinc-800/70", icon: "" },
 };
@@ -173,7 +176,7 @@ function scheduleTrainingDays(days: TrainingDay[], startDate: string, weekBlock:
     return {
       ...day,
       scheduledDate,
-      scheduledDayName: getWeekdayName(scheduledDate) || day.day,
+      scheduledDayName: startDate ? getWeekdayName(scheduledDate) || day.day : `Dia ${index + 1}`,
       blockIndex: index + 1,
       blockTotal,
     };
@@ -188,6 +191,11 @@ function numericValue(value: string) {
   const normalized = value.replace(",", ".");
   const parsed = Number(normalized);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function textInputValue(value: unknown) {
+  if (typeof value === "number" && Number.isNaN(value)) return "";
+  return String(value ?? "");
 }
 
 function estimateExerciseCalories(log?: ExerciseLog, exercise?: Exercise, bodyWeightKg?: number | null) {
@@ -302,19 +310,17 @@ function downloadWeeklySummaryPdf(summary: WeeklySummary) {
 }
 
 function formatDateRange(startDate: string, weekBlock: number) {
-  const start = new Date(`${startDate}T00:00:00`);
-  start.setDate(start.getDate() + weekBlock * 7);
-  const end = new Date(start);
-  end.setDate(start.getDate() + 6);
+  const startKey = getWeekBlockStartDate(startDate, weekBlock);
+  const nextStartKey = getWeekBlockStartDate(startDate, weekBlock + 1);
+  const start = new Date(`${startKey}T00:00:00`);
+  const end = new Date(`${addDays(nextStartKey, -1)}T00:00:00`);
   return `${start.toLocaleDateString("pt-BR")} - ${end.toLocaleDateString("pt-BR")}`;
 }
 
 function isDateInWeek(date: string, startDate: string, weekBlock: number) {
-  const start = new Date(`${startDate}T00:00:00`);
-  const value = new Date(`${date}T00:00:00`);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(value.getTime())) return false;
-  const diffDays = Math.floor((value.getTime() - start.getTime()) / 86400000);
-  return diffDays >= weekBlock * 7 && diffDays < weekBlock * 7 + 7;
+  const startKey = getWeekBlockStartDate(startDate, weekBlock);
+  const nextStartKey = getWeekBlockStartDate(startDate, weekBlock + 1);
+  return date >= startKey && date < nextStartKey;
 }
 
 function svgLineChart(points: { label: string; totalLoad: number; calories?: number }[]) {
@@ -383,12 +389,12 @@ function LogInputs({ log, onLog, compact = false }: { log: ExerciseLog; onLog: (
   return (
     <div className="grid gap-2">
       <div className={`grid gap-2 ${compact ? "grid-cols-4" : "grid-cols-2 sm:grid-cols-4"}`}>
-        <input value={log.load} onChange={(event) => onLog({ load: event.target.value })} placeholder="kg" inputMode="decimal" className={inputClass} />
-        <input value={log.reps1} onChange={(event) => onLog({ reps1: event.target.value })} placeholder="R1" inputMode="numeric" className={inputClass} />
-        <input value={log.reps2} onChange={(event) => onLog({ reps2: event.target.value })} placeholder="R2" inputMode="numeric" className={inputClass} />
-        <input value={log.reps3} onChange={(event) => onLog({ reps3: event.target.value })} placeholder="R3" inputMode="numeric" className={inputClass} />
+        <input value={textInputValue(log.load)} onChange={(event) => onLog({ load: event.target.value })} placeholder="kg" inputMode="decimal" className={inputClass} />
+        <input value={textInputValue(log.reps1)} onChange={(event) => onLog({ reps1: event.target.value })} placeholder="R1" inputMode="numeric" className={inputClass} />
+        <input value={textInputValue(log.reps2)} onChange={(event) => onLog({ reps2: event.target.value })} placeholder="R2" inputMode="numeric" className={inputClass} />
+        <input value={textInputValue(log.reps3)} onChange={(event) => onLog({ reps3: event.target.value })} placeholder="R3" inputMode="numeric" className={inputClass} />
       </div>
-      <input value={log.note} onChange={(event) => onLog({ note: event.target.value })} placeholder="Observação" className={`${inputClass} col-span-full`} />
+      <input value={textInputValue(log.note)} onChange={(event) => onLog({ note: event.target.value })} placeholder="Observação" className={`${inputClass} col-span-full`} />
     </div>
   );
 }
@@ -445,12 +451,14 @@ function VideoButton({ name, videoKey: explicitVideoKey, compact = false, onOpen
   );
 }
 function AlternativeChips({ exercise, onAlternativeClick }: { exercise: Exercise; onAlternativeClick: (idOrName: string, source: Exercise) => void }) {
+  const alternatives = (exercise.alternatives ?? []).map((alt) => ({ id: alt, item: findExerciseLibraryItem(alt) }));
+  const available = alternatives.filter(({ item }) => !item || isExerciseAvailable(item));
+  const unavailableCount = alternatives.length - available.length;
   return (
     <div className="mt-2 flex flex-wrap gap-2">
-      {(exercise.alternatives ?? []).map((alt) => {
-        const item = findExerciseLibraryItem(alt);
-        return <button key={alt} type="button" onClick={(event) => { event.stopPropagation(); onAlternativeClick(alt, exercise); }} className="cute-badge cute-badge-lavender min-h-8 text-left transition">{item?.name ?? alt}</button>;
-      })}
+      {available.map(({ id, item }) => <button key={id} type="button" onClick={(event) => { event.stopPropagation(); onAlternativeClick(id, exercise); }} className="cute-badge cute-badge-lavender min-h-8 text-left transition">{item?.name ?? id}</button>)}
+      {alternatives.length > 0 && available.length === 0 && <span className="rounded-2xl border border-dashed border-zinc-700 px-3 py-2 text-xs font-bold text-zinc-400">Sem alternativas disponíveis cadastradas para esta academia.</span>}
+      {unavailableCount > 0 && available.length > 0 && <span className="rounded-full bg-zinc-950 px-3 py-1 text-xs font-bold text-zinc-500">{unavailableCount} indisponível(is)</span>}
     </div>
   );
 }
@@ -629,10 +637,13 @@ function AlternativeModal({ alternative, onClose, onMuscleClick, onMediaOpen }: 
   const focus = item?.focus ?? alternative.source.focus;
   const muscles = item?.muscles?.length ? item.muscles : focusToTargets(focus).map((target) => target.key);
   const primaryMuscle = muscleImages[muscles[0]] ?? muscleImages[focusToKey(focus)] ?? muscleImages.core;
+  const equipment = item?.equipment ?? [];
+  const missingEquipment = getMissingEquipment(item);
+  const available = isExerciseAvailable(item);
   return (
     <ModalShell onClose={onClose}>
       <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-zinc-800 bg-zinc-900/95 p-5 backdrop-blur"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">Alternativa</p><h2 className="mt-1 text-2xl font-black text-zinc-50">{name}</h2><p className="mt-2 text-sm text-zinc-400">{focus}</p></div><button onClick={onClose} className="rounded-full bg-zinc-800 p-2 text-zinc-300"><X className="h-5 w-5" /></button></div>
-      <div className="grid gap-5 p-5 md:grid-cols-[0.9fr_1.1fr]"><MuscleFigure info={primaryMuscle} compact /><div><p className="text-base leading-relaxed text-zinc-300">{item?.description ?? "Informações completas ainda não cadastradas. Use esta alternativa como variação próxima ao exercício original e confirme a execução com um profissional."}</p><div className="mt-4 flex flex-wrap gap-2">{muscles.map((muscle) => <button key={muscle} onClick={() => onMuscleClick(muscle)} className="rounded-full bg-blue-950/40 px-3 py-1 text-xs font-black text-blue-200 ring-1 ring-blue-800">{muscleImages[muscle]?.title ?? muscle}</button>)}</div><ul className="mt-4 space-y-2 text-sm text-zinc-300">{(item?.tips ?? ["Controle o movimento.", "Use carga confortável.", "Pare se sentir dor articular."]).map((tip) => <li key={tip} className="rounded-xl bg-zinc-950 px-3 py-2">• {tip}</li>)}</ul><div className="mt-5 flex flex-wrap gap-2"><VideoButton name={name} videoKey={item?.videoKey ?? item?.id ?? name} onOpen={onMediaOpen} /></div></div></div>
+      <div className="grid gap-5 p-5 md:grid-cols-[0.9fr_1.1fr]"><MuscleFigure info={primaryMuscle} compact /><div><p className="text-base leading-relaxed text-zinc-300">{item?.description ?? "Informações completas ainda não cadastradas. Use esta alternativa como variação próxima ao exercício original e confirme a execução com um profissional."}</p><div className="mt-4 flex flex-wrap gap-2"><span className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${available ? "bg-emerald-950/60 text-emerald-200 ring-emerald-800" : "bg-red-950/60 text-red-200 ring-red-800"}`}>{available ? "Disponível nesta academia" : "Não disponível nesta academia"}</span>{equipment.map((id) => <span key={id} className="rounded-full bg-zinc-950 px-3 py-1 text-xs font-bold text-zinc-300 ring-1 ring-zinc-800">{getEquipmentName(id)}</span>)}</div>{missingEquipment.length > 0 && <p className="mt-3 rounded-2xl bg-red-950/40 px-3 py-2 text-sm font-bold text-red-100">Faltando: {missingEquipment.map(getEquipmentName).join(", ")}</p>}<div className="mt-4 flex flex-wrap gap-2">{muscles.map((muscle) => <button key={muscle} onClick={() => onMuscleClick(muscle)} className="rounded-full bg-blue-950/40 px-3 py-1 text-xs font-black text-blue-200 ring-1 ring-blue-800">{muscleImages[muscle]?.title ?? muscle}</button>)}</div><ul className="mt-4 space-y-2 text-sm text-zinc-300">{(item?.tips ?? ["Controle o movimento.", "Use carga confortável.", "Pare se sentir dor articular."]).map((tip) => <li key={tip} className="rounded-xl bg-zinc-950 px-3 py-2">• {tip}</li>)}</ul><div className="mt-5 flex flex-wrap gap-2"><VideoButton name={name} videoKey={item?.videoKey ?? item?.id ?? name} onOpen={onMediaOpen} /></div></div></div>
     </ModalShell>
   );
 }
@@ -673,7 +684,6 @@ function BodyCheckModal({
         <div className="grid gap-4 p-5">
           <label className="grid gap-1 text-sm font-bold text-zinc-300">Peso corporal atual<input value={weight} onChange={(event) => setWeight(event.target.value)} inputMode="decimal" placeholder="kg" className="cute-input" /></label>
           {mode === "signup" && <label className="grid gap-1 text-sm font-bold text-zinc-300">Altura<input value={height} onChange={(event) => setHeight(event.target.value)} inputMode="decimal" placeholder="cm" className="cute-input" /></label>}
-          {mode === "weekly" && <p className="rounded-2xl bg-zinc-950 p-3 text-sm font-bold text-zinc-400 ring-1 ring-zinc-800">A altura fica salva no cadastro. A cada nova semana, pedimos só o peso atual.</p>}
           <button type="button" disabled={!canSave} onClick={() => onSave({ weightKg: parsedWeight, heightCm: parsedHeight || undefined })} className="cute-button cute-button-primary disabled:cursor-not-allowed disabled:opacity-50">Salvar</button>
         </div>
       </div>
@@ -698,13 +708,16 @@ function ExtraWorkoutModal({
   const [title, setTitle] = useState("Treino extra");
   const [selectedExercise, setSelectedExercise] = useState(exerciseLibraryList[0]?.id ?? "");
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [showUnavailable, setShowUnavailable] = useState(false);
+  const exerciseOptions = showUnavailable ? exerciseLibraryList : filterAvailableExercises(exerciseLibraryList);
 
   useEffect(() => {
     if (!open) return;
     setDate(todayDateKey());
     setTitle("Treino extra");
-    setSelectedExercise(exerciseLibraryList[0]?.id ?? "");
+    setSelectedExercise(filterAvailableExercises(exerciseLibraryList)[0]?.id ?? "");
     setExercises([]);
+    setShowUnavailable(false);
   }, [open]);
 
   if (!open) return null;
@@ -744,7 +757,9 @@ function ExtraWorkoutModal({
           <label className="grid gap-1 text-sm font-bold text-zinc-300">Nome do bloco<input value={title} onChange={(event) => setTitle(event.target.value)} className="cute-input" /></label>
         </div>
         <div className="grid gap-2 rounded-2xl bg-zinc-950/70 p-3 ring-1 ring-zinc-800">
-          <label className="grid gap-1 text-sm font-bold text-zinc-300">Exercício<select value={selectedExercise} onChange={(event) => setSelectedExercise(event.target.value)} className="cute-input">{exerciseLibraryList.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.focus}</option>)}</select></label>
+          <label className="grid gap-1 text-sm font-bold text-zinc-300">Exercício<select value={selectedExercise} onChange={(event) => setSelectedExercise(event.target.value)} className="cute-input">{exerciseOptions.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.focus}{isExerciseAvailable(item) ? "" : " · indisponível"}</option>)}</select></label>
+          <label className="flex items-center gap-2 rounded-2xl bg-zinc-950 px-3 py-2 text-sm font-bold text-zinc-300"><input type="checkbox" checked={showUnavailable} onChange={(event) => setShowUnavailable(event.target.checked)} /> Mostrar indisponíveis</label>
+          {selectedExercise && !isExerciseAvailable(exerciseLibrary[selectedExercise]) && <p className="rounded-2xl bg-red-950/40 px-3 py-2 text-sm font-bold text-red-100">Atenção: este exercício usa equipamento indisponível nesta academia.</p>}
           <button type="button" onClick={addExercise} className="cute-button cute-button-secondary"><Plus className="h-4 w-4" /> Adicionar exercício</button>
         </div>
         <div className="grid gap-2">
@@ -774,6 +789,9 @@ function ExerciseMediaModal({ target, onClose, onMuscleClick }: { target: MediaT
   const tiktokUrl = validUrl(manual?.tiktok);
   const searchUrl = youtubeSearch(item?.videoKey ?? target.videoKey ?? name);
   const illustrations = item?.illustrations ?? [];
+  const equipment = item?.equipment ?? [];
+  const missingEquipment = getMissingEquipment(item);
+  const available = isExerciseAvailable(item);
   return (
     <ModalShell onClose={onClose} wide>
       <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-zinc-800 bg-zinc-900/95 p-5 backdrop-blur">
@@ -789,6 +807,8 @@ function ExerciseMediaModal({ target, onClose, onMuscleClick }: { target: MediaT
         </div>
         <div>
           <p className="text-base leading-relaxed text-zinc-300">{item?.description ?? "Informações completas ainda não cadastradas. Use os vídeos e o foco muscular como referência inicial."}</p>
+          <div className="mt-4 flex flex-wrap gap-2"><span className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${available ? "bg-emerald-950/60 text-emerald-200 ring-emerald-800" : "bg-red-950/60 text-red-200 ring-red-800"}`}>{available ? "Disponível nesta academia" : "Não disponível nesta academia"}</span>{equipment.map((id) => <span key={id} className="rounded-full bg-zinc-950 px-3 py-1 text-xs font-bold text-zinc-300 ring-1 ring-zinc-800">{getEquipmentName(id)}</span>)}</div>
+          {missingEquipment.length > 0 && <p className="mt-3 rounded-2xl bg-red-950/40 px-3 py-2 text-sm font-bold text-red-100">Equipamento faltando: {missingEquipment.map(getEquipmentName).join(", ")}</p>}
           <div className="mt-4 flex flex-wrap gap-2">{muscles.map((muscle) => <button key={muscle} onClick={() => onMuscleClick(muscle)} className="rounded-full bg-blue-950/40 px-3 py-1 text-xs font-black text-blue-200 ring-1 ring-blue-800">{muscleImages[muscle]?.title ?? muscle}</button>)}</div>
           <ul className="mt-4 space-y-2 text-sm text-zinc-300">{(item?.tips ?? ["Controle o movimento.", "Use carga confortável.", "Pare se sentir dor articular."]).map((tip) => <li key={tip} className="rounded-xl bg-zinc-950 px-3 py-2">• {tip}</li>)}</ul>
           <div className="mt-5 flex flex-wrap gap-2">
@@ -796,6 +816,7 @@ function ExerciseMediaModal({ target, onClose, onMuscleClick }: { target: MediaT
             {tiktokUrl && <a href={tiktokUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl bg-cyan-400 px-4 py-3 text-sm font-black text-zinc-950"><ExternalLink className="h-4 w-4" /> TikTok</a>}
             <a href={searchUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-black text-zinc-100 hover:bg-zinc-800"><Search className="h-4 w-4" /> Buscar no YouTube</a>
           </div>
+          {(item?.alternatives ?? []).map((id) => findExerciseLibraryItem(id)).filter((alternative) => alternative && !isExerciseAvailable(alternative)).length > 0 && <div className="mt-5 rounded-2xl border border-zinc-800 bg-zinc-950 p-3"><p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-500">Indisponíveis nesta academia</p><div className="mt-2 flex flex-wrap gap-2">{(item?.alternatives ?? []).map((id) => findExerciseLibraryItem(id)).filter((alternative) => alternative && !isExerciseAvailable(alternative)).map((alternative) => alternative && <span key={alternative.id} className="rounded-full bg-zinc-900 px-3 py-1 text-xs font-bold text-zinc-400">{alternative.name}</span>)}</div></div>}
         </div>
       </div>
     </ModalShell>
@@ -821,7 +842,9 @@ function InfoModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
 function TrainingEditor({ open, plans, activePlanId, onClose, onSave, onDelete }: { open: boolean; plans: CustomTrainingPlan[]; activePlanId: string; onClose: () => void; onSave: (plan: CustomTrainingPlan) => void; onDelete: (id: string) => void }) {
   const base = plans.find((plan) => plan.id === activePlanId) ?? plans[0] ?? makeCustomPlan();
   const [draft, setDraft] = useState(base);
-  const [selectedExercise, setSelectedExercise] = useState(exerciseLibraryList[0]?.id ?? "");
+  const [showUnavailable, setShowUnavailable] = useState(false);
+  const exerciseOptions = showUnavailable ? exerciseLibraryList : filterAvailableExercises(exerciseLibraryList);
+  const [selectedExercise, setSelectedExercise] = useState(filterAvailableExercises(exerciseLibraryList)[0]?.id ?? "");
   useEffect(() => { if (open) setDraft(base); }, [open, base]);
   if (!open) return null;
   const patch = (next: CustomTrainingPlan) => setDraft({ ...next, updatedAt: new Date().toISOString() });
@@ -855,7 +878,7 @@ function TrainingEditor({ open, plans, activePlanId, onClose, onSave, onDelete }
         </div>
       </div>
       <div className="grid gap-5 p-5">
-        <div className="grid gap-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-4 md:grid-cols-[1fr_auto]"><select value={selectedExercise} onChange={(event) => setSelectedExercise(event.target.value)} className="min-w-0 rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm font-semibold text-zinc-100 outline-none">{exerciseLibraryList.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.focus}</option>)}</select><p className="text-sm text-zinc-400 md:self-center">Escolha um exercício e toque em Adicionar no dia desejado.</p></div>
+        <div className="grid gap-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-4 md:grid-cols-[1fr_auto]"><div className="grid gap-2"><select value={selectedExercise} onChange={(event) => setSelectedExercise(event.target.value)} className="min-w-0 rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm font-semibold text-zinc-100 outline-none">{exerciseOptions.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.focus}{isExerciseAvailable(item) ? "" : " · indisponível"}</option>)}</select><label className="flex items-center gap-2 text-sm font-bold text-zinc-300"><input type="checkbox" checked={showUnavailable} onChange={(event) => setShowUnavailable(event.target.checked)} /> Mostrar indisponíveis</label>{selectedExercise && !isExerciseAvailable(exerciseLibrary[selectedExercise]) && <p className="rounded-2xl bg-red-950/40 px-3 py-2 text-sm font-bold text-red-100">Atenção: este exercício usa equipamento indisponível nesta academia.</p>}</div><p className="text-sm text-zinc-400 md:self-center">Escolha um exercício e toque em Adicionar no dia desejado.</p></div>
         {draft.weeks.map((week, weekIndex) => <section key={week.id} className="rounded-3xl border border-zinc-800 bg-zinc-950 p-4"><div className="mb-4 flex flex-wrap items-center justify-between gap-2"><input value={week.id} onChange={(event) => patch({ ...draft, weeks: draft.weeks.map((item, index) => index === weekIndex ? { ...item, id: event.target.value.toUpperCase(), label: `Semana ${event.target.value.toUpperCase()}`, days: item.days.map((day) => ({ ...day, week: event.target.value.toUpperCase() })) } : item) })} className="w-36 rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-2 text-lg font-black text-zinc-50" />{draft.weeks.length > 1 && <button onClick={() => patch({ ...draft, weeks: draft.weeks.filter((_, index) => index !== weekIndex) })} className="rounded-2xl border border-red-900 px-3 py-2 text-sm font-bold text-red-200 hover:bg-red-950">Remover semana</button>}</div><div className="grid gap-3 lg:grid-cols-2">{week.days.map((day, dayIndex) => <div key={day.day} className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4"><div className="mb-3 grid gap-2 sm:grid-cols-[1fr_auto]"><input value={day.title} onChange={(event) => updateDay(weekIndex, dayIndex, (current) => ({ ...current, title: event.target.value }))} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm font-black text-zinc-50" /><select value={day.type} onChange={(event) => updateDay(weekIndex, dayIndex, (current) => ({ ...current, type: event.target.value as TrainingType }))} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">{Object.keys(typeStyle).map((type) => <option key={type} value={type}>{typeStyle[type as TrainingType].label}</option>)}</select></div><p className="mb-3 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">{day.day}</p><div className="grid gap-2">{day.exercises.map((exercise, exerciseIndex) => <div key={`${exercise.id}-${exerciseIndex}`} className="flex items-center gap-2 rounded-xl bg-zinc-950 px-3 py-2 text-sm text-zinc-200"><span className="min-w-0 flex-1 truncate">{exercise.order}. {exercise.name}</span><button onClick={() => moveExercise(weekIndex, dayIndex, exerciseIndex, -1)} className="rounded-lg bg-zinc-800 px-2 py-1 text-xs">↑</button><button onClick={() => moveExercise(weekIndex, dayIndex, exerciseIndex, 1)} className="rounded-lg bg-zinc-800 px-2 py-1 text-xs">↓</button><button onClick={() => updateDay(weekIndex, dayIndex, (current) => ({ ...current, exercises: current.exercises.filter((_, index) => index !== exerciseIndex).map((item, index) => ({ ...item, order: index + 1 })) }))} className="rounded-lg bg-red-950 px-2 py-1 text-xs text-red-100">Remover</button></div>)}<button onClick={() => addExercise(weekIndex, dayIndex)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-100 px-3 py-2 text-sm font-black text-zinc-950"><Plus className="h-4 w-4" /> Adicionar</button></div></div>)}</div></section>)}
         <div className="sticky bottom-0 z-10 -mx-5 -mb-5 grid gap-2 border-t border-zinc-800 bg-zinc-900/95 p-4 backdrop-blur sm:hidden">
           <button onClick={() => onSave(draft)} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-sm font-black text-zinc-950"><Save className="h-4 w-4" /> Salvar treino</button>
@@ -1092,12 +1115,10 @@ export default function TrainingPlanApp() {
   function selectedWeekBlock(dateValue: string, selectedWeek: string) {
     if (!dateValue || weekIds.length === 0) return 0;
     const currentBlock = getBusinessWeekBlock(dateValue, new Date());
-    if (weekIds[currentBlock % weekIds.length] === selectedWeek) return currentBlock;
-    for (let offset = 1; offset <= weekIds.length; offset += 1) {
-      const candidate = Math.max(0, currentBlock - offset);
-      if (weekIds[candidate % weekIds.length] === selectedWeek) return candidate;
-    }
-    return currentBlock;
+    const selectedIndex = weekIds.findIndex((id) => id === selectedWeek);
+    if (selectedIndex < 0) return currentBlock;
+    const cycleStart = Math.floor(currentBlock / weekIds.length) * weekIds.length;
+    return cycleStart + selectedIndex;
   }
 
   function logKeyFor(plan: ScheduledTrainingDay, exercise: Exercise) {
@@ -1240,6 +1261,16 @@ export default function TrainingPlanApp() {
       const next = deleteWeightEntry(current, entryId);
       updateBodyFromWeightHistory(next);
       return next;
+    });
+  }
+
+  function saveSettingsBodyWeight() {
+    if (typeof bodyWeightKg !== "number" || bodyWeightKg <= 0) return;
+    addWeightEntry({
+      weightKg: bodyWeightKg,
+      heightCm: typeof bodyHeightCm === "number" ? bodyHeightCm : undefined,
+      source: "manual",
+      note: "Atualizado nas configurações",
     });
   }
 
@@ -1423,8 +1454,8 @@ export default function TrainingPlanApp() {
                         <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Plano<select value={activePlan.id} onChange={(event) => setActivePlanId(event.target.value)} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-black normal-case tracking-normal text-zinc-100 outline-none"><option value={defaultTrainingPlan.id}>Treino padrão</option>{customPlans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name}</option>)}</select></label>
                         {activePlan.id === defaultTrainingPlan.id ? <Segmented value={phase} setValue={setPhase} options={[{ value: "fase1", label: "Meses 1-6" }, { value: "fase2", label: "Após 6 meses" }]} /> : <button onClick={() => setEditorOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm font-black text-zinc-200"><Library className="h-4 w-4" /> Editar personalizado</button>}
                         <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Data de início<span className="grid gap-2 sm:grid-cols-[1fr_auto]"><input ref={startDateInputRef} type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="min-w-0 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-zinc-100 outline-none focus:border-zinc-400" /><button type="button" onClick={openStartDatePicker} className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-black normal-case tracking-normal text-zinc-200 hover:bg-zinc-800"><CalendarDays className="h-4 w-4" /> Selecionar</button></span></label>
-                        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Peso corporal atual<input value={bodyWeightKg} onChange={(event) => setBodyWeightKg(event.target.value ? Number(event.target.value.replace(",", ".")) : "")} inputMode="decimal" placeholder="kg" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-zinc-100 outline-none focus:border-zinc-400" /></label>
-                        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Altura<input value={bodyHeightCm} onChange={(event) => setBodyHeightCm(event.target.value ? Number(event.target.value.replace(",", ".")) : "")} inputMode="decimal" placeholder="cm" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-zinc-100 outline-none focus:border-zinc-400" /></label>
+                        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Peso corporal atual<input value={typeof bodyWeightKg === "number" && Number.isFinite(bodyWeightKg) ? bodyWeightKg : ""} onBlur={saveSettingsBodyWeight} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} onChange={(event) => setBodyWeightKg(event.target.value ? Number(event.target.value.replace(",", ".")) : "")} inputMode="decimal" placeholder="kg" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-zinc-100 outline-none focus:border-zinc-400" /></label>
+                        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Altura<input value={typeof bodyHeightCm === "number" && Number.isFinite(bodyHeightCm) ? bodyHeightCm : ""} onChange={(event) => setBodyHeightCm(event.target.value ? Number(event.target.value.replace(",", ".")) : "")} inputMode="decimal" placeholder="cm" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-zinc-100 outline-none focus:border-zinc-400" /></label>
                         <label className="relative block"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar exercício, músculo ou dia..." className="w-full rounded-xl border border-zinc-700 bg-zinc-950 py-2.5 pl-9 pr-3 text-sm text-zinc-100 placeholder:text-zinc-500 outline-none transition focus:border-zinc-400" /></label>
                         <Segmented value={week} setValue={(next) => { setAutoWeekEnabled(false); setWeek(next); }} options={availableWeeks.map((item) => ({ value: item.id, label: item.label }))} />
                       </div>

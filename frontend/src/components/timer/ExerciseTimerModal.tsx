@@ -3,6 +3,7 @@ import { Pause, Play, X } from "lucide-react";
 import type { Exercise, ExerciseTimerSession, ExerciseTimerSet } from "../../types/training";
 import { findExerciseLibraryItem } from "../../data/exerciseLibrary";
 import { estimateKcalFromMet, metForExercise } from "../../utils/energy";
+import { filterAvailableExercises } from "../../utils/equipment";
 import { completeTimerSession, latestLoadAndReps } from "../../utils/timer";
 import { TimerDisplay } from "./TimerDisplay";
 import { SetResultForm } from "./SetResultForm";
@@ -48,7 +49,7 @@ export function ExerciseTimerModal({
   const exerciseName = exerciseItem?.name ?? target?.exercise.name ?? "";
   const defaultRest = target?.exercise.rest ?? exerciseItem?.rest ?? 60;
   const met = metForExercise(exerciseItem?.exerciseKind, exerciseItem?.met);
-  const alternatives = target ? (target.exercise.alternatives ?? []).map((id) => findExerciseLibraryItem(id)).filter(Boolean) : [];
+  const alternatives = target ? filterAvailableExercises((target.exercise.alternatives ?? []).map((id) => findExerciseLibraryItem(id)).filter(Boolean)) : [];
 
   useEffect(() => {
     if (!target) return;

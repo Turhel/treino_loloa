@@ -1,11 +1,12 @@
 import type { ExerciseVideoLinks } from "../types/training";
+import { generatedExerciseVideoLinks } from "./generated/exerciseVideos.generated";
 
 // LINKS MANUAIS DOS VÍDEOS
 // Para adicionar um vídeo manual: crie/edite a chave normalizada do exercício
 // e preencha youtube ou tiktok. Se os dois existirem, o app mostra um menu para escolher.
 // Se nenhum existir, cai na busca automática do YouTube.
 
-export const exerciseVideoLinks: Record<string, ExerciseVideoLinks> = {
+const manualExerciseVideoLinks: Record<string, ExerciseVideoLinks> = {
   // Costas / puxar
   puxada_na_frente_pegada_neutra_ou_aberta: {
     youtube: "https://www.youtube.com/shorts/SapM-j_3M20",
@@ -179,4 +180,9 @@ export const exerciseVideoLinks: Record<string, ExerciseVideoLinks> = {
     youtube: "",
     tiktok: "",
   },
+};
+
+export const exerciseVideoLinks: Record<string, ExerciseVideoLinks> = {
+  ...manualExerciseVideoLinks,
+  ...generatedExerciseVideoLinks,
 };

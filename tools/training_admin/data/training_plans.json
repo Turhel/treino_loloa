@@ -1,0 +1,57 @@
+[
+  {
+    "id": "treino-admin-exemplo",
+    "name": "Treino Admin Exemplo",
+    "phase": "custom",
+    "weeks": [
+      {
+        "id": "A",
+        "label": "Semana A",
+        "days": [
+          {
+            "id": "admin-a-segunda",
+            "week": "A",
+            "day": "Segunda",
+            "title": "Puxar A: costas completas",
+            "type": "puxar",
+            "exercises": [
+              { "id": "puxada_barra_reta", "order": 1 },
+              { "id": "remada_baixa_triangulo", "order": 2 },
+              { "id": "pulldown_corda", "order": 3 }
+            ]
+          },
+          {
+            "id": "admin-a-terca",
+            "week": "A",
+            "day": "Terça",
+            "title": "Glúteos e posterior",
+            "type": "gluteo",
+            "exercises": [
+              { "id": "rdl", "order": 1 },
+              { "id": "leg_press_45_pes_altos", "order": 2 },
+              { "id": "cadeira_abdutora", "order": 3 }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "B",
+        "label": "Semana B",
+        "days": [
+          {
+            "id": "admin-b-segunda",
+            "week": "B",
+            "day": "Segunda",
+            "title": "Inferiores B",
+            "type": "inferior",
+            "exercises": [
+              { "id": "leg_press_45", "order": 1 },
+              { "id": "agachamento_sumo", "order": 2 },
+              { "id": "panturrilha_no_leg_press_45", "order": 3 }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]

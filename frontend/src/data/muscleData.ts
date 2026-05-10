@@ -1,6 +1,7 @@
 import type { MuscleInfo } from "../types/training";
+import { generatedMuscleImages } from "./generated/muscleData.generated";
 
-export const muscleImages: Record<string, MuscleInfo> = {
+const baseMuscleImages: Record<string, MuscleInfo> = {
   adutores: {
     title: "Adutores",
     description:
@@ -165,4 +166,9 @@ export const muscleImages: Record<string, MuscleInfo> = {
     tips: ["Respiração controlada.", "Coluna neutra.", "Qualidade acima de tempo absurdo."],
     image: "/musculos/lombar.png",
   },
+};
+
+export const muscleImages: Record<string, MuscleInfo> = {
+  ...baseMuscleImages,
+  ...generatedMuscleImages,
 };

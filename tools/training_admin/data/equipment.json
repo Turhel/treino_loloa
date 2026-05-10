@@ -1,0 +1,97 @@
+[
+  {
+    "id": "barra_reta",
+    "name": "Barra reta",
+    "type": "barra",
+    "available": true
+  },
+  {
+    "id": "barra_v",
+    "name": "Barra V",
+    "type": "barra",
+    "available": true
+  },
+  {
+    "id": "corda",
+    "name": "Corda",
+    "type": "acessorio",
+    "available": true
+  },
+  {
+    "id": "triangulo",
+    "name": "Triângulo",
+    "type": "pegador",
+    "available": true
+  },
+  {
+    "id": "halteres",
+    "name": "Halteres",
+    "type": "peso_livre",
+    "available": true
+  },
+  {
+    "id": "smith",
+    "name": "Smith",
+    "type": "maquina",
+    "available": true
+  },
+  {
+    "id": "leg_press_45",
+    "name": "Leg press 45",
+    "type": "maquina",
+    "available": true
+  },
+  {
+    "id": "cabo",
+    "name": "Cabo/polia",
+    "type": "maquina",
+    "available": true
+  },
+  {
+    "id": "maquina",
+    "name": "Máquina guiada",
+    "type": "maquina",
+    "available": false,
+    "notes": "Use somente quando a máquina específica existir no inventário."
+  },
+  {
+    "id": "esteira",
+    "name": "Esteira",
+    "type": "cardio",
+    "available": true
+  },
+  {
+    "id": "bicicleta_ergometrica",
+    "name": "Bicicleta ergométrica",
+    "type": "cardio",
+    "available": true
+  },
+  {
+    "id": "leg_press_90",
+    "name": "Leg press 90",
+    "type": "maquina",
+    "available": false,
+    "notes": "Não disponível nesta academia."
+  },
+  {
+    "id": "eliptico",
+    "name": "Elíptico",
+    "type": "cardio",
+    "available": false,
+    "notes": "Não disponível nesta academia."
+  },
+  {
+    "id": "escada",
+    "name": "Escada",
+    "type": "cardio",
+    "available": false,
+    "notes": "Não disponível nesta academia."
+  },
+  {
+    "id": "remo",
+    "name": "Remo",
+    "type": "cardio",
+    "available": false,
+    "notes": "Não disponível nesta academia."
+  }
+]

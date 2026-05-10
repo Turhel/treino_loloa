@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getCurrentWeekId, getCycleIndex, getWeeksElapsed } from "./schedule";
+import { getCurrentWeekId, getCycleIndex, getFirstBusinessDate, getSessionDateForWeekDay, getWeekBlockStartDate, getWeeksElapsed } from "./schedule";
 
 describe("schedule", () => {
   it("calcula A/B recorrente", () => {
@@ -49,5 +49,19 @@ describe("schedule", () => {
       const date = new Date(Date.UTC(2026, 4, 4 + offset * 7, 12)).toISOString().slice(0, 10);
       expect(weeks).toContain(getCurrentWeekId("2026-05-04", date, weeks));
     }
+  });
+  it("agenda a semana B na semana útil seguinte quando a semana A começa em uma segunda", () => {
+    expect(getSessionDateForWeekDay("2026-05-04", 0, 0)).toBe("2026-05-04");
+    expect(getSessionDateForWeekDay("2026-05-04", 0, 4)).toBe("2026-05-08");
+    expect(getSessionDateForWeekDay("2026-05-04", 1, 0)).toBe("2026-05-11");
+    expect(getSessionDateForWeekDay("2026-05-04", 1, 4)).toBe("2026-05-15");
+  });
+
+  it("move data inicial de sábado/domingo para a próxima segunda útil", () => {
+    expect(getFirstBusinessDate("2026-05-09")).toBe("2026-05-11");
+    expect(getFirstBusinessDate("2026-05-10")).toBe("2026-05-11");
+    expect(getSessionDateForWeekDay("2026-05-10", 0, 0)).toBe("2026-05-11");
+    expect(getSessionDateForWeekDay("2026-05-10", 0, 4)).toBe("2026-05-15");
+    expect(getWeekBlockStartDate("2026-05-10", 1)).toBe("2026-05-18");
   });
 });

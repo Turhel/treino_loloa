@@ -34,6 +34,12 @@ export function isWeekend(dateKey: string) {
   return day === "Sábado" || day === "Domingo";
 }
 
+export function getFirstBusinessDate(dateKey: string) {
+  let current = getLocalDateKey(dateKey);
+  while (isWeekend(current)) current = addDays(current, 1);
+  return current;
+}
+
 export function addBusinessDays(dateKey: string, businessDays: number) {
   let current = dateKey;
   let remaining = Math.max(0, businessDays);
@@ -45,7 +51,7 @@ export function addBusinessDays(dateKey: string, businessDays: number) {
 }
 
 export function getBusinessDaysBetween(startDate: string, currentDate: Date | string = new Date()) {
-  const startKey = getLocalDateKey(startDate);
+  const startKey = getFirstBusinessDate(startDate);
   const currentKey = getLocalDateKey(currentDate);
   if (getDaysBetween(startKey, currentKey) <= 0) return 0;
   let current = startKey;
@@ -63,11 +69,11 @@ export function getBusinessWeekBlock(startDate: string, currentDate: Date | stri
 }
 
 export function getSessionDateForWeekDay(startDate: string, weekBlock: number, dayIndex: number, sessionsPerWeek = 5) {
-  return addBusinessDays(startDate, Math.max(0, weekBlock) * sessionsPerWeek + Math.max(0, dayIndex));
+  return addBusinessDays(getFirstBusinessDate(startDate), Math.max(0, weekBlock) * sessionsPerWeek + Math.max(0, dayIndex));
 }
 
 export function getDaysBetween(startDate: string, currentDate: Date | string = new Date()): number {
-  const start = parseDateOnly(getLocalDateKey(startDate));
+  const start = parseDateOnly(getFirstBusinessDate(startDate));
   const current = parseDateOnly(getLocalDateKey(currentDate));
   if (start === null || current === null) return 0;
   return Math.floor((current - start) / MS_PER_DAY);
@@ -93,5 +99,5 @@ export function getCycleIndex(startDate: string, currentDate: Date | string, num
 }
 
 export function getWeekBlockStartDate(startDate: string, weekBlock: number) {
-  return addDays(startDate, Math.max(0, weekBlock) * 7);
+  return addBusinessDays(getFirstBusinessDate(startDate), Math.max(0, weekBlock) * 5);
 }

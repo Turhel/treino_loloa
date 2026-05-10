@@ -1,4 +1,13 @@
-export type TrainingType = "puxar" | "empurrar" | "gluteo" | "inferior" | "superior" | "cardio" | "descanso";
+export type TrainingType =
+  | "puxar"
+  | "empurrar"
+  | "gluteo"
+  | "inferior"
+  | "superior"
+  | "core"
+  | "cardio"
+  | "mobilidade"
+  | "descanso";
 export type Phase = "fase1" | "fase2";
 export type WeekId = string;
 
@@ -53,6 +62,7 @@ export type MuscleInfo = {
   description: string;
   tips: string[];
   image: string;
+  group?: string;
 };
 
 export type ExerciseLibraryItem = {
@@ -60,6 +70,7 @@ export type ExerciseLibraryItem = {
   name: string;
   focus: string;
   muscles: string[];
+  equipment?: string[];
   description: string;
   tips: string[];
   alternatives?: string[];
@@ -68,6 +79,7 @@ export type ExerciseLibraryItem = {
   illustrations?: string[];
   met?: number;
   exerciseKind?: "isolador" | "composto" | "cardio" | "mobilidade";
+  availableByDefault?: boolean;
 };
 
 export type ExerciseLog = {

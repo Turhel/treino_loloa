@@ -1,4 +1,5 @@
 import type { Exercise, Phase, TrainingDay, TrainingPlan, TrainingWeek } from "../types/training";
+import { generatedTrainingPlans } from "./generated/trainingPlans.generated";
 import { videoKey } from "../utils/video";
 
 export function restFor(name: string) {
@@ -407,6 +408,8 @@ export const defaultTrainingPlan: TrainingPlan = {
   phase: "fase1",
   weeks: groupDefaultWeeks(legacyDayPlans),
 };
+
+export const staticTrainingPlans = [defaultTrainingPlan, ...generatedTrainingPlans.filter((plan) => plan.id !== defaultTrainingPlan.id)];
 
 export const defaultDayPlans = legacyDayPlans;
 

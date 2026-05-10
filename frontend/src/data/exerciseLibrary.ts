@@ -1,7 +1,24 @@
 import { alternativesFor, defaultDayPlans, restFor } from "./trainingPlans";
+import { generatedExerciseLibraryItems } from "./generated/exerciseLibrary.generated";
 import { focusToTargets } from "../utils/focus";
 import type { Exercise, ExerciseLibraryItem } from "../types/training";
 import { videoKey } from "../utils/video";
+
+function equipmentFor(name: string) {
+  const text = name.toLowerCase();
+  const equipment = new Set<string>();
+  if (text.includes("leg press")) equipment.add("leg_press_45");
+  if (text.includes("smith")) equipment.add("smith");
+  if (text.includes("halter")) equipment.add("halteres");
+  if (text.includes("cabo") || text.includes("pulley") || text.includes("puxada") || text.includes("pulldown") || text.includes("face pull") || text.includes("crossover")) equipment.add("cabo");
+  if (text.includes("corda")) equipment.add("corda");
+  if (text.includes("triângulo") || text.includes("triangulo")) equipment.add("triangulo");
+  if (text.includes("barra v")) equipment.add("barra_v");
+  if (text.includes("barra reta")) equipment.add("barra_reta");
+  if (text.includes("esteira") || text.includes("caminhada") || text.includes("corrida")) equipment.add("esteira");
+  if (text.includes("bicicleta") || text.includes("bike")) equipment.add("bicicleta_ergometrica");
+  return Array.from(equipment);
+}
 
 const extraExercises: ExerciseLibraryItem[] = [
   {
@@ -183,7 +200,7 @@ const extraExercises: ExerciseLibraryItem[] = [
     focus: "Posterior e glúteos",
     muscles: ["posterior_coxa", "gluteos", "lombar", "adutores"],
     description: "Levantamento de barra com pegada ampla para ênfase em glúteos e adutores.",
-    tips: ["Corpo tensionado.", "Penas mais abertas.", "Pés apontados levemente para fora."],
+    tips: ["Corpo tensionado.", "Pernas mais abertas.", "Pés apontados levemente para fora."],
     rest: 90,
   },
 ];
@@ -195,6 +212,7 @@ function fromExercise(exercise: Exercise): ExerciseLibraryItem {
     name: exercise.name,
     focus: exercise.focus,
     muscles,
+    equipment: equipmentFor(exercise.name),
     description: `Exercício do treino com foco em ${exercise.focus}.`,
     tips: ["Priorize execução limpa.", "Controle a fase de volta.", "Ajuste a carga para manter boa técnica."],
     alternatives: exercise.alternatives ?? alternativesFor(exercise.name).map(videoKey),
@@ -211,6 +229,7 @@ for (const day of defaultDayPlans) {
     if (!items.has(item.id)) items.set(item.id, item);
   }
 }
+for (const item of generatedExerciseLibraryItems) items.set(item.id, item);
 
 export const exerciseLibrary = Object.fromEntries(items) as Record<string, ExerciseLibraryItem>;
 export const exerciseLibraryList = Object.values(exerciseLibrary).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));

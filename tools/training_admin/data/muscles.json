@@ -1,0 +1,146 @@
+[
+  {
+    "id": "dorsal",
+    "title": "Dorsal",
+    "description": "Trabalha largura das costas em puxadas verticais e pulldowns.",
+    "tips": ["Puxe com os cotovelos.", "Controle a volta.", "Evite jogar o tronco para trás."],
+    "image": "/musculos/dorsal.png",
+    "group": "costas"
+  },
+  {
+    "id": "costas_medias",
+    "title": "Costas médias",
+    "description": "Região enfatizada em remadas e movimentos de retração escapular.",
+    "tips": ["Segure a contração.", "Não arredonde a coluna.", "Puxe com os cotovelos."],
+    "image": "/musculos/costas_medias.png",
+    "group": "costas"
+  },
+  {
+    "id": "biceps",
+    "title": "Bíceps",
+    "description": "Atua em puxadas e roscas.",
+    "tips": ["Evite balanço.", "Controle a descida.", "Mantenha cotovelos estáveis."],
+    "image": "/musculos/biceps.png",
+    "group": "bracos"
+  },
+  {
+    "id": "triceps",
+    "title": "Tríceps",
+    "description": "Atua em empurrões e extensões de cotovelo.",
+    "tips": ["Cotovelos firmes.", "Controle o retorno.", "Evite travar com violência."],
+    "image": "/musculos/triceps.png",
+    "group": "bracos"
+  },
+  {
+    "id": "peitoral",
+    "title": "Peitoral",
+    "description": "Trabalhado em supinos, crucifixos e variações de empurrar.",
+    "tips": ["Escápulas estáveis.", "Controle a descida.", "Não deixe o ombro dominar."],
+    "image": "/musculos/peitoral.png",
+    "group": "peito"
+  },
+  {
+    "id": "deltoide_anterior",
+    "title": "Deltoide anterior",
+    "description": "Parte frontal do ombro, muito usada em supinos e desenvolvimento.",
+    "tips": ["Evite excesso de carga.", "Controle a descida.", "Não suba o ombro para a orelha."],
+    "image": "/musculos/deltoide_anterior.png",
+    "group": "ombros"
+  },
+  {
+    "id": "gluteos",
+    "title": "Glúteos",
+    "description": "Grupo muscular que participa de extensão, abdução e estabilidade do quadril.",
+    "tips": ["Evite jogar tudo para lombar.", "Controle a amplitude.", "Contraia no topo."],
+    "image": "/musculos/gluteos.png",
+    "group": "gluteos"
+  },
+  {
+    "id": "gluteo_maximo",
+    "title": "Glúteo máximo",
+    "description": "Principal músculo de volume dos glúteos.",
+    "tips": ["Contraia no topo.", "Não hiperestenda a lombar.", "Controle a descida."],
+    "image": "/musculos/gluteo_maximo.png",
+    "group": "gluteos"
+  },
+  {
+    "id": "gluteo_medio",
+    "title": "Glúteo médio",
+    "description": "Importante para estabilidade lateral do quadril.",
+    "tips": ["Controle a abertura.", "Evite impulso.", "Sinta a lateral do quadril."],
+    "image": "/musculos/gluteo_medio.png",
+    "group": "gluteos"
+  },
+  {
+    "id": "posterior_coxa",
+    "title": "Posterior de coxa",
+    "description": "Grupo posterior da coxa, exigido em dobradiças e flexoras.",
+    "tips": ["Coluna neutra.", "Controle a descida.", "Use amplitude sem dor."],
+    "image": "/musculos/posterior_coxa.png",
+    "group": "pernas"
+  },
+  {
+    "id": "quadriceps",
+    "title": "Quadríceps",
+    "description": "Parte anterior da coxa, forte em agachamentos, extensora e leg press.",
+    "tips": ["Joelhos alinhados.", "Controle a descida.", "Evite travar o joelho com força."],
+    "image": "/musculos/quadriceps.png",
+    "group": "pernas"
+  },
+  {
+    "id": "vasto_lateral",
+    "title": "Vasto lateral",
+    "description": "Porção lateral do quadríceps.",
+    "tips": ["Controle a descida.", "Mantenha joelhos alinhados.", "Use amplitude confortável."],
+    "image": "/musculos/vasto_lateral.png",
+    "group": "pernas"
+  },
+  {
+    "id": "adutores",
+    "title": "Adutores",
+    "description": "Região interna da coxa, importante para estabilidade do quadril.",
+    "tips": ["Controle abertura e fechamento.", "Evite bater a máquina.", "Use amplitude confortável."],
+    "image": "/musculos/adutores.png",
+    "group": "pernas"
+  },
+  {
+    "id": "panturrilha",
+    "title": "Panturrilha",
+    "description": "Grupo da panturrilha, incluindo gastrocnêmio e sóleo.",
+    "tips": ["Amplitude completa.", "Pause no topo.", "Não quique a repetição."],
+    "image": "/musculos/panturrilha.png",
+    "group": "pernas"
+  },
+  {
+    "id": "lombar",
+    "title": "Lombar",
+    "description": "Região de suporte do tronco em dobradiças e estabilidade.",
+    "tips": ["Coluna neutra.", "Evite hiperextensão.", "Pare se houver dor articular."],
+    "image": "/musculos/lombar.png",
+    "group": "core"
+  },
+  {
+    "id": "core",
+    "title": "Core",
+    "description": "Estabilidade do tronco em exercícios anti-rotação e abdominais.",
+    "tips": ["Respire sem perder tensão.", "Controle o quadril.", "Priorize qualidade."],
+    "image": "/musculos/abdomen.png",
+    "group": "core"
+  },
+  {
+    "id": "abdomen",
+    "title": "Abdômen anterior",
+    "description": "Inclui principalmente o reto abdominal.",
+    "tips": ["Evite puxar o pescoço.", "Contraia sem prender a respiração.", "Controle a volta."],
+    "image": "/musculos/abdomen.png",
+    "group": "core"
+  },
+  {
+    "id": "obliquos",
+    "title": "Oblíquos",
+    "description": "Parte lateral do core, usada em anti-rotação e pranchas laterais.",
+    "tips": ["Tronco estável.", "Evite girar sem controle.", "Controle antes da velocidade."],
+    "image": "/musculos/obliquos.png",
+    "group": "core"
+  }
+]
