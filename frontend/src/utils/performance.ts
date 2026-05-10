@@ -511,7 +511,7 @@ export function calculatePainSummary(painLogs: PainPerformanceLog[], period: Per
   return {
     total: logs.length,
     areas: areaList,
-    recent: [...logs].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5),
+    recent: [...logs].sort((a, b) => b.date.localeCompare(a.date)),
     alerts: areaList.filter((area) => area.count >= 2).map((area) => `Atenção: dor recorrente em ${area.label}. Considere reduzir carga e revisar execução.`),
   };
 }

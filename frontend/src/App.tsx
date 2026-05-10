@@ -38,7 +38,7 @@ import { focusToKey, focusToTargets } from "./utils/focus";
 import { getManualVideoLinks, videoKey, youtubeSearch } from "./utils/video";
 import { estimateKcalFromLoggedExercise } from "./utils/energy";
 import { filterAvailableExercises, getEquipmentName, getMissingEquipment, isExerciseAvailable } from "./utils/equipment";
-import { deleteWeightEntry, normalizeWeightHistory, sortWeightHistory } from "./utils/weight";
+import { deleteWeightEntry, normalizeWeightHistory, parseDecimalNumber, sortWeightHistory } from "./utils/weight";
 import { getCurrentSession, onAuthSessionChange, signOut } from "./services/authService";
 import { getUserAppData, hasRemoteData, mergeUserAppData, normalizeUserAppData, saveUserAppData, type UserAppData } from "./services/userDataService";
 import { PerformancePage } from "./pages/PerformancePage";
@@ -116,6 +116,7 @@ const WEEKLY_SUMMARY_KEY = "treino-loloa-weekly-summaries-v1";
 const TIMER_SESSION_KEY = "treino-loloa-timer-sessions-v1";
 const BODY_WEIGHT_KEY = "treino-loloa-body-weight-v1";
 const BODY_HEIGHT_KEY = "treino-loloa-body-height-v1";
+const TARGET_WEIGHT_KEY = "treino-loloa-target-weight-v1";
 const BODY_WEIGHT_WEEK_KEY = "treino-loloa-body-weight-week-v1";
 const EXTRA_WORKOUT_KEY = "treino-loloa-extra-workouts-v1";
 const WEIGHT_HISTORY_KEY = "treino-loloa-weight-history-v1";
@@ -188,8 +189,7 @@ function makeEntryId(prefix: string) {
 }
 
 function numericValue(value: string) {
-  const normalized = value.replace(",", ".");
-  const parsed = Number(normalized);
+  const parsed = parseDecimalNumber(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
@@ -936,6 +936,7 @@ export default function TrainingPlanApp() {
   const [extraWorkouts, setExtraWorkouts] = useStoredArray<ExtraWorkout>(EXTRA_WORKOUT_KEY);
   const [bodyWeightKg, setBodyWeightKg] = useState<number | "">(() => readJson<number | "">(BODY_WEIGHT_KEY, ""));
   const [bodyHeightCm, setBodyHeightCm] = useState<number | "">(() => readJson<number | "">(BODY_HEIGHT_KEY, ""));
+  const [targetWeightKg, setTargetWeightKg] = useState<number | "">(() => readJson<number | "">(TARGET_WEIGHT_KEY, ""));
   const [bodyWeightWeekBlock, setBodyWeightWeekBlock] = useState(() => readJson<number>(BODY_WEIGHT_WEEK_KEY, -1));
   const [user, setUser] = useState<User | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
@@ -954,6 +955,8 @@ export default function TrainingPlanApp() {
   const [pendingWorkoutJump, setPendingWorkoutJump] = useState(false);
   const syncReadyRef = useRef(false);
   const syncTimerRef = useRef<number | null>(null);
+  const syncRetryTimerRef = useRef<number | null>(null);
+  const syncRetryCountRef = useRef(0);
   const exerciseRefs = useRef<Record<string, HTMLElement | null>>({});
   const startDateInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -979,6 +982,7 @@ export default function TrainingPlanApp() {
         activePlanId: activePlan.id,
         bodyWeightKg: typeof bodyWeightKg === "number" ? bodyWeightKg : undefined,
         bodyHeightCm: typeof bodyHeightCm === "number" ? bodyHeightCm : undefined,
+        targetWeightKg: typeof targetWeightKg === "number" ? targetWeightKg : undefined,
         bodyWeightWeekBlock,
         extraWorkouts,
       },
@@ -1000,6 +1004,7 @@ export default function TrainingPlanApp() {
     if (typeof data.settings.activePlanId === "string") setActivePlanId(data.settings.activePlanId);
     if (typeof data.settings.bodyWeightKg === "number") setBodyWeightKg(data.settings.bodyWeightKg);
     if (typeof data.settings.bodyHeightCm === "number") setBodyHeightCm(data.settings.bodyHeightCm);
+    if (typeof data.settings.targetWeightKg === "number") setTargetWeightKg(data.settings.targetWeightKg);
     if (typeof data.settings.bodyWeightWeekBlock === "number") setBodyWeightWeekBlock(data.settings.bodyWeightWeekBlock);
     if (Array.isArray(data.settings.extraWorkouts)) setExtraWorkouts(data.settings.extraWorkouts as ExtraWorkout[]);
   }
@@ -1017,11 +1022,22 @@ export default function TrainingPlanApp() {
       if (mode === "merge") applySyncPayload(next);
       await saveUserAppData(currentUser.id, next);
       syncReadyRef.current = true;
+      syncRetryCountRef.current = 0;
+      if (syncRetryTimerRef.current) window.clearTimeout(syncRetryTimerRef.current);
       setSyncStatus("Sincronizado");
     } catch (error) {
       console.error("[Supabase sync] Não foi possível sincronizar os dados.", error);
       setSyncStatus("Erro ao sincronizar");
+      scheduleSyncRetry(currentUser);
     }
+  }
+
+  function scheduleSyncRetry(currentUser: User) {
+    if (!navigator.onLine) return;
+    if (syncRetryTimerRef.current) window.clearTimeout(syncRetryTimerRef.current);
+    const delay = Math.min(30000, 5000 * 2 ** syncRetryCountRef.current);
+    syncRetryCountRef.current += 1;
+    syncRetryTimerRef.current = window.setTimeout(() => void syncWithSupabase(currentUser, "push"), delay);
   }
 
   useEffect(() => localStorage.setItem(START_DATE_KEY, startDate), [startDate]);
@@ -1029,6 +1045,7 @@ export default function TrainingPlanApp() {
   useEffect(() => localStorage.setItem(ACTIVE_PLAN_KEY, activePlan.id), [activePlan.id]);
   useEffect(() => writeJson(BODY_WEIGHT_KEY, bodyWeightKg), [bodyWeightKg]);
   useEffect(() => writeJson(BODY_HEIGHT_KEY, bodyHeightCm), [bodyHeightCm]);
+  useEffect(() => writeJson(TARGET_WEIGHT_KEY, targetWeightKg), [targetWeightKg]);
   useEffect(() => writeJson(BODY_WEIGHT_WEEK_KEY, bodyWeightWeekBlock), [bodyWeightWeekBlock]);
   useEffect(() => saveCustomPlans(customPlans), [customPlans]);
   useEffect(() => { if (autoWeekEnabled) setWeek(autoWeek); }, [autoWeekEnabled, autoWeek]);
@@ -1062,7 +1079,16 @@ export default function TrainingPlanApp() {
     return () => {
       if (syncTimerRef.current) window.clearTimeout(syncTimerRef.current);
     };
-  }, [user, logs, painLogs, cardioLogs, timerSessions, weightHistory, extraWorkouts, customPlans, weeklySummaries, phase, week, startDate, autoWeekEnabled, activePlan.id, bodyWeightKg, bodyHeightCm, bodyWeightWeekBlock]);
+  }, [user, logs, painLogs, cardioLogs, timerSessions, weightHistory, extraWorkouts, customPlans, weeklySummaries, phase, week, startDate, autoWeekEnabled, activePlan.id, bodyWeightKg, bodyHeightCm, targetWeightKg, bodyWeightWeekBlock]);
+  useEffect(() => {
+    if (!user) return;
+    const retryWhenOnline = () => void syncWithSupabase(user, "push");
+    window.addEventListener("online", retryWhenOnline);
+    return () => {
+      window.removeEventListener("online", retryWhenOnline);
+      if (syncRetryTimerRef.current) window.clearTimeout(syncRetryTimerRef.current);
+    };
+  }, [user]);
 
   const filteredPlans = useMemo(() => {
     const days = getPlanDays(activePlan, activePlan.id === defaultTrainingPlan.id ? phase : undefined, week);
@@ -1454,8 +1480,9 @@ export default function TrainingPlanApp() {
                         <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Plano<select value={activePlan.id} onChange={(event) => setActivePlanId(event.target.value)} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-black normal-case tracking-normal text-zinc-100 outline-none"><option value={defaultTrainingPlan.id}>Treino padrão</option>{customPlans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name}</option>)}</select></label>
                         {activePlan.id === defaultTrainingPlan.id ? <Segmented value={phase} setValue={setPhase} options={[{ value: "fase1", label: "Meses 1-6" }, { value: "fase2", label: "Após 6 meses" }]} /> : <button onClick={() => setEditorOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm font-black text-zinc-200"><Library className="h-4 w-4" /> Editar personalizado</button>}
                         <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Data de início<span className="grid gap-2 sm:grid-cols-[1fr_auto]"><input ref={startDateInputRef} type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="min-w-0 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-zinc-100 outline-none focus:border-zinc-400" /><button type="button" onClick={openStartDatePicker} className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-black normal-case tracking-normal text-zinc-200 hover:bg-zinc-800"><CalendarDays className="h-4 w-4" /> Selecionar</button></span></label>
-                        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Peso corporal atual<input value={typeof bodyWeightKg === "number" && Number.isFinite(bodyWeightKg) ? bodyWeightKg : ""} onBlur={saveSettingsBodyWeight} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} onChange={(event) => setBodyWeightKg(event.target.value ? Number(event.target.value.replace(",", ".")) : "")} inputMode="decimal" placeholder="kg" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-zinc-100 outline-none focus:border-zinc-400" /></label>
-                        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Altura<input value={typeof bodyHeightCm === "number" && Number.isFinite(bodyHeightCm) ? bodyHeightCm : ""} onChange={(event) => setBodyHeightCm(event.target.value ? Number(event.target.value.replace(",", ".")) : "")} inputMode="decimal" placeholder="cm" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-zinc-100 outline-none focus:border-zinc-400" /></label>
+                        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Peso corporal atual<input value={typeof bodyWeightKg === "number" && Number.isFinite(bodyWeightKg) ? bodyWeightKg : ""} onBlur={saveSettingsBodyWeight} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} onChange={(event) => setBodyWeightKg(event.target.value ? parseDecimalNumber(event.target.value) : "")} inputMode="decimal" placeholder="kg" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-zinc-100 outline-none focus:border-zinc-400" /></label>
+                        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Altura<input value={typeof bodyHeightCm === "number" && Number.isFinite(bodyHeightCm) ? bodyHeightCm : ""} onChange={(event) => setBodyHeightCm(event.target.value ? parseDecimalNumber(event.target.value) : "")} inputMode="decimal" placeholder="cm" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-zinc-100 outline-none focus:border-zinc-400" /></label>
+                        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Peso desejado<input value={typeof targetWeightKg === "number" && Number.isFinite(targetWeightKg) ? targetWeightKg : ""} onChange={(event) => setTargetWeightKg(event.target.value ? parseDecimalNumber(event.target.value) : "")} inputMode="decimal" placeholder="kg" className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-zinc-100 outline-none focus:border-zinc-400" /></label>
                         <label className="relative block"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar exercício, músculo ou dia..." className="w-full rounded-xl border border-zinc-700 bg-zinc-950 py-2.5 pl-9 pr-3 text-sm text-zinc-100 placeholder:text-zinc-500 outline-none transition focus:border-zinc-400" /></label>
                         <Segmented value={week} setValue={(next) => { setAutoWeekEnabled(false); setWeek(next); }} options={availableWeeks.map((item) => ({ value: item.id, label: item.label }))} />
                       </div>
@@ -1511,7 +1538,7 @@ export default function TrainingPlanApp() {
           </div>
         </section>
         <section className="space-y-5"><div className="cute-section-header flex-col items-start sm:flex-row sm:items-end"><div><p className="cute-eyebrow">Treinos</p><h2>{activePlan.id === defaultTrainingPlan.id ? (phase === "fase1" ? "Fase 1: meses 1 a 6" : "Fase 2: após 6 meses") : activePlan.name} · Semana {week}</h2><p>{filteredPlans.length} bloco(s) encontrado(s)</p></div><div className="next-exercise-actions"><button onClick={goToNextExercise} disabled={todayExercises.length === 0 || allTodayExercisesHandled} className="cute-button cute-button-primary next-exercise-button disabled:cursor-not-allowed disabled:opacity-50"><ClipboardCheck className="h-4 w-4" /> {todayExercises.length === 0 ? "Sem treino hoje" : allTodayExercisesHandled ? (allTodayExercisesDone ? "Dia concluído" : "Sem pendências") : "Próximo exercício"}</button>{!allTodayExercisesHandled && workoutMessage && <span className="cute-badge cute-badge-lavender next-exercise-feedback">{workoutMessage}</span>}</div></div>{filteredPlans.length > 0 ? filteredPlans.map((plan) => <DayCard key={plan.id} plan={plan} logs={logs} getLog={getLog} updateExerciseLog={updateExerciseLog} onMuscleClick={setSelectedMuscle} onAlternativeClick={(idOrName, source) => setSelectedAlternative({ idOrName, source })} onMediaOpen={setSelectedMedia} onTimerOpen={(timerPlan, exercise) => setSelectedTimer({ plan: timerPlan, exercise })} isOpen={isDayOpen(plan)} onToggle={() => setOpenDayIds((current) => ({ ...current, [plan.id]: !isDayOpen(plan) }))} getExerciseDomKey={getExerciseDomKey} getCurrentLogKey={logKeyFor} registerExerciseRef={registerExerciseRef} highlightedExerciseKey={highlightedExerciseKey} lightMode={lightMode} bodyWeightKg={typeof bodyWeightKg === "number" ? bodyWeightKg : null} timerSessions={timerSessions} />) : <div className="cute-empty">Nenhum treino encontrado por aqui 💗</div>}<div className="cute-card rounded-3xl border border-dashed border-zinc-700 bg-zinc-900/70 p-4 text-center"><p className="text-sm font-bold text-zinc-400">Vai treinar fora do plano da semana?</p><button type="button" onClick={() => setExtraWorkoutOpen(true)} className="cute-button cute-button-secondary mx-auto mt-3"><Plus className="h-4 w-4" /> Adicionar exercícios extras</button></div></section>
-        </> : <PerformancePage logs={logs} cardioLogs={cardioLogs} painLogs={painLogs} timerSessions={timerSessions} weightHistory={weightHistory} bodyWeightKg={typeof bodyWeightKg === "number" ? bodyWeightKg : null} bodyHeightCm={typeof bodyHeightCm === "number" ? bodyHeightCm : null} onSaveWeightEntry={saveWeightEntry} onDeleteWeightEntry={removeWeightEntry} loading={syncStatus === "Sincronizando" && Boolean(user)} />}
+        </> : <PerformancePage logs={logs} cardioLogs={cardioLogs} painLogs={painLogs} timerSessions={timerSessions} weightHistory={weightHistory} bodyWeightKg={typeof bodyWeightKg === "number" ? bodyWeightKg : null} bodyHeightCm={typeof bodyHeightCm === "number" ? bodyHeightCm : null} targetWeightKg={typeof targetWeightKg === "number" ? targetWeightKg : null} onTargetWeightChange={setTargetWeightKg} onSaveWeightEntry={saveWeightEntry} onDeleteWeightEntry={removeWeightEntry} loading={syncStatus === "Sincronizando" && Boolean(user)} />}
       </main>
 
       <InfoModal isOpen={infoModalOpen} onClose={() => setInfoModalOpen(false)} />

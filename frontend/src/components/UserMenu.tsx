@@ -13,10 +13,11 @@ type Props = {
 
 export function UserMenu({ user, syncStatus, onOpenAuth, onSignOut, onSyncNow }: Props) {
   const statusClass = syncStatus === "Sincronizado" ? "text-emerald-200 ring-emerald-800 bg-emerald-950/40" : syncStatus === "Sincronizando" ? "text-blue-200 ring-blue-800 bg-blue-950/40" : syncStatus === "Erro ao sincronizar" ? "text-rose-200 ring-rose-800 bg-rose-950/40" : "text-zinc-300 ring-zinc-700 bg-zinc-950";
+  const statusTitle = syncStatus === "Erro ao sincronizar" ? "Erro ao sincronizar. O app salva localmente e tenta reenviar sozinho quando a conexão voltar." : syncStatus;
   return (
     <div className="relative flex items-center gap-2">
-      <span title={syncStatus} className={`cute-badge hidden md:inline-flex ${statusClass}`}>{syncStatus}</span>
-      <span title={syncStatus} className={`inline-flex h-2.5 w-2.5 rounded-full ring-2 ring-zinc-950 md:hidden ${syncStatus === "Sincronizado" ? "bg-emerald-400" : syncStatus === "Sincronizando" ? "bg-blue-400" : syncStatus === "Erro ao sincronizar" ? "bg-rose-400" : "bg-zinc-500"}`} />
+      <span title={statusTitle} className={`cute-badge hidden md:inline-flex ${statusClass}`}>{syncStatus === "Erro ao sincronizar" ? "Tentando novamente" : syncStatus}</span>
+      <span title={statusTitle} className={`inline-flex h-2.5 w-2.5 rounded-full ring-2 ring-zinc-950 md:hidden ${syncStatus === "Sincronizado" ? "bg-emerald-400" : syncStatus === "Sincronizando" ? "bg-blue-400" : syncStatus === "Erro ao sincronizar" ? "bg-rose-400" : "bg-zinc-500"}`} />
       {user ? (
         <details className="group relative">
           <summary className="list-none">

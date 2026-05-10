@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Scale, X } from "lucide-react";
 import type { WeightEntry } from "../../types/training";
-import { validateWeightEntry } from "../../utils/weight";
+import { parseDecimalNumber, validateWeightEntry } from "../../utils/weight";
 
 type Props = {
   entry?: WeightEntry | null;
@@ -18,18 +18,13 @@ function todayKey() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function parseNumber(value: string) {
-  const parsed = Number(value.replace(",", "."));
-  return Number.isFinite(parsed) ? parsed : NaN;
-}
-
 export function WeightEntryModal({ entry, defaultHeightCm, onClose, onSave }: Props) {
   const [date, setDate] = useState(entry?.date ?? todayKey());
   const [weight, setWeight] = useState(entry ? String(entry.weightKg) : "");
   const [height, setHeight] = useState(entry?.heightCm ? String(entry.heightCm) : defaultHeightCm ? String(defaultHeightCm) : "");
   const [note, setNote] = useState(entry?.note ?? "");
-  const parsedWeight = parseNumber(weight);
-  const parsedHeight = height.trim() ? parseNumber(height) : undefined;
+  const parsedWeight = parseDecimalNumber(weight);
+  const parsedHeight = height.trim() ? parseDecimalNumber(height) : undefined;
   const validation = useMemo(() => validateWeightEntry({ date, weightKg: parsedWeight, heightCm: parsedHeight }), [date, parsedHeight, parsedWeight]);
 
   function save() {

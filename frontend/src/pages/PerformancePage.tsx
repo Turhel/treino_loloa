@@ -48,6 +48,8 @@ export function PerformancePage({
   weightHistory,
   bodyWeightKg,
   bodyHeightCm,
+  targetWeightKg,
+  onTargetWeightChange,
   onSaveWeightEntry,
   onDeleteWeightEntry,
   loading = false,
@@ -59,6 +61,8 @@ export function PerformancePage({
   weightHistory: WeightEntry[];
   bodyWeightKg?: number | null;
   bodyHeightCm?: number | null;
+  targetWeightKg?: number | null;
+  onTargetWeightChange: (value: number | "") => void;
   onSaveWeightEntry: (entry: WeightEntry) => void;
   onDeleteWeightEntry: (entryId: string) => void;
   loading?: boolean;
@@ -99,7 +103,7 @@ export function PerformancePage({
   return (
     <div className="grid gap-6">
       <PerformanceFilterBar filters={filters} onChange={setFilters} exercises={exerciseOptions} muscles={muscleOptions} />
-      <WeightProjectionChart history={weightHistory} heightCm={bodyHeightCm} timerSessions={timerSessions} cardioLogs={cardioLogs} />
+      <WeightProjectionChart history={weightHistory} heightCm={bodyHeightCm} timerSessions={timerSessions} cardioLogs={cardioLogs} targetWeightKg={targetWeightKg} onTargetWeightChange={onTargetWeightChange} />
       <WeightHistoryManager history={weightHistory} heightCm={bodyHeightCm} onSave={onSaveWeightEntry} onDelete={onDeleteWeightEntry} />
 
       {!hasAnyData ? (

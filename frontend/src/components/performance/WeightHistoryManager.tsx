@@ -1,8 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Edit3, Plus, Trash2 } from "lucide-react";
 import type { WeightEntry } from "../../types/training";
 import { normalizeWeightHistory, sortWeightHistory } from "../../utils/weight";
 import { WeightEntryModal } from "./WeightEntryModal";
+
+const pageSize = 6;
 
 type Props = {
   history: WeightEntry[];
@@ -21,8 +23,15 @@ const sourceLabels: Record<NonNullable<WeightEntry["source"]>, string> = {
 export function WeightHistoryManager({ history, heightCm, onSave, onDelete }: Props) {
   const [modalEntry, setModalEntry] = useState<WeightEntry | null | undefined>(undefined);
   const [pendingDelete, setPendingDelete] = useState<WeightEntry | null>(null);
+  const [page, setPage] = useState(1);
   const entries = useMemo(() => sortWeightHistory(normalizeWeightHistory(history), "desc"), [history]);
+  const totalPages = Math.max(1, Math.ceil(entries.length / pageSize));
+  const visibleEntries = entries.slice((page - 1) * pageSize, page * pageSize);
   const latestId = entries[0]?.id;
+
+  useEffect(() => {
+    setPage(1);
+  }, [history]);
 
   return (
     <section className="cute-card rounded-3xl border border-zinc-800 bg-zinc-900 p-5 shadow-sm">
@@ -39,7 +48,7 @@ export function WeightHistoryManager({ history, heightCm, onSave, onDelete }: Pr
         <div className="cute-empty mt-5">Nenhum peso salvo ainda 💗</div>
       ) : (
         <div className="mt-5 grid gap-3">
-          {entries.map((entry) => (
+          {visibleEntries.map((entry) => (
             <article key={entry.id} className={`rounded-3xl border p-4 ${entry.id === latestId ? "border-pink-300/40 bg-rose-950/20" : "border-zinc-800 bg-zinc-950/70"}`}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
@@ -58,6 +67,7 @@ export function WeightHistoryManager({ history, heightCm, onSave, onDelete }: Pr
               </div>
             </article>
           ))}
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
       )}
 
@@ -76,6 +86,19 @@ export function WeightHistoryManager({ history, heightCm, onSave, onDelete }: Pr
         </div>
       )}
     </section>
+  );
+}
+
+function Pagination({ page, totalPages, onPageChange }: { page: number; totalPages: number; onPageChange: (page: number) => void }) {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="flex items-center justify-between gap-3 pt-2">
+      <p className="text-xs font-bold text-zinc-500">Página {page} de {totalPages}</p>
+      <div className="flex gap-2">
+        <button type="button" disabled={page === 1} onClick={() => onPageChange(Math.max(1, page - 1))} className="cute-button cute-button-secondary min-h-0 px-3 py-2 text-xs disabled:opacity-40">Anterior</button>
+        <button type="button" disabled={page === totalPages} onClick={() => onPageChange(Math.min(totalPages, page + 1))} className="cute-button cute-button-secondary min-h-0 px-3 py-2 text-xs disabled:opacity-40">Próxima</button>
+      </div>
+    </div>
   );
 }
 

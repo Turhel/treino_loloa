@@ -18,9 +18,18 @@ export type ProjectionResult = {
   weeklyDeltaKg: number;
   averageWeeklyKcal: number;
   monthsToHealthy: number | null;
+  monthsToTarget: number | null;
 };
 
 const DAY_MS = 86400000;
+
+export function parseDecimalNumber(value: string | number | null | undefined) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : NaN;
+  const normalized = String(value ?? "").trim().replace(",", ".");
+  if (!normalized) return NaN;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : NaN;
+}
 
 export function sortWeightHistory(history: WeightEntry[], direction: "asc" | "desc" = "asc") {
   return [...history].sort((a, b) => {
@@ -129,16 +138,18 @@ export function calculateHybridProjection({
   timerSessions,
   cardioLogs,
   heightCm,
+  targetWeightKg,
   mode,
 }: {
   history: WeightEntry[];
   timerSessions: ExerciseTimerSession[];
   cardioLogs: CardioPerformanceLog[];
   heightCm?: number | null;
+  targetWeightKg?: number | null;
   mode: WeightMode;
 }): ProjectionResult {
   const normalized = normalizeWeightHistory(history);
-  if (normalized.length < 2) return { points: [], reliability: normalized.length ? "low" : "none", weeklyDeltaKg: 0, averageWeeklyKcal: 0, monthsToHealthy: null };
+  if (normalized.length < 2) return { points: [], reliability: normalized.length ? "low" : "none", weeklyDeltaKg: 0, averageWeeklyKcal: 0, monthsToHealthy: null, monthsToTarget: null };
   const current = normalized[normalized.length - 1];
   const trend = calculateWeightTrend(normalized);
   const met = calculateMetBasedProjection(timerSessions, cardioLogs, current.weightKg);
@@ -146,20 +157,34 @@ export function calculateHybridProjection({
   const limit = Math.max(0.2, current.weightKg * 0.008);
   const weeklyDeltaKg = Math.max(-limit, Math.min(limit, rawWeeklyDelta));
   const healthy = getHealthyWeightRange(heightCm);
+  const target = targetWeightKg && Number.isFinite(targetWeightKg) && targetWeightKg > 20 && targetWeightKg < 350 ? targetWeightKg : null;
   const horizon = projectionHorizon(mode);
   const stepDays = projectionStepDays(mode);
   const points: WeightPoint[] = [];
   let weight = current.weightKg;
   let monthsToHealthy: number | null = null;
+  let monthsToTarget: number | null = null;
   for (let day = stepDays; day <= horizon; day += stepDays) {
     weight += weeklyDeltaKg * (stepDays / 7);
-    if (healthy && weeklyDeltaKg < 0 && weight <= healthy.max) {
+    if (target && weeklyDeltaKg < 0 && current.weightKg > target && weight <= target) {
+      weight = target;
+      monthsToTarget = Math.max(1, Math.round(day / 30));
+      points.push(projectedPoint(addDays(current.date, day), weight, mode, points.length));
+      break;
+    }
+    if (target && weeklyDeltaKg > 0 && current.weightKg < target && weight >= target) {
+      weight = target;
+      monthsToTarget = Math.max(1, Math.round(day / 30));
+      points.push(projectedPoint(addDays(current.date, day), weight, mode, points.length));
+      break;
+    }
+    if (!target && healthy && weeklyDeltaKg < 0 && weight <= healthy.max) {
       weight = healthy.max;
       monthsToHealthy = Math.max(1, Math.round(day / 30));
       points.push(projectedPoint(addDays(current.date, day), weight, mode, points.length));
       break;
     }
-    if (healthy && weeklyDeltaKg > 0 && weight >= healthy.min && current.weightKg < healthy.min) {
+    if (!target && healthy && weeklyDeltaKg > 0 && weight >= healthy.min && current.weightKg < healthy.min) {
       weight = healthy.min;
       monthsToHealthy = Math.max(1, Math.round(day / 30));
       points.push(projectedPoint(addDays(current.date, day), weight, mode, points.length));
@@ -173,6 +198,7 @@ export function calculateHybridProjection({
     weeklyDeltaKg,
     averageWeeklyKcal: Math.round(met.averageWeeklyKcal),
     monthsToHealthy,
+    monthsToTarget,
   };
 }
 

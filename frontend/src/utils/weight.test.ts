@@ -9,6 +9,7 @@ import {
   deleteWeightEntry,
   getHealthyWeightRange,
   normalizeWeightHistory,
+  parseDecimalNumber,
   sortWeightHistory,
   stopProjectionAtHealthyRange,
   updateWeightEntry,
@@ -20,6 +21,12 @@ function entry(date: string, weightKg: number): WeightEntry {
 }
 
 describe("weight helpers", () => {
+  it("interpreta virgula e ponto como decimal no peso", () => {
+    expect(parseDecimalNumber("100,1")).toBe(100.1);
+    expect(parseDecimalNumber("100.1")).toBe(100.1);
+    expect(parseDecimalNumber("100000")).toBe(100000);
+  });
+
   it("calcula faixa saudavel por altura", () => {
     const range = getHealthyWeightRange(175);
     expect(range?.min).toBeCloseTo(56.7, 1);

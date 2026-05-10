@@ -24,15 +24,20 @@ export function WeeklyCaloriesChart({ items }: { items: WeeklyCaloriesItem[] }) 
             const width = Math.max((item.totalCalories / maxCalories) * 100, 8);
 
             return (
-              <div key={item.weekStart} className="grid gap-2 sm:grid-cols-[4.5rem_1fr_5rem] sm:items-center">
+              <div key={item.weekStart} tabIndex={0} className="group relative grid gap-2 sm:grid-cols-[4.5rem_1fr_5rem] sm:items-center">
                 <div className="text-xs font-black text-zinc-500">{item.label}</div>
-                <div title={`${item.totalCalories} kcal`} className="h-5 overflow-hidden rounded-full bg-zinc-950 ring-1 ring-zinc-800">
+                <div title={`Total: ${item.totalCalories} kcal · Treino: ${item.trainingCalories} kcal · Cardio: ${item.cardioCalories} kcal`} className="h-5 overflow-hidden rounded-full bg-zinc-950 ring-1 ring-zinc-800">
                   <div className="flex h-full rounded-full" style={{ width: `${width}%` }}>
                     <div className="h-full bg-amber-400" style={{ width: `${trainingPercent}%` }} />
                     <div className="h-full bg-teal-400" style={{ width: `${cardioPercent}%` }} />
                   </div>
                 </div>
                 <div className="text-sm font-black text-zinc-200">{item.totalCalories} kcal</div>
+                <div className="pointer-events-none absolute -top-14 left-20 z-10 hidden rounded-2xl bg-zinc-950 px-3 py-2 text-xs font-bold text-zinc-100 ring-1 ring-zinc-800 shadow-xl group-hover:block group-focus:block">
+                  <p>Total: {item.totalCalories} kcal</p>
+                  <p>Treino: {item.trainingCalories} kcal</p>
+                  <p>Cardio: {item.cardioCalories} kcal</p>
+                </div>
               </div>
             );
           })

@@ -9,6 +9,7 @@ export type SyncSettings = {
   activePlanId?: string;
   bodyWeightKg?: number;
   bodyHeightCm?: number;
+  targetWeightKg?: number;
   bodyWeightWeekBlock?: number;
   extraWorkouts?: unknown[];
 };
