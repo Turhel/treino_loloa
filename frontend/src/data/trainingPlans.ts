@@ -11,18 +11,342 @@ export function restFor(name: string) {
 
 export function alternativesFor(name: string) {
   const text = name.toLowerCase();
-  if (text.includes("hip thrust") || text.includes("elevação pélvica")) return ["Máquina de glúteo", "Ponte com barra", "Glúteo no cabo"];
-  if (text.includes("hack") || text.includes("agachamento")) return ["Smith", "Leg press", "Cadeira extensora"];
-  if (text.includes("leg press")) return ["Hack machine", "Smith", "Cadeira extensora"];
-  if (text.includes("stiff")) return ["Flexora sentada", "Mesa flexora", "Terra romeno leve"];
-  if (text.includes("puxada")) return ["Puxada neutra", "Puxada supinada", "Remada articulada"];
-  if (text.includes("remada")) return ["Remada baixa", "Remada unilateral", "Remada máquina com apoio"];
-  if (text.includes("supino")) return ["Chest press", "Supino máquina", "Crossover leve"];
-  if (text.includes("tríceps") || text.includes("triceps")) return ["Tríceps corda", "Tríceps barra V", "Tríceps unilateral"];
-  if (text.includes("rosca")) return ["Rosca cabo", "Rosca alternada", "Rosca martelo"];
-  if (text.includes("panturrilha")) return ["Panturrilha em pé", "Panturrilha sentada", "Panturrilha no leg press"];
-  if (text.includes("levantamento terra")) return ["Stiff com halteres", "Leg press pés altos", "Hip thrust"];
-  return ["Máquina equivalente", "Variação com cabo", "Variação com halter leve"];
+
+  // =========================
+  // GLÚTEOS / POSTERIOR
+  // =========================
+  if (text.includes("hip thrust") || text.includes("elevação pélvica")) {
+    return [
+      "Máquina de glúteo",
+      "Ponte com barra",
+      "Glúteo no cabo",
+      "Smith hip thrust",
+      "Glute bridge",
+    ];
+  }
+
+  if (
+    text.includes("stiff") ||
+    text.includes("rdl") ||
+    text.includes("terra romeno")
+  ) {
+    return [
+      "Mesa flexora",
+      "Flexora sentada",
+      "Stiff com halteres",
+      "Pull through no cabo",
+      "Good morning leve",
+    ];
+  }
+
+  if (text.includes("mesa flexora")) {
+    return [
+      "Flexora sentada",
+      "Stiff leve",
+      "RDL com halteres",
+      "Nordic assistido",
+    ];
+  }
+
+  if (text.includes("flexora sentada")) {
+    return [
+      "Mesa flexora",
+      "Stiff com barra",
+      "Terra romeno",
+      "Flexora unilateral",
+    ];
+  }
+
+  if (
+    text.includes("levantamento terra") ||
+    text.includes("terra convencional")
+  ) {
+    return [
+      "Stiff com halteres",
+      "Leg press pés altos",
+      "Hip thrust",
+      "Rack pull",
+      "Terra sumô",
+    ];
+  }
+
+  if (text.includes("sumô") || text.includes("sumo")) {
+    return [
+      "Leg press pés abertos",
+      "Agachamento goblet",
+      "Hack machine",
+      "Terra romeno",
+      "Cadeira adutora",
+    ];
+  }
+
+  // =========================
+  // QUADRÍCEPS
+  // =========================
+  if (
+    text.includes("hack") ||
+    text.includes("agachamento")
+  ) {
+    return [
+      "Smith",
+      "Leg press",
+      "Cadeira extensora",
+      "Goblet squat",
+      "Afundo",
+    ];
+  }
+
+  if (text.includes("leg press")) {
+    return [
+      "Hack machine",
+      "Smith",
+      "Cadeira extensora",
+      "Agachamento livre",
+      "Afundo no smith",
+    ];
+  }
+
+  if (text.includes("cadeira extensora")) {
+    return [
+      "Leg press",
+      "Hack machine",
+      "Agachamento smith",
+      "Sissy squat assistido",
+    ];
+  }
+
+  if (
+    text.includes("afundo") ||
+    text.includes("passada") ||
+    text.includes("avanço")
+  ) {
+    return [
+      "Bulgarian split squat",
+      "Leg press unilateral",
+      "Smith",
+      "Step-up",
+    ];
+  }
+
+  // =========================
+  // COSTAS
+  // =========================
+  if (text.includes("puxada")) {
+    return [
+      "Puxada neutra",
+      "Puxada supinada",
+      "Remada articulada",
+      "Pulldown com corda",
+      "Barra fixa assistida",
+    ];
+  }
+
+  if (text.includes("pulldown")) {
+    return [
+      "Puxada alta",
+      "Barra fixa assistida",
+      "Puxada triângulo",
+      "Pullover no cabo",
+    ];
+  }
+
+  if (text.includes("remada")) {
+    return [
+      "Remada baixa",
+      "Remada unilateral",
+      "Remada máquina com apoio",
+      "Remada cavalinho",
+      "Remada no cabo",
+    ];
+  }
+
+  if (text.includes("pullover")) {
+    return [
+      "Pulldown corda",
+      "Puxada barra reta",
+      "Straight arm pulldown",
+      "Puxada aberta",
+    ];
+  }
+
+  // =========================
+  // PEITO
+  // =========================
+  if (text.includes("supino")) {
+    return [
+      "Chest press",
+      "Supino máquina",
+      "Crossover leve",
+      "Flexão",
+      "Supino com halteres",
+    ];
+  }
+
+  if (
+    text.includes("crossover") ||
+    text.includes("crucifixo")
+  ) {
+    return [
+      "Peck deck",
+      "Supino inclinado",
+      "Flexão",
+      "Crossover polia baixa",
+    ];
+  }
+
+  if (text.includes("peck deck")) {
+    return [
+      "Crucifixo com halteres",
+      "Crossover",
+      "Chest press",
+      "Supino máquina",
+    ];
+  }
+
+  // =========================
+  // OMBROS
+  // =========================
+  if (
+    text.includes("elevação lateral") ||
+    text.includes("elevacao lateral")
+  ) {
+    return [
+      "Elevação lateral no cabo",
+      "Máquina lateral",
+      "Arnold press leve",
+      "Desenvolvimento com halteres",
+    ];
+  }
+
+  if (
+    text.includes("desenvolvimento") ||
+    text.includes("shoulder press")
+  ) {
+    return [
+      "Arnold press",
+      "Máquina ombro",
+      "Elevação lateral",
+      "Desenvolvimento smith",
+    ];
+  }
+
+  if (text.includes("face pull")) {
+    return [
+      "Crucifixo inverso",
+      "Remada alta leve",
+      "Reverse peck deck",
+      "Pulldown corda",
+    ];
+  }
+
+  // =========================
+  // BRAÇOS
+  // =========================
+  if (
+    text.includes("tríceps") ||
+    text.includes("triceps")
+  ) {
+    return [
+      "Tríceps corda",
+      "Tríceps barra V",
+      "Tríceps unilateral",
+      "Francês sentado",
+      "Mergulho assistido",
+    ];
+  }
+
+  if (text.includes("rosca")) {
+    return [
+      "Rosca cabo",
+      "Rosca alternada",
+      "Rosca martelo",
+      "Rosca scott",
+      "Rosca inclinada",
+    ];
+  }
+
+  // =========================
+  // PANTURRILHA
+  // =========================
+  if (text.includes("panturrilha")) {
+    return [
+      "Panturrilha em pé",
+      "Panturrilha sentada",
+      "Panturrilha no leg press",
+      "Panturrilha unilateral",
+      "Smith calf raise",
+    ];
+  }
+
+  // =========================
+  // CORE
+  // =========================
+  if (
+    text.includes("abdominal") ||
+    text.includes("crunch")
+  ) {
+    return [
+      "Abdominal máquina",
+      "Abdominal no cabo",
+      "Prancha",
+      "Dead bug",
+      "Crunch reverso",
+    ];
+  }
+
+  if (text.includes("prancha")) {
+    return [
+      "Dead bug",
+      "Pallof press",
+      "Prancha lateral",
+      "Ab wheel assistido",
+    ];
+  }
+
+  if (
+    text.includes("oblíquo") ||
+    text.includes("obliquo")
+  ) {
+    return [
+      "Woodchopper",
+      "Prancha lateral",
+      "Russian twist",
+      "Pallof press",
+    ];
+  }
+
+  // =========================
+  // CARDIO
+  // =========================
+  if (text.includes("esteira")) {
+    return [
+      "Bicicleta ergométrica",
+      "Caminhada inclinada",
+      "HIIT leve",
+    ];
+  }
+
+  if (
+    text.includes("bicicleta") ||
+    text.includes("bike")
+  ) {
+    return [
+      "Esteira",
+      "Bike horizontal",
+      "Cardio intervalado leve",
+    ];
+  }
+
+  // =========================
+  // FALLBACK
+  // =========================
+  return [
+    "Máquina equivalente",
+    "Variação com cabo",
+    "Variação com halter leve",
+    "Versão unilateral",
+    "Versão guiada",
+  ];
 }
 
 function ex(order: number | string, name: string, focus: string, videoName?: string): Exercise {
