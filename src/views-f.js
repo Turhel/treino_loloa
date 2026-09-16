@@ -3,24 +3,25 @@
 /* ================================================================
    First-run questionnaire (#onb) — shown once, the first time someone opens their plan
    ================================================================ */
-const ACTIVITY_LEVELS = [[1.3, 'Sedentary', 'Desk job, under 5k steps a day'], [1.4, 'Lightly active', 'Desk job plus 5–8k steps'], [1.5, 'Moderately active', '8–12k steps, or a job with some walking'], [1.6, 'Very active', 'On your feet most of the day, 12k+ steps']];
+const ACTIVITY_LEVELS = [[1.3, 'Sedentário', 'Trabalho sentado, menos de 5 mil passos por dia'], [1.4, 'Levemente ativo', 'Trabalho sentado e 5–8 mil passos'], [1.5, 'Moderadamente ativo', '8–12 mil passos ou trabalho com alguma caminhada'], [1.6, 'Muito ativo', 'Em pé a maior parte do dia, mais de 12 mil passos']];
 const OB_STEPS = ['About you', 'Your body', 'Your goal', 'Meal planning'];
 let OB = null;
+const kg = (value, digits = 1) => fmt(value, digits);
 // Deurenberg (1991): body fat % from BMI, age and sex (1 = male, 0 = female)
-function deurenbergBF(lb, heightIn, age, male) {
-  if (!(lb > 0 && heightIn > 0 && age > 0)) return null;
-  const bmi = 703 * lb / (heightIn * heightIn);
+function deurenbergBF(weightKg, heightCm, age, male) {
+  if (!(weightKg > 0 && heightCm > 0 && age > 0)) return null;
+  const bmi = weightKg / Math.pow(heightCm / 100, 2);
   return Math.round(clamp(1.2 * bmi + 0.23 * age - 10.8 * (male ? 1 : 0) - 5.4, 5, 60) * 10) / 10;
 }
 function obNum(v) { const n = parseFloat(String(v == null ? '' : v).replace(',', '.')); return Number.isFinite(n) ? n : null; }
-function obBF() { return OB.bf != null && OB.bf !== '' ? obNum(OB.bf) : deurenbergBF(obNum(OB.w), (obNum(OB.hFt) || 0) * 12 + (obNum(OB.hIn) || 0), obNum(OB.age), OB.sex === 'm'); }
+function obBF() { return OB.bf != null && OB.bf !== '' ? obNum(OB.bf) : deurenbergBF(obNum(OB.w), obNum(OB.hCm), obNum(OB.age), OB.sex === 'm'); }
 function obEstimated() { return !(OB.bf != null && String(OB.bf).trim() !== ''); }
 function showOnboarding(done) {
   const u = AUTH.user || {}; const parts = String(u.name || '').trim().split(/\s+/);
   const looksLikeEmail = !u.name || (u.email && u.name === u.email.split('@')[0]);
   OB = { step: 0, done, error: null,
     first: u.firstName || (looksLikeEmail ? '' : parts[0] || ''), last: u.lastName || (looksLikeEmail ? '' : parts.slice(1).join(' ')), nick: u.firstName || (looksLikeEmail ? '' : parts[0] || ''),
-    w: '', bf: '', hFt: '', hIn: '', sex: '', age: '', goal: '', rate: 1, mode: 'cut', bulkPct: 0.35, activity: 1.4, share: true };
+    w: '', bf: '', hCm: '', sex: '', age: '', goal: '', rate: 0.5, mode: 'cut', bulkPct: 0.35, activity: 1.4, share: true };
   document.body.className = 'auth-page onb-page'; bgCurrent = null; document.body.dataset.sec = 'auth';
   document.body.innerHTML = `<div class="auth-split"><section class="auth-hero" aria-hidden="true"><div class="auth-photo" style="background-image:url('${AUTH_PHOTO.url}'), ${AUTH_PHOTO.fallback}"></div>
       <div class="auth-hero-copy"><div class="auth-brand">${LOGO}<b class="wm">FORGE<em>90</em></b></div><p>A few questions and your training plan, calorie targets and meals are built around you.</p></div>
@@ -40,7 +41,7 @@ function obSummaryHTML() {
   obApplyDraft(); const st = S.settings; const tT = targetsFor(st.startWeight, st.startBF, true), tR = targetsFor(st.startWeight, st.startBF, false);
   const pr = Math.abs(planRate(st.startWeight)) || 0.0001;
   const weeks = Math.abs(st.startWeight - st.goalWeight) / pr; const when = addDays(maxISO(todayISO(), st.startDate), Math.round(weeks * 7));
-  return `<div class="onb-sum"><div><span class="tiny muted">Calories · training / rest day</span><b class="num">${fmt(tT.kcal)} / ${fmt(tR.kcal)}</b></div><div><span class="tiny muted">Protein</span><b class="num">${fmt(tT.protein)} g</b></div><div><span class="tiny muted">Reach ${fmt(st.goalWeight, st.goalWeight % 1 ? 1 : 0)} lb</span><b>${fmtDate(when, { month: 'short', day: 'numeric', year: 'numeric' })}</b></div></div>`;
+  return `<div class="onb-sum"><div><span class="tiny muted">Calorias · treino / descanso</span><b class="num">${fmt(tT.kcal)} / ${fmt(tR.kcal)}</b></div><div><span class="tiny muted">Proteína</span><b class="num">${fmt(tT.protein)} g</b></div><div><span class="tiny muted">Meta: ${kg(st.goalWeight, 1)} kg</span><b>${fmtDate(when, { month: 'short', day: 'numeric', year: 'numeric' })}</b></div></div>`;
 }
 function renderOnboarding() {
   const s = OB; const el = $('#onb'); if (!el) return;
@@ -52,34 +53,34 @@ function renderOnboarding() {
     <div class="grid g2" style="gap:12px">${fld('First name', 'first', s.first, 'autocomplete="given-name" maxlength="40" required')}${fld('Last name', 'last', s.last, 'autocomplete="family-name" maxlength="40" required')}</div>
     ${fld('Nickname', 'nick', s.nick, 'autocomplete="nickname" maxlength="40" required', 'Your display name — shown in the app and to anyone you sync meal plans with.')}`;
   if (s.step === 1) { const est = obEstimated(); const bf = obBF();
-    body = `<h1>Your body today</h1><p class="sub">Your calorie and protein targets are built from your weight and lean mass.</p>${msg}
-    <div class="grid g2" style="gap:12px">${fld('Current weight (lb)', 'w', s.w, 'type="number" inputmode="decimal" step="0.1" min="70" max="700" required')}
-      ${fld('Body fat % <span class="muted" style="font-weight:500">— optional</span>', 'bf', s.bf, 'type="number" inputmode="decimal" step="0.1" min="3" max="70" placeholder="Leave blank if unknown"')}</div>
-    <div class="onb-est ${est ? '' : 'hidden'}" id="ob-est"><div class="tiny muted" style="margin:4px 0 8px">No body-fat number? We’ll estimate it from your height, age and sex.</div>
-      <div class="grid g3" style="gap:10px"><div class="field"><label>Height</label><div class="row" style="gap:6px;flex-wrap:nowrap"><input class="inp" name="hFt" value="${esc(s.hFt)}" type="number" inputmode="numeric" min="3" max="8" placeholder="ft" aria-label="Height, feet"><input class="inp" name="hIn" value="${esc(s.hIn)}" type="number" inputmode="numeric" min="0" max="11.9" step="0.5" placeholder="in" aria-label="Height, inches"></div></div>
-        <div class="field"><label>Sex</label><select class="inp" name="sex"><option value="">Choose…</option><option value="m" ${s.sex === 'm' ? 'selected' : ''}>Male</option><option value="f" ${s.sex === 'f' ? 'selected' : ''}>Female</option></select></div>
-        ${fld('Age', 'age', s.age, 'type="number" inputmode="numeric" min="16" max="99"')}</div>
-      <div class="note warn" style="margin-top:12px">${icon('info')}<span>${bf ? `Estimated body fat: <b>${fmt(bf, 1)}%</b>. ` : ''}This estimate (the Deurenberg formula, from BMI, age and sex) is <b>less accurate than a measured body-fat %</b> — it can be off by 5 points or more, especially if you carry a lot of muscle. When you can, measure it with a smart scale, calipers or a DEXA scan and add it to a weigh-in; your targets update automatically.</span></div></div>`; }
+    body = `<h1>Seu corpo hoje</h1><p class="sub">Suas metas de calorias e proteína são calculadas a partir do seu peso e massa magra.</p>${msg}
+    <div class="grid g2" style="gap:12px">${fld('Peso atual (kg)', 'w', s.w, 'type="number" inputmode="decimal" step="0.1" min="30" max="320" required')}
+      ${fld('Gordura corporal % <span class="muted" style="font-weight:500">— opcional</span>', 'bf', s.bf, 'type="number" inputmode="decimal" step="0.1" min="3" max="70" placeholder="Deixe em branco se não souber"')}</div>
+    <div class="onb-est ${est ? '' : 'hidden'}" id="ob-est"><div class="tiny muted" style="margin:4px 0 8px">Não sabe sua gordura corporal? Vamos estimar usando altura, idade e sexo.</div>
+      <div class="grid g3" style="gap:10px">${fld('Altura (cm)', 'hCm', s.hCm, 'type="number" inputmode="numeric" min="120" max="240" placeholder="Ex.: 175"')}
+        <div class="field"><label>Sexo</label><select class="inp" name="sex"><option value="">Escolha…</option><option value="m" ${s.sex === 'm' ? 'selected' : ''}>Masculino</option><option value="f" ${s.sex === 'f' ? 'selected' : ''}>Feminino</option></select></div>
+        ${fld('Idade', 'age', s.age, 'type="number" inputmode="numeric" min="16" max="99"')}</div>
+      <div class="note warn" style="margin-top:12px">${icon('info')}<span>${bf ? `Gordura corporal estimada: <b>${fmt(bf, 1)}%</b>. ` : ''}Esta estimativa (fórmula de Deurenberg, a partir do IMC, idade e sexo) é <b>menos precisa que uma medição de gordura corporal</b> — pode errar 5 pontos ou mais, especialmente se você tem bastante massa muscular. Quando puder, meça com balança de bioimpedância, adipômetro ou DEXA e registre uma pesagem; suas metas serão atualizadas automaticamente.</span></div></div>`; }
   if (s.step === 2) { const w = obNum(s.w) || S.settings.startWeight;
     const gk = s.mode === 'bulk' || s.mode === 'maintain' ? s.mode : 'cut';
-    const sub = gk === 'bulk' ? 'FORGE 90 plans a measured surplus — enough to build, slow enough that most of it is muscle.'
-      : gk === 'maintain' ? 'FORGE 90 holds you at maintenance calories while you train.'
-      : 'FORGE 90 plans a steady cut with enough protein to keep your muscle.';
+    const sub = gk === 'bulk' ? 'O FORGE 90 planeja um superávit controlado: suficiente para evoluir, lento o bastante para favorecer massa muscular.'
+      : gk === 'maintain' ? 'O FORGE 90 mantém suas calorias de manutenção enquanto você treina.'
+      : 'O FORGE 90 planeja um déficit constante, com proteína suficiente para preservar sua massa muscular.';
     const rateCtl = gk === 'maintain' ? ''
       : gk === 'bulk' ? `<div class="field" style="margin-top:12px"><label>Weekly gain: <b id="ob-rate-v">${fmt(+s.bulkPct, 2)} % of body weight</b></label><input type="range" name="bulkPct" min="0.15" max="0.6" step="0.05" value="${s.bulkPct}" aria-label="Weekly gain, percent of body weight">
         <div class="row" style="justify-content:space-between"><span class="tiny muted">0.15</span><span class="tiny muted">0.35</span><span class="tiny muted">0.6 %/wk</span></div></div>`
-      : `<div class="field" style="margin-top:12px"><label>Target loss rate: <b id="ob-rate-v">${fmt(+s.rate, 2)} lb / week</b></label><input type="range" name="rate" min="0.25" max="2" step="0.05" value="${s.rate}" aria-label="Target loss rate, pounds per week">
-        <div class="row" style="justify-content:space-between"><span class="tiny muted">0.25</span><span class="tiny muted">1.0</span><span class="tiny muted">2.0 lb/wk</span></div></div>`;
-    body = `<h1>Your goal</h1><p class="sub">${sub}</p>${msg}
-    <div class="field"><label>What are you after?</label><div class="seg seg-goal">${[['cut', 'Lose fat'], ['maintain', 'Maintain'], ['bulk', 'Build muscle']].map(([v, l]) => `<button type="button" class="${gk === v ? 'on' : ''}" data-act="ob-mode" data-v="${v}">${l}</button>`).join('')}</div></div>
-    <div class="grid g2" style="gap:12px;margin-top:12px">${fld(gk === 'bulk' ? 'Goal weight (lb)' : 'Goal weight (lb)', 'goal', s.goal, `type="number" inputmode="decimal" step="0.1" ${gk === 'bulk' ? `min="${fmt(w, 1)}" max="600"` : `min="70" max="${fmt(w, 1)}"`} ${gk === 'maintain' ? '' : 'required'}`)}
-      <div class="field"><label for="ob-activity">Activity level <span class="muted" style="font-weight:500">— outside the gym</span></label><select class="inp" id="ob-activity" name="activity">${ACTIVITY_LEVELS.map(([v, l, d]) => `<option value="${v}" ${+s.activity === v ? 'selected' : ''}>${l} — ${d}</option>`).join('')}</select></div></div>
+      : `<div class="field" style="margin-top:12px"><label>Ritmo de perda: <b id="ob-rate-v">${fmt(+s.rate, 2)} kg / semana</b></label><input type="range" name="rate" min="0.1" max="1" step="0.05" value="${s.rate}" aria-label="Ritmo de perda semanal em quilogramas">
+        <div class="row" style="justify-content:space-between"><span class="tiny muted">0,10</span><span class="tiny muted">0,50</span><span class="tiny muted">1,00 kg/sem.</span></div></div>`;
+    body = `<h1>Seu objetivo</h1><p class="sub">${sub}</p>${msg}
+    <div class="field"><label>O que você busca?</label><div class="seg seg-goal">${[['cut', 'Perder gordura'], ['maintain', 'Manter'], ['bulk', 'Ganhar massa muscular']].map(([v, l]) => `<button type="button" class="${gk === v ? 'on' : ''}" data-act="ob-mode" data-v="${v}">${l}</button>`).join('')}</div></div>
+    <div class="grid g2" style="gap:12px;margin-top:12px">${fld('Peso-meta (kg)', 'goal', s.goal, `type="number" inputmode="decimal" step="0.1" ${gk === 'bulk' ? `min="${fmt(w, 1)}" max="300"` : `min="30" max="${fmt(w, 1)}"`} ${gk === 'maintain' ? '' : 'required'}`)}
+      <div class="field"><label for="ob-activity">Nível de atividade <span class="muted" style="font-weight:500">— fora da academia</span></label><select class="inp" id="ob-activity" name="activity">${ACTIVITY_LEVELS.map(([v, l, d]) => `<option value="${v}" ${+s.activity === v ? 'selected' : ''}>${l} — ${d}</option>`).join('')}</select></div></div>
     ${rateCtl}
     <div id="ob-rate-info" style="margin-top:6px">${obRateInfo()}</div>`; }
-  if (s.step === 3) body = `<h1>Meal planning</h1><p class="sub">One last choice. Every meal is portioned to your targets either way.</p>${msg}
+  if (s.step === 3) body = `<h1>Planejamento de refeições</h1><p class="sub">Uma última escolha. De qualquer forma, cada refeição é ajustada às suas metas.</p>${msg}
     <label class="onb-share ${s.share ? 'on' : ''}"><input type="checkbox" name="share" ${s.share ? 'checked' : ''}><i class="switch ${s.share ? 'on' : ''}" aria-hidden="true"><i></i></i>
-      <span><b>Money-saving meal planning</b><span class="small sub">Plans each week so your recipes <b>share fresh ingredients</b> — the rest of a bag of spinach or a pack of chicken goes into another meal that week instead of going bad. You buy fewer packages and waste less. Your variety and ★ favorites stay the same; only the order of meals within the week changes, and meals you place yourself are never moved.</span></span></label>
-    <h3 style="margin:18px 0 8px">Your starting targets</h3><div id="ob-sum">${obSummaryHTML()}</div>
+      <span><b>Planejamento para economizar</b><span class="small sub">Organiza cada semana para que suas receitas <b>compartilhem ingredientes frescos</b> — o restante de um pacote de espinafre ou frango entra em outra refeição antes de estragar. Você compra menos embalagens e desperdiça menos. Sua variedade e seus favoritos ★ permanecem iguais; apenas a ordem das refeições da semana muda, e refeições escolhidas por você nunca são movidas.</span></span></label>
+    <h3 style="margin:18px 0 8px">Suas metas iniciais</h3><div id="ob-sum">${obSummaryHTML()}</div>
     <div class="tiny muted" style="margin-top:8px">Your plan starts ${fmtDate(S.settings.startDate, { weekday: 'long', month: 'long', day: 'numeric' })} with 3 training days a week — change the start date and training days any time in Settings.</div>`;
   el.innerHTML = `<form class="auth-card onb-card" data-form="onb" novalidate><div class="auth-brand">${LOGO}<b class="wm">FORGE<em>90</em></b></div>${dots}${body}
     <div class="onb-nav">${s.step ? `<button type="button" class="btn ghost" data-act="onb-back">${icon('left')}Back</button>` : '<span></span>'}<button class="btn primary big" type="submit">${s.step < OB_STEPS.length - 1 ? `Continue ${icon('right')}` : `${icon('check')}Start my plan`}</button></div></form>`;
@@ -87,20 +88,20 @@ function renderOnboarding() {
   s.noFocus = false;
 }
 function obRateInfo() { obApplyDraft(); const k = goalKind();
-  return k === 'bulk' ? bulkInfoHTML(+OB.bulkPct) : k === 'maintain' ? `<div class="tiny muted">Calories sit at maintenance — no deficit, no surplus.</div>` : rateInfoHTML(+OB.rate); }
+  return k === 'bulk' ? bulkInfoHTML(+OB.bulkPct) : k === 'maintain' ? `<div class="tiny muted">Calorias em manutenção — sem déficit ou superávit.</div>` : rateInfoHTML(+OB.rate); }
 function obRead(form) {
   const fd = new FormData(form);
-  ['first', 'last', 'nick', 'w', 'bf', 'hFt', 'hIn', 'sex', 'age', 'goal', 'rate', 'bulkPct', 'activity'].forEach(k => { if (fd.has(k)) OB[k] = String(fd.get(k)).trim(); });
+  ['first', 'last', 'nick', 'w', 'bf', 'hCm', 'sex', 'age', 'goal', 'rate', 'bulkPct', 'activity'].forEach(k => { if (fd.has(k)) OB[k] = String(fd.get(k)).trim(); });
   if (form.elements.share) OB.share = form.elements.share.checked;
 }
 function obValidate() {
   const s = OB;
   if (s.step === 0) { if (!s.first || !s.last) return 'Enter your first and last name.'; if (!s.nick) return 'Choose a nickname — it’s how you’ll show up in the app.'; }
-  if (s.step === 1) { const w = obNum(s.w); if (!w || w < 70 || w > 700) return 'Enter your current weight in pounds.';
-    if (!obEstimated()) { const b = obNum(s.bf); if (!b || b < 3 || b > 70) return 'Body fat should be between 3 and 70% — or leave it blank.'; }
-    else { const h = (obNum(s.hFt) || 0) * 12 + (obNum(s.hIn) || 0); if (h < 48 || h > 96) return 'Enter your height so we can estimate body fat (or type a body-fat %).';
-      if (!s.sex) return 'Choose male or female for the body-fat estimate.'; const a = obNum(s.age); if (!a || a < 16 || a > 99) return 'Enter your age (16–99) for the body-fat estimate.'; } }
-  if (s.step === 2) { const g = obNum(s.goal), w = obNum(s.w); if (!g || g < 70) return 'Enter your goal weight in pounds.'; if (g >= w) return `Your goal should be below your current weight (${fmt(w, 1)} lb).`; }
+  if (s.step === 1) { const w = obNum(s.w); if (!w || w < 30 || w > 320) return 'Informe seu peso atual em quilogramas.';
+    if (!obEstimated()) { const b = obNum(s.bf); if (!b || b < 3 || b > 70) return 'A gordura corporal deve ficar entre 3 e 70% — ou deixe em branco.'; }
+    else { const h = obNum(s.hCm); if (!h || h < 120 || h > 240) return 'Informe sua altura em centímetros para estimarmos a gordura corporal.';
+      if (!s.sex) return 'Escolha o sexo para a estimativa de gordura corporal.'; const a = obNum(s.age); if (!a || a < 16 || a > 99) return 'Informe sua idade (16–99) para a estimativa de gordura corporal.'; } }
+  if (s.step === 2) { const g = obNum(s.goal), w = obNum(s.w); if (!g || g < 30) return 'Informe seu peso-meta em quilogramas.'; if (g >= w) return `Sua meta deve ser menor que seu peso atual (${fmt(w, 1)} kg).`; }
   return null;
 }
 async function obSubmit(form) {
@@ -109,7 +110,7 @@ async function obSubmit(form) {
   if (OB.step < OB_STEPS.length - 1) { OB.step++; renderOnboarding(); return; }
   const btn = form.querySelector('button[type=submit]'); btn.disabled = true; btn.classList.add('loading');
   obApplyDraft(); const est = obEstimated();
-  S.profile = { first: OB.first, last: OB.last, nick: OB.nick, heightIn: (obNum(OB.hFt) || 0) * 12 + (obNum(OB.hIn) || 0) || null, sex: OB.sex || null, age: obNum(OB.age), at: todayISO() };
+  S.profile = { first: OB.first, last: OB.last, nick: OB.nick, heightCm: obNum(OB.hCm), heightIn: obNum(OB.hCm) ? obNum(OB.hCm) / 2.54 : null, sex: OB.sex || null, age: obNum(OB.age), at: todayISO() };
   S.settings.bfEstimated = est; S.onboarded = true;
   S.plan = {}; S.planEnd = null; ensureHorizon();                         // meals depend on the money-saver choice
   if (AUTH.mode === 'server' && AUTH.user) { try { const r = await api('PATCH', '/api/account', { firstName: OB.first, lastName: OB.last, name: OB.nick }); AUTH.user = r.user; } catch (e) { btn.disabled = false; btn.classList.remove('loading'); OB.error = e.message; renderOnboarding(); return; } }
@@ -121,10 +122,10 @@ document.addEventListener('submit', e => { const f = e.target; if (f.dataset && 
 document.addEventListener('input', e => {
   const t = e.target; if (!OB || !t.closest || !t.closest('form[data-form="onb"]')) return;
   const form = t.closest('form'); obRead(form); if (OB.error) { OB.error = null; const m = form.querySelector('.auth-msg'); if (m) m.remove(); }
-  if (t.name === 'bf' || t.name === 'w' || t.name === 'hFt' || t.name === 'hIn' || t.name === 'age') {
+  if (t.name === 'bf' || t.name === 'w' || t.name === 'hCm' || t.name === 'age') {
     const box = $('#ob-est'); if (box) { box.classList.toggle('hidden', !obEstimated()); const n = box.querySelector('.note span'); const bf = obBF();
       if (n) n.innerHTML = n.innerHTML.replace(/^Estimated body fat: <b>[^<]*<\/b>\. /, '').replace(/^/, bf ? `Estimated body fat: <b>${fmt(bf, 1)}%</b>. ` : ''); } }
-  if (t.name === 'rate') { const v = $('#ob-rate-v'); if (v) v.textContent = fmt(+t.value, 2) + ' lb / week'; const i = $('#ob-rate-info'); if (i) i.innerHTML = obRateInfo(); }
+  if (t.name === 'rate') { const v = $('#ob-rate-v'); if (v) v.textContent = fmt(+t.value, 2) + ' kg / semana'; const i = $('#ob-rate-info'); if (i) i.innerHTML = obRateInfo(); }
   if (t.name === 'bulkPct') { const v = $('#ob-rate-v'); if (v) v.textContent = fmt(+t.value, 2) + ' % of body weight'; const i = $('#ob-rate-info'); if (i) i.innerHTML = obRateInfo(); }
   if (t.name === 'goal') { const i = $('#ob-rate-info'); if (i) i.innerHTML = obRateInfo(); }
 });

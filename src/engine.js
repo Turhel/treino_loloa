@@ -8,6 +8,8 @@ let STORE_KEY = 'forge90.v1';          // per-user key when signed in to the ser
 let NEW_STATE_DEFAULTS = null;
 const LAUNCH_DAYS = 90;          // the original 90-day launch block (Cycle 1)
 const PLAN_DAYS = LAUNCH_DAYS;   // kept for launch-block copy
+const KG_PER_LB = 0.45359237;
+const KCAL_PER_KG = 7700;
 
 /* ---------- dates ---------- */
 const pad2 = n => String(n).padStart(2, '0');
@@ -19,7 +21,7 @@ function todayISO() { return iso(new Date()); }
 function nextMonday(from) { const d = parseISO(from); const wd = d.getDay(); const add = wd === 1 ? 0 : (8 - wd) % 7; d.setDate(d.getDate() + add); return iso(d); }
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-function fmtDate(s, opts) { return parseISO(s).toLocaleDateString(undefined, opts || { weekday: 'short', month: 'short', day: 'numeric' }); }
+function fmtDate(s, opts) { return parseISO(s).toLocaleDateString('pt-BR', opts || { weekday: 'short', month: 'short', day: 'numeric' }); }
 const maxISO = (a, b) => a > b ? a : b;
 
 /* ---------- state ---------- */
@@ -27,13 +29,13 @@ function defaultSettings() {
   return {
     startDate: nextMonday(todayISO()),
     trainDays: [1, 3, 5],
-    startWeight: 230, startBF: 30,
-    goalWeight: 180, goalBF: 15,
-    rate: 1.25,            // lb / week
+    startWeight: 104.3, startBF: 30,
+    goalWeight: 81.6, goalBF: 15,
+    rate: 0.57,            // kg / week
     shareIngredients: true, // plan meals so recipes share ingredients (fewer packages, less waste)
     activity: 1.4,         // non-exercise activity multiplier on BMR
     sessionKcal: 250,      // extra burn on a lifting day
-    proteinPerLb: 0.85,    // g per lb bodyweight (range 0.5–1.0)
+    proteinPerKg: 1.5,     // g per kg bodyweight
     kcalAdjust: 0,         // manual / trend-based adjustment
     minKcal: 1800,
     atGoal: 'maintain',    // 'maintain' = switch to maintenance calories once goal weight or BF% is reached
@@ -58,13 +60,27 @@ function defaultSettings() {
 }
 let S = null;
 function freshState() {
-  return { v: 5, onboarded: false, profile: null, settings: defaultSettings(), plan: {}, planEnd: null, weights: [], logs: {}, done: {}, created: todayISO(), customExercises: {},
+  return { v: 6, onboarded: false, profile: null, settings: defaultSettings(), plan: {}, planEnd: null, weights: [], logs: {}, done: {}, created: todayISO(), customExercises: {},
     foodPrefs: Object.assign({}, DEFAULT_FOOD_PREFS), favRecipes: {}, exOff: {}, customFoods: {}, foodOverrides: {}, customRecipes: {}, recipeOverrides: {}, recipeOff: {}, bgCustom: {}, grocery: {}, importMap: {}, favFoods: {}, pantry: [], gymCards: [] };
 }
 function migrateState() {
   const f = freshState();
   ['weights', 'logs', 'done', 'customExercises', 'foodPrefs', 'favRecipes', 'exOff', 'customFoods', 'foodOverrides', 'customRecipes', 'recipeOverrides', 'recipeOff', 'bgCustom', 'grocery', 'importMap', 'favFoods', 'pantry', 'gymCards'].forEach(k => { if (!S[k]) S[k] = f[k]; });
   S.settings = Object.assign(defaultSettings(), S.settings);
+  // v6 stores every body and lifting mass in kg. Older Forge snapshots are
+  // imperial, so convert exactly once before any target is calculated.
+  if (!S.metricV6) {
+    const lbToKg = n => Number.isFinite(+n) ? +(Number(n) * KG_PER_LB).toFixed(3) : n;
+    S.settings.startWeight = lbToKg(S.settings.startWeight);
+    S.settings.goalWeight = lbToKg(S.settings.goalWeight);
+    S.settings.rate = lbToKg(S.settings.rate);
+    if (S.settings.proteinPerLb != null) S.settings.proteinPerKg = +(S.settings.proteinPerLb / KG_PER_LB).toFixed(2);
+    delete S.settings.proteinPerLb;
+    (S.weights || []).forEach(x => { x.w = lbToKg(x.w); });
+    Object.values(S.logs || {}).forEach(day => Object.values(day || {}).forEach(sets => (sets || []).forEach(set => { if (set && set.w != null) set.w = lbToKg(set.w); })));
+    if (S.profile && S.profile.heightIn != null && S.profile.heightCm == null) S.profile.heightCm = +(S.profile.heightIn * 2.54).toFixed(1);
+    S.metricV6 = true;
+  }
   if (S.onboarded === undefined) S.onboarded = true;
   // research-backed extra exercises start switched off — applied once per exercise, so a user's own choice sticks
   S.exDefaults = S.exDefaults || {}; S.exOff = S.exOff || {};
@@ -457,12 +473,12 @@ const goalKind = () => { const g = S.settings.goal; return g === 'bulk' || g ===
 function planRate(w) {
   const st = S.settings; const k = goalKind();
   if (k === 'maintain') return 0;
-  if (k === 'bulk') return bulkLb(w == null ? (latestStats() || {}).w || st.startWeight : w);
+  if (k === 'bulk') return bulkKg(w == null ? (latestStats() || {}).w || st.startWeight : w);
   return -st.rate;
 }
-function bulkLb(w) {
+function bulkKg(w) {
   const st = S.settings; const raw = (+w || st.startWeight) * (+st.bulkPct || 0.35) / 100;
-  return Math.min(raw, (+st.bulkMaxSurplus || 500) * 7 / 3500);        // the cap can bind at low body weights
+  return Math.min(raw, (+st.bulkMaxSurplus || 500) * 7 / KCAL_PER_KG); // the cap can bind at low body weights
 }
 function goalReached(w, bf) {
   const st = S.settings; const k = goalKind();
@@ -473,26 +489,26 @@ function goalReached(w, bf) {
 function targetsFor(w, bf, isTrain) {
   const st = S.settings;
   const lbm = w * (1 - bf / 100);
-  const bmr = 370 + 21.6 * (lbm * 0.453592);
+  const bmr = 370 + 21.6 * lbm;
   const restMaint = bmr * st.activity;
   const maint = restMaint + (isTrain ? st.sessionKcal : 0);
   const kind = goalKind();
   const maintMode = goalReached(w, bf);
   const bulking = kind === 'bulk' && !maintMode;
-  const deficit = maintMode || kind !== 'cut' ? 0 : st.rate * 3500 / 7;
-  const surplus = bulking ? Math.min(+st.bulkMaxSurplus || 500, bulkLb(w) * 3500 / 7) : 0;
+  const deficit = maintMode || kind !== 'cut' ? 0 : st.rate * KCAL_PER_KG / 7;
+  const surplus = bulking ? Math.min(+st.bulkMaxSurplus || 500, bulkKg(w) * KCAL_PER_KG / 7) : 0;
   const kcal = Math.max(st.minKcal, maint - deficit + surplus + (+st.kcalAdjust || 0));
   const nTrain = st.trainDays.length;
   const weeklyMaint = restMaint + st.sessionKcal * nTrain / 7;
-  const kr = Math.round(kcal / 10) * 10, pr = Math.round(st.proteinPerLb * w);
+  const kr = Math.round(kcal / 10) * 10, pr = Math.round(st.proteinPerKg * w);
   /* Fat sits lower on a bulk so the extra calories land in carbohydrate, which is what fuels
      training volume — but never below ~0.3 g/lb, the floor tied to hormone production. */
   const fatPct = bulking ? 0.25 : 0.27;
-  const fat = Math.max(Math.round(0.3 * w), Math.round(kr * fatPct / 9));
+  const fat = Math.max(Math.round(0.66 * w), Math.round(kr * fatPct / 9));
   const carbs = Math.max(0, Math.round((kr - pr * 4 - fat * 9) / 4));
   return { fat, carbs, lbm, bmr: Math.round(bmr), maint: Math.round(maint), weeklyMaint: Math.round(weeklyMaint), deficit: Math.round(deficit),
            surplus: Math.round(surplus), kind, bulking, bfCap: kind === 'bulk' && bf >= (+st.bulkMaxBF || 20),
-           maintMode, kcal: Math.round(kcal / 10) * 10, protein: Math.round(st.proteinPerLb * w), floorHit: maint - deficit + surplus + (+st.kcalAdjust || 0) < st.minKcal };
+           maintMode, kcal: Math.round(kcal / 10) * 10, protein: Math.round(st.proteinPerKg * w), floorHit: maint - deficit + surplus + (+st.kcalAdjust || 0) < st.minKcal };
 }
 
 /* ---------- recipes & portions ---------- */
@@ -680,11 +696,11 @@ function suggestion(exId, reps, beforeDate) {
   const ex = EX[exId];
   const w = last.bestSet ? +last.bestSet.w : 0;
   const allTop = last.sets.every(s => +s.r >= hi);
-  const inc = /Dumbbell|DB/.test(ex.name) || ex.group === 'Shoulders' || ex.group === 'Biceps' || ex.group === 'Triceps' ? 5 : 10;
+  const inc = /Dumbbell|DB/.test(ex.name) || ex.group === 'Shoulders' || ex.group === 'Biceps' || ex.group === 'Triceps' ? 2 : 5;
   if (isBW(exId)) return { text: `Last best: ${last.bestReps} reps → aim for ${last.bestReps + 1}+`, last };
-  if (ex.assist) return { text: allTop ? `Hit the top of the range — drop assistance to ${Math.max(0, w - 10)} lb` : `Keep ${w} lb assist, add a rep per set`, last };
-  if (allTop) return { text: `Hit ${hi}+ on all sets → go up to ${w + inc} lb and aim for ${lo}+`, last };
-  return { text: `Stay at ${w} lb and beat ${last.sets.map(s => s.r).join('/')} reps`, last };
+  if (ex.assist) return { text: allTop ? `Chegou ao topo da faixa — reduza a assistência para ${Math.max(0, w - 5)} kg` : `Mantenha ${w} kg de assistência e adicione uma repetição por série`, last };
+  if (allTop) return { text: `Chegou a ${hi}+ em todas as séries → suba para ${w + inc} kg e busque ${lo}+`, last };
+  return { text: `Mantenha ${w} kg e supere ${last.sets.map(s => s.r).join('/')} repetições`, last };
 }
 
 /* ---------- trend & projections ---------- */
@@ -706,7 +722,7 @@ function weightTrend() {
   }
   if (kind === 'bulk') {
     const gain = -rate;                         // lb/wk gained
-    const target = bulkLb(st0.w);
+    const target = bulkKg(st0.w);
     if (gain < target * 0.5) { delta = gain < 0 ? 300 : 200; advice = `You’re gaining ${gain.toFixed(2)} lb/wk against a ${target.toFixed(2)} lb/wk target. Add ${delta} kcal/day.`; }
     else if (gain > target * 1.6) { delta = -150; advice = `You’re gaining ${gain.toFixed(2)} lb/wk — faster than the ${target.toFixed(2)} lb/wk target, and the extra is mostly fat. Trim ${-delta} kcal/day.`; }
     else advice = `On track: ${gain.toFixed(2)} lb/wk against a ${target.toFixed(2)} lb/wk target. Keep going.`;
@@ -741,4 +757,4 @@ function projection() {
 }
 
 /* ---------- export for node tests ---------- */
-if (typeof module !== 'undefined') module.exports = { get S() { return S; }, set S(v) { S = v; }, loadState, foodAllowed, subOn, replanMeals, exOffOn, exGroupOf, simulateMeals, shoppingStats, shareScore, packInfo, defaultPack, isFav, filterSeq, nextPlanWeekStart, markMealEdit, rescheduleWorkouts, rebuildExercises, slotVars, rebuildCatalog, ensureHorizon, ensurePlanThrough, substitutePlan, recipeAllowed, planEnd, phaseForWeek, cycleOfWeek, freshState, generatePlan, computeAll, computeDay, sessionRows, targetsFor, goalKind, planRate, bulkLb, statsOn, amountText, groceryText, exerciseHistory, weightTrend, projection, RPS, planDates, invalidate };
+if (typeof module !== 'undefined') module.exports = { get S() { return S; }, set S(v) { S = v; }, loadState, foodAllowed, subOn, replanMeals, exOffOn, exGroupOf, simulateMeals, shoppingStats, shareScore, packInfo, defaultPack, isFav, filterSeq, nextPlanWeekStart, markMealEdit, rescheduleWorkouts, rebuildExercises, slotVars, rebuildCatalog, ensureHorizon, ensurePlanThrough, substitutePlan, recipeAllowed, planEnd, phaseForWeek, cycleOfWeek, freshState, generatePlan, computeAll, computeDay, sessionRows, targetsFor, goalKind, planRate, bulkKg, statsOn, amountText, groceryText, exerciseHistory, weightTrend, projection, RPS, planDates, invalidate };

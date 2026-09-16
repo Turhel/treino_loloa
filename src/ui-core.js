@@ -12,7 +12,7 @@ const PHONE_MQ = window.matchMedia ? window.matchMedia('(max-width: 860px)') : n
 const isPhone = () => !!(PHONE_MQ && PHONE_MQ.matches);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const fmt = (n, d = 0) => (n == null || isNaN(n)) ? '—' : Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+const fmt = (n, d = 0) => (n == null || isNaN(n)) ? '—' : Number(n).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
 const UI = { calView: 'month', calMonth: null, calWeek: null, libTab: 'workouts', libFilter: 'all', libQ: '', dietFilter: 'all', groWeek: null, prEx: null, planPhase: 1, showLib: true };
 try { Object.assign(UI, JSON.parse(localStorage.getItem('forge90.ui') || '{}')); } catch (e) { }
 function saveUI() { try { localStorage.setItem('forge90.ui', JSON.stringify(UI)); } catch (e) { } }

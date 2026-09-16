@@ -86,12 +86,12 @@ function viewDiet() {
       <div class="card stat" style="box-shadow:none;background:var(--surface-2)"><div class="lbl">${icon('dumbbell')}Training day</div><div class="val">${fmt(tT.kcal)}<small>kcal</small></div><div class="delta neu">${fmt(tT.protein)} g protein</div></div>
       <div class="card stat" style="box-shadow:none;background:var(--surface-2)"><div class="lbl">${icon('moon')}Rest day</div><div class="val">${fmt(tR.kcal)}<small>kcal</small></div><div class="delta neu">${fmt(tR.protein)} g protein</div></div>
       <div class="card stat" style="box-shadow:none;background:var(--surface-2)"><div class="lbl">${icon('target')}Weekly average</div><div class="val">${fmt(weeklyAvg)}<small>kcal</small></div><div class="delta neu">−${fmt(tT.deficit)} kcal/day vs maintenance</div></div>
-      <div class="card stat" style="box-shadow:none;background:var(--surface-2)"><div class="lbl">${icon('bolt')}Protein</div><div class="val">${fmt(st.proteinPerLb, 2)}<small>g/lb</small></div><div class="delta neu">range ${fmt(cur.w * 0.5)}–${fmt(cur.w)} g (0.5–1 g/lb)</div></div></div>
+      <div class="card stat" style="box-shadow:none;background:var(--surface-2)"><div class="lbl">${icon('bolt')}Protein</div><div class="val">${fmt(st.proteinPerKg, 2)}<small>g/kg</small></div><div class="delta neu">faixa ${fmt(cur.w * 1.4)}–${fmt(cur.w * 2)} g (1,4–2 g/kg)</div></div></div>
     <div class="scroll-x" style="margin-top:14px"><table class="tbl"><tbody>
       <tr><td>Lean body mass</td><td class="num">${fmt(cur.lbm, 1)} lb</td><td class="muted">weight × (1 − body-fat %)</td></tr>
       <tr><td>BMR (Katch–McArdle)</td><td class="num">${fmt(tT.bmr)} kcal</td><td class="muted">370 + 21.6 × lean mass (kg)</td></tr>
       <tr><td>Maintenance — rest / training</td><td class="num">${fmt(tR.maint)} / ${fmt(tT.maint)} kcal</td><td class="muted">BMR × ${st.activity} activity, + ${st.sessionKcal} kcal on lifting days</td></tr>
-      <tr><td>${tT.bulking ? 'Surplus' : 'Deficit'}</td><td class="num">${fmt(tT.bulking ? tT.surplus : tT.deficit)} kcal/day</td><td class="muted">${tT.bfCap ? `At ${fmt(cur.bf, 1)}% body fat, at or above the ${st.bulkMaxBF}% ceiling — holding at maintenance` : tT.maintMode ? (goalKind() === 'maintain' ? 'Maintenance calories' : 'Goal reached — eating at maintenance (change in Settings)') : tT.bulking ? `${fmt(bulkLb(cur.w), 2)} lb/week × 3,500 kcal ÷ 7` : st.rate + ' lb/week × 3,500 kcal ÷ 7'}${st.kcalAdjust ? ` · adjustment ${st.kcalAdjust > 0 ? '+' : ''}${st.kcalAdjust} kcal` : ''}</td></tr>
+      <tr><td>${tT.bulking ? 'Surplus' : 'Deficit'}</td><td class="num">${fmt(tT.bulking ? tT.surplus : tT.deficit)} kcal/day</td><td class="muted">${tT.bulking ? `${fmt(bulkKg(cur.w), 2)} kg/semana` : `${fmt(st.rate, 2)} kg/semana`}${st.kcalAdjust ? ` · adjustment ${st.kcalAdjust > 0 ? '+' : ''}${st.kcalAdjust} kcal` : ''}</td></tr>
     </tbody></table></div>
     <div class="small muted" style="margin-top:14px">Targets and every portion on the calendar update from your latest weigh-in.</div></div></div>`;
   const portion = (d, lbl) => { if (!d) return ''; const x = A.days[d]; return `<div class="card" style="box-shadow:none;background:var(--surface-2)"><div class="tiny muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.08em">${lbl} · ${fmtDate(d)}</div>
@@ -100,11 +100,11 @@ function viewDiet() {
   const portions = `<div class="card"><div class="card-h"><h2>Serving-size suggestions</h2></div>
     <div class="small sub" style="margin:-6px 0 12px">Every recipe is written as a standard 1× serving. Each day, protein ingredients (chicken, eggs, yogurt…) are scaled to land your protein target, then carb & fat ingredients (rice, potatoes, oats, oils…) are scaled to land calories. Training days get more carbs.</div>
     <div class="grid g2" style="gap:12px">${portion(nextT, 'Next training day')}${portion(nextR, 'Next rest day')}</div>
-    ${trend ? `<div class="note ${trend.delta ? 'warn' : 'acc'}" style="margin-top:12px">${icon('trend')}<span>${esc(trend.advice)} ${trend.delta ? `<button class="btn sm" data-act="apply-trend" data-delta="${trend.delta}">Apply ${trend.delta > 0 ? '+' : ''}${trend.delta} kcal</button>` : ''}</span></div>` : `<div class="note" style="margin-top:12px">${icon('info')}<span>After ~1–2 weeks of weigh-ins, the app compares what the scale actually did to your ${goalKind() === 'bulk' ? `${fmt(bulkLb(cur.w), 2)} lb/wk gain` : goalKind() === 'maintain' ? 'maintenance' : `${st.rate} lb/wk loss`} target and suggests a calorie adjustment.</span></div>`}
-    ${goalKind() === 'maintain' ? '' : `<div class="note" style="margin-top:8px">${icon('target')}<span>At ${goalKind() === 'bulk' ? `${fmt(bulkLb(cur.w), 2)} lb/wk` : `${st.rate} lb/wk`} you’ll be around <b>${fmt(pj.endW, 0)} lb</b> ${pj.cyc === 1 ? 'on Day 90' : 'at the end of cycle ' + pj.cyc}${Math.abs(pj.weeks) > 0.01 ? ` and reach ${st.goalWeight} lb around <b>${fmtDate(pj.goalDate, { month: 'long', year: 'numeric' })}</b>` : ''}. Holding your lean mass, ${st.goalBF}% BF ≈ <b>${fmt(pj.wAtGoalBF, 0)} lb</b>.</span></div>`}</div>`;
-  const goalLine = goalKind() === 'bulk' ? `A ${fmt(st.bulkPct, 2)}%/week lean gain with ${fmt(st.proteinPerLb, 2)} g protein per lb, the surplus weighted toward carbohydrate to fuel training.`
-    : goalKind() === 'maintain' ? `Maintenance calories with ${fmt(st.proteinPerLb, 2)} g protein per lb.`
-    : `A ${st.rate} lb/week cut with ${fmt(st.proteinPerLb, 2)} g protein per lb.`;
+    ${trend ? `<div class="note ${trend.delta ? 'warn' : 'acc'}" style="margin-top:12px">${icon('trend')}<span>${esc(trend.advice)} ${trend.delta ? `<button class="btn sm" data-act="apply-trend" data-delta="${trend.delta}">Apply ${trend.delta > 0 ? '+' : ''}${trend.delta} kcal</button>` : ''}</span></div>` : `<div class="note" style="margin-top:12px">${icon('info')}<span>After ~1–2 weeks of weigh-ins, the app compares what the scale actually did to your ${goalKind() === 'bulk' ? `${fmt(bulkKg(cur.w), 2)} kg/sem gain` : goalKind() === 'maintain' ? 'maintenance' : `${fmt(st.rate, 2)} kg/sem loss`} target and suggests a calorie adjustment.</span></div>`}
+    ${goalKind() === 'maintain' ? '' : `<div class="note" style="margin-top:8px">${icon('target')}<span>At ${goalKind() === 'bulk' ? `${fmt(bulkKg(cur.w), 2)} kg/sem` : `${fmt(st.rate, 2)} kg/sem`} you’ll be around <b>${fmt(pj.endW, 0)} kg</b> ${pj.cyc === 1 ? 'on Day 90' : 'at the end of cycle ' + pj.cyc}${Math.abs(pj.weeks) > 0.01 ? ` and reach ${fmt(st.goalWeight, 1)} kg around <b>${fmtDate(pj.goalDate, { month: 'long', year: 'numeric' })}</b>` : ''}. Holding your lean mass, ${st.goalBF}% BF ≈ <b>${fmt(pj.wAtGoalBF, 0)} kg</b>.</span></div>`}</div>`;
+  const goalLine = goalKind() === 'bulk' ? `Ganho de ${fmt(st.bulkPct, 2)}%/semana, com ${fmt(st.proteinPerKg, 2)} g de proteína por kg.`
+    : goalKind() === 'maintain' ? `Calorias de manutenção com ${fmt(st.proteinPerKg, 2)} g de proteína por kg.`
+    : `Déficit de ${fmt(st.rate, 2)} kg/semana com ${fmt(st.proteinPerKg, 2)} g de proteína por kg.`;
   return `<div class="page-head"><div class="t"><h1>Diet plan</h1><p>${goalLine} Meals are popular high-protein meal-prep staples; multi-serving recipes are scheduled as leftovers so nothing goes to waste.</p></div>${syncBtnHTML()}</div>
     ${bfEstimateNote()}${targets}<div style="height:16px"></div>${portions}<div style="height:16px"></div>
     <div style="height:16px"></div>
@@ -362,11 +362,11 @@ function progressCharts() {
 function rateInfoHTML(rate) {
   const st = S.settings; const cur = latestStats(); const pct = rate / cur.w * 100;
   const tT = targetsFor(cur.w, cur.bf, true), tR = targetsFor(cur.w, cur.bf, false);
-  const deficit = Math.round(rate * 500); const weeks = Math.max(0, cur.w - st.goalWeight) / rate;
+  const deficit = Math.round(rate * KCAL_PER_KG / 7); const weeks = Math.max(0, cur.w - st.goalWeight) / rate;
   const when = addDays(maxISO(todayISO(), st.startDate), Math.round(weeks * 7));
-  const flag = pct > 1 ? `<div class="note warn" style="margin-top:8px">${icon('info')}<span>That’s ${fmt(pct, 1)}% of your body weight per week — above the ~1%/week where muscle loss and training quality usually start to suffer.</span></div>` : '';
-  return `<div class="grid g3" style="gap:10px"><div><div class="tiny muted">Daily deficit</div><b class="num" style="font-size:18px">−${fmt(deficit)} kcal</b></div><div><div class="tiny muted">Training / rest day</div><b class="num" style="font-size:18px">${fmt(tT.kcal)} / ${fmt(tR.kcal)}</b></div><div><div class="tiny muted">Reach ${st.goalWeight} lb</div><b style="font-size:18px">${fmtDate(when, { month: 'short', year: 'numeric' })}</b></div></div>
-    <div class="tiny muted" style="margin-top:6px">${fmt(pct, 2)}% of body weight per week · portions on the calendar resize automatically.</div>${flag}`;
+  const flag = pct > 1 ? `<div class="note warn" style="margin-top:8px">${icon('info')}<span>Isso equivale a ${fmt(pct, 1)}% do seu peso por semana — acima de ~1%/semana, faixa em que a qualidade do treino e a massa muscular podem sofrer.</span></div>` : '';
+  return `<div class="grid g3" style="gap:10px"><div><div class="tiny muted">Déficit diário</div><b class="num" style="font-size:18px">−${fmt(deficit)} kcal</b></div><div><div class="tiny muted">Treino / descanso</div><b class="num" style="font-size:18px">${fmt(tT.kcal)} / ${fmt(tR.kcal)}</b></div><div><div class="tiny muted">Meta: ${kg(st.goalWeight, 1)} kg</div><b style="font-size:18px">${fmtDate(when, { month: 'short', year: 'numeric' })}</b></div></div>
+    <div class="tiny muted" style="margin-top:6px">${fmt(pct, 2)}% do peso corporal por semana · as porções do calendário são atualizadas automaticamente.</div>${flag}`;
 }
 /* settings cards shared by Settings and the Diet plan */
 const setField = (lbl, name, val, attrs = '', hint = '') => `<div class="field"><label>${lbl}</label><input class="inp" name="${name}" value="${esc(val)}" ${attrs}>${hint ? `<span class="tiny muted">${hint}</span>` : ''}</div>`;
@@ -400,7 +400,7 @@ function lossRateCardHTML() { const st = S.settings; const k = goalKind(); const
    too fast and the surplus goes on as fat; too high a body fat and it does the same. */
 function bulkInfoHTML(pct) {
   const st = S.settings; const cur = latestStats();
-  const lb = Math.min(cur.w * pct / 100, (+st.bulkMaxSurplus || 500) * 7 / 3500);
+  const lb = Math.min(cur.w * pct / 100, (+st.bulkMaxSurplus || 500) * 7 / KCAL_PER_KG);
   const capped = cur.w * pct / 100 > lb + 1e-9;
   const tT = targetsFor(cur.w, cur.bf, true), tR = targetsFor(cur.w, cur.bf, false);
   const toGoal = Math.max(0, st.goalWeight - cur.w); const weeks = lb > 0 ? toGoal / lb : 0;
@@ -425,7 +425,7 @@ function bodyGoalsCardHTML() { const st = S.settings; const f = setField; const 
         <div><button class="btn primary" type="submit">Save</button></div></form></div>`; }
 function nutritionCardHTML() { const st = S.settings; const f = setField;
   return `<div class="card"><div class="card-h"><h2>Nutrition model</h2></div><form data-form="nut" class="grid g2" style="gap:12px">
-        <div class="field"><label>Protein: <b id="prot-v">${st.proteinPerLb}</b> g per lb</label><input type="range" name="proteinPerLb" min="0.5" max="1" step="0.05" value="${st.proteinPerLb}" oninput="document.getElementById('prot-v').textContent=this.value"></div>
+        <div class="field"><label>Proteína: <b id="prot-v">${st.proteinPerKg}</b> g por kg</label><input type="range" name="proteinPerKg" min="1.2" max="2.2" step="0.1" value="${st.proteinPerKg}" oninput="document.getElementById('prot-v').textContent=this.value"></div>
         <div class="field"><label>Daily activity (outside the gym)</label><select class="inp" name="activity">${[[1.3, 'Sedentary — desk, <5k steps'], [1.4, 'Light — desk + 5–8k steps'], [1.5, 'Moderate — 8–12k steps'], [1.6, 'Active — on your feet / 12k+']].map(([v, l]) => `<option value="${v}" ${+st.activity === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
         ${f('Extra kcal on lifting days', 'sessionKcal', st.sessionKcal, 'type="number" step="10"')}
         ${f('Manual calorie adjustment', 'kcalAdjust', st.kcalAdjust, 'type="number" step="25"', 'Applied to every day. The trend coach can set this for you.')}
