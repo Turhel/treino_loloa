@@ -68,7 +68,7 @@ const weekdays = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "
 const trainingWeekdays = weekdays.slice(0, 5);
 type PainLog = { id?: string; date: string; level: string; text: string };
 type CardioLog = { id?: string; date: string; minutes: string; type: string; intensity: string; lightMinutes?: string; moderateMinutes?: string; hardMinutes?: string };
-type SyncStatus = "Local" | "Sincronizado" | "Sincronizando" | "Erro ao sincronizar";
+type SyncStatus = "Local" | "Aguardando sincronização" | "Sincronizado" | "Sincronizando" | "Erro ao sincronizar";
 type MediaTarget = { name: string; videoKey?: string; source?: Exercise };
 type AppView = "training" | "performance";
 type ScheduledTrainingDay = TrainingDay & {
@@ -120,6 +120,8 @@ const TARGET_WEIGHT_KEY = "treino-loloa-target-weight-v1";
 const BODY_WEIGHT_WEEK_KEY = "treino-loloa-body-weight-week-v1";
 const EXTRA_WORKOUT_KEY = "treino-loloa-extra-workouts-v1";
 const WEIGHT_HISTORY_KEY = "treino-loloa-weight-history-v1";
+const SYNC_PENDING_SINCE_KEY = "treino-loloa-sync-pending-since-v1";
+const SYNC_AFTER_MS = 24 * 60 * 60 * 1000;
 const cardioTypeOptions = ["Caminhada", "Esteira", "Corrida", "Bicicleta", "Outro"];
 
 const typeStyle: Record<TrainingType, { label: string; chip: string; border: string; soft: string; icon: string }> = {
@@ -172,12 +174,17 @@ function shouldDayStartOpen(dayName: string, todayName: string, query: string, o
 
 function scheduleTrainingDays(days: TrainingDay[], startDate: string, weekBlock: number): ScheduledTrainingDay[] {
   const blockTotal = days.length;
+  const currentDayIndex = getDayIndex(getTodayName());
   return days.map((day, index) => {
-    const scheduledDate = startDate ? getSessionDateForWeekDay(startDate, weekBlock, index, blockTotal) : todayDateKey();
+    // Antes do primeiro treino concluído não há uma data-base salva. Ainda assim,
+    // cada dia precisa ocupar sua posição real na semana, em vez de virar "hoje".
+    const scheduledDate = startDate
+      ? getSessionDateForWeekDay(startDate, weekBlock, index, blockTotal)
+      : addDays(todayDateKey(), index - currentDayIndex);
     return {
       ...day,
       scheduledDate,
-      scheduledDayName: startDate ? getWeekdayName(scheduledDate) || day.day : `Dia ${index + 1}`,
+      scheduledDayName: getWeekdayName(scheduledDate) || day.day,
       blockIndex: index + 1,
       blockTotal,
     };
@@ -363,6 +370,37 @@ function makeCustomPlan(name = "Meu treino personalizado"): CustomTrainingPlan {
   return { id: `custom-${Date.now()}`, name, phase: "custom", createdAt: now, updatedAt: now, weeks: [makeCustomWeek("A")] };
 }
 
+type SmartGoal = "hipertrofia" | "forca" | "condicionamento" | "mobilidade";
+
+function makeSmartPlan(goal: SmartGoal, daysPerWeek: number, level: "iniciante" | "intermediario" | "avancado"): CustomTrainingPlan {
+  const now = new Date().toISOString();
+  const days = trainingWeekdays.slice(0, Math.max(2, Math.min(daysPerWeek, trainingWeekdays.length)));
+  const splits = [
+    { title: "Empurrar", type: "empurrar" as TrainingType, terms: ["peitoral", "triceps", "ombro", "deltoide"] },
+    { title: "Puxar", type: "puxar" as TrainingType, terms: ["dorsal", "costas", "biceps", "trapezio"] },
+    { title: "Inferiores", type: "inferior" as TrainingType, terms: ["quadriceps", "glute", "posterior", "adutores", "panturrilha"] },
+    { title: "Superiores", type: "superior" as TrainingType, terms: ["peitoral", "costas", "ombro", "biceps", "triceps"] },
+    { title: "Corpo todo", type: "superior" as TrainingType, terms: ["quadriceps", "glute", "dorsal", "peitoral", "ombro"] },
+  ];
+  const available = filterAvailableExercises(exerciseLibraryList).filter((item) => goal !== "mobilidade" || item.exerciseKind === "mobilidade" || /mobilidade|alongamento/i.test(`${item.name} ${item.focus}`));
+  const source = available.length ? available : filterAvailableExercises(exerciseLibraryList);
+  const targetCount = level === "iniciante" ? 4 : level === "avancado" ? 6 : 5;
+  const used = new Set<string>();
+  const planDays = days.map((day, index) => {
+    const split = goal === "condicionamento" && index % 2 === 1
+      ? { title: "Cardio e core", type: "cardio" as TrainingType, terms: ["cardio", "core", "abdomen", "obliquos"] }
+      : splits[index % splits.length];
+    const matches = source.filter((item) => split.terms.some((term) => `${item.name} ${item.focus} ${item.muscles.join(" ")}`.toLowerCase().includes(term)));
+    const ordered = [...matches, ...source].filter((item, itemIndex, list) => list.findIndex((candidate) => candidate.id === item.id) === itemIndex);
+    const chosen = ordered.filter((item) => !used.has(item.id)).slice(0, targetCount);
+    chosen.forEach((item) => used.add(item.id));
+    const exercises = (chosen.length === targetCount ? chosen : ordered.slice(0, targetCount)).map((item, exerciseIndex) => toPlanExercise(item, exerciseIndex + 1));
+    return { id: `smart-${Date.now()}-${index}`, week: "A", day, title: `${split.title} · ${level}`, type: split.type, exercises };
+  });
+  const labels: Record<SmartGoal, string> = { hipertrofia: "Hipertrofia", forca: "Força", condicionamento: "Condicionamento", mobilidade: "Mobilidade" };
+  return { id: `smart-${Date.now()}`, name: `${labels[goal]} · ${days.length} dias`, phase: "custom", createdAt: now, updatedAt: now, weeks: [{ id: "A", label: "Semana A", days: planDays }] };
+}
+
 function nextWeekId(weeks: TrainingWeek[]) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   return alphabet[weeks.length] ?? `W${weeks.length + 1}`;
@@ -389,10 +427,10 @@ function LogInputs({ log, onLog, compact = false }: { log: ExerciseLog; onLog: (
   return (
     <div className="grid gap-2">
       <div className={`grid gap-2 ${compact ? "grid-cols-4" : "grid-cols-2 sm:grid-cols-4"}`}>
-        <input value={textInputValue(log.load)} onChange={(event) => onLog({ load: event.target.value })} placeholder="kg" inputMode="decimal" className={inputClass} />
-        <input value={textInputValue(log.reps1)} onChange={(event) => onLog({ reps1: event.target.value })} placeholder="R1" inputMode="numeric" className={inputClass} />
-        <input value={textInputValue(log.reps2)} onChange={(event) => onLog({ reps2: event.target.value })} placeholder="R2" inputMode="numeric" className={inputClass} />
-        <input value={textInputValue(log.reps3)} onChange={(event) => onLog({ reps3: event.target.value })} placeholder="R3" inputMode="numeric" className={inputClass} />
+        <input aria-label="Carga em quilogramas" value={textInputValue(log.load)} onChange={(event) => onLog({ load: event.target.value })} placeholder="Carga kg" inputMode="decimal" className={inputClass} />
+        <input aria-label="Repetições da primeira série" value={textInputValue(log.reps1)} onChange={(event) => onLog({ reps1: event.target.value })} placeholder="Série 1" inputMode="numeric" className={inputClass} />
+        <input aria-label="Repetições da segunda série" value={textInputValue(log.reps2)} onChange={(event) => onLog({ reps2: event.target.value })} placeholder="Série 2" inputMode="numeric" className={inputClass} />
+        <input aria-label="Repetições da terceira série" value={textInputValue(log.reps3)} onChange={(event) => onLog({ reps3: event.target.value })} placeholder="Série 3" inputMode="numeric" className={inputClass} />
       </div>
       <input value={textInputValue(log.note)} onChange={(event) => onLog({ note: event.target.value })} placeholder="Observação" className={`${inputClass} col-span-full`} />
     </div>
@@ -585,8 +623,7 @@ function DayCard({
           </button>
         </div>
       </div>
-      {isOpen && <><div className="hidden overflow-x-auto md:block"><table className="cute-table w-full min-w-[1080px] text-left text-sm"><thead className="border-y border-zinc-800 bg-zinc-950 text-xs uppercase tracking-wide text-zinc-400"><tr><th className="w-24 px-4 py-3">Feito</th><th className="px-4 py-3">Exercício</th><th className="px-4 py-3">Foco</th><th className="w-80 px-4 py-3">Carga/reps</th><th className="w-52 px-4 py-3">Descanso</th><th className="w-28 px-4 py-3">Vídeo</th></tr></thead><tbody className="divide-y divide-zinc-800">{exercises.map((exercise) => { const key = exerciseKey(plan, exercise); const domKey = getExerciseDomKey(plan, exercise); const currentLogKey = getCurrentLogKey(plan, exercise); return <ExerciseRow key={key} currentLogKey={currentLogKey} exerciseDomKey={domKey} registerExerciseRef={registerExerciseRef} highlighted={highlightedExerciseKey === domKey} exercise={exercise} log={getLog(plan, exercise) ?? emptyLog()} logs={logs} onLog={(patch) => updateExerciseLog(plan, exercise, patch)} onMuscleClick={onMuscleClick} onAlternativeClick={onAlternativeClick} onMediaOpen={onMediaOpen} onTimerOpen={() => onTimerOpen(plan, exercise)} lightMode={lightMode} />; })}</tbody></table></div>
-      <div className="grid gap-3 p-4 md:hidden">{exercises.map((exercise) => { const key = exerciseKey(plan, exercise); const domKey = getExerciseDomKey(plan, exercise); const currentLogKey = getCurrentLogKey(plan, exercise); return <ExerciseMobileCard key={key} currentLogKey={currentLogKey} exerciseDomKey={domKey} registerExerciseRef={registerExerciseRef} highlighted={highlightedExerciseKey === domKey} exercise={exercise} log={getLog(plan, exercise) ?? emptyLog()} logs={logs} onLog={(patch) => updateExerciseLog(plan, exercise, patch)} onMuscleClick={onMuscleClick} onAlternativeClick={onAlternativeClick} onMediaOpen={onMediaOpen} onTimerOpen={() => onTimerOpen(plan, exercise)} lightMode={lightMode} />; })}</div>
+      {isOpen && <><div className="grid gap-4 p-4 lg:grid-cols-2">{exercises.map((exercise) => { const key = exerciseKey(plan, exercise); const domKey = getExerciseDomKey(plan, exercise); const currentLogKey = getCurrentLogKey(plan, exercise); return <ExerciseMobileCard key={key} currentLogKey={currentLogKey} exerciseDomKey={domKey} registerExerciseRef={registerExerciseRef} highlighted={highlightedExerciseKey === domKey} exercise={exercise} log={getLog(plan, exercise) ?? emptyLog()} logs={logs} onLog={(patch) => updateExerciseLog(plan, exercise, patch)} onMuscleClick={onMuscleClick} onAlternativeClick={onAlternativeClick} onMediaOpen={onMediaOpen} onTimerOpen={() => onTimerOpen(plan, exercise)} lightMode={lightMode} />; })}</div>
       {plan.optional && <div className="border-t border-zinc-800 px-5 py-4 text-sm text-zinc-400"><span className="font-black text-zinc-100">Opcionais:</span> {plan.optional}</div>}</>}
     </motion.section>
   );
@@ -843,6 +880,9 @@ function TrainingEditor({ open, plans, activePlanId, onClose, onSave, onDelete }
   const base = plans.find((plan) => plan.id === activePlanId) ?? plans[0] ?? makeCustomPlan();
   const [draft, setDraft] = useState(base);
   const [showUnavailable, setShowUnavailable] = useState(false);
+  const [smartGoal, setSmartGoal] = useState<SmartGoal>("hipertrofia");
+  const [smartDays, setSmartDays] = useState(3);
+  const [smartLevel, setSmartLevel] = useState<"iniciante" | "intermediario" | "avancado">("iniciante");
   const exerciseOptions = showUnavailable ? exerciseLibraryList : filterAvailableExercises(exerciseLibraryList);
   const [selectedExercise, setSelectedExercise] = useState(filterAvailableExercises(exerciseLibraryList)[0]?.id ?? "");
   useEffect(() => { if (open) setDraft(base); }, [open, base]);
@@ -878,6 +918,10 @@ function TrainingEditor({ open, plans, activePlanId, onClose, onSave, onDelete }
         </div>
       </div>
       <div className="grid gap-5 p-5">
+        <section className="rounded-3xl border border-violet-500/40 bg-violet-950/20 p-4">
+          <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="cute-eyebrow">Plano inteligente</p><h3 className="text-lg font-black text-zinc-50">Monte uma base em segundos</h3><p className="mt-1 text-sm text-zinc-400">A sugestão usa somente exercícios disponíveis e continua totalmente editável.</p></div><button type="button" onClick={() => setDraft(makeSmartPlan(smartGoal, smartDays, smartLevel))} className="cute-button cute-button-primary"><Sparkles className="h-4 w-4" /> Gerar sugestão</button></div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3"><label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Objetivo<select value={smartGoal} onChange={(event) => setSmartGoal(event.target.value as SmartGoal)} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-bold normal-case tracking-normal text-zinc-100"><option value="hipertrofia">Hipertrofia</option><option value="forca">Força</option><option value="condicionamento">Condicionamento</option><option value="mobilidade">Mobilidade</option></select></label><label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Dias por semana<select value={smartDays} onChange={(event) => setSmartDays(Number(event.target.value))} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-bold normal-case tracking-normal text-zinc-100">{[2, 3, 4, 5].map((days) => <option key={days} value={days}>{days} dias</option>)}</select></label><label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-zinc-500">Experiência<select value={smartLevel} onChange={(event) => setSmartLevel(event.target.value as typeof smartLevel)} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm font-bold normal-case tracking-normal text-zinc-100"><option value="iniciante">Iniciante</option><option value="intermediario">Intermediário</option><option value="avancado">Avançado</option></select></label></div>
+        </section>
         <div className="grid gap-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-4 md:grid-cols-[1fr_auto]"><div className="grid gap-2"><select value={selectedExercise} onChange={(event) => setSelectedExercise(event.target.value)} className="min-w-0 rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm font-semibold text-zinc-100 outline-none">{exerciseOptions.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.focus}{isExerciseAvailable(item) ? "" : " · indisponível"}</option>)}</select><label className="flex items-center gap-2 text-sm font-bold text-zinc-300"><input type="checkbox" checked={showUnavailable} onChange={(event) => setShowUnavailable(event.target.checked)} /> Mostrar indisponíveis</label>{selectedExercise && !isExerciseAvailable(exerciseLibrary[selectedExercise]) && <p className="rounded-2xl bg-red-950/40 px-3 py-2 text-sm font-bold text-red-100">Atenção: este exercício usa equipamento indisponível nesta academia.</p>}</div><p className="text-sm text-zinc-400 md:self-center">Escolha um exercício e toque em Adicionar no dia desejado.</p></div>
         {draft.weeks.map((week, weekIndex) => <section key={week.id} className="rounded-3xl border border-zinc-800 bg-zinc-950 p-4"><div className="mb-4 flex flex-wrap items-center justify-between gap-2"><input value={week.id} onChange={(event) => patch({ ...draft, weeks: draft.weeks.map((item, index) => index === weekIndex ? { ...item, id: event.target.value.toUpperCase(), label: `Semana ${event.target.value.toUpperCase()}`, days: item.days.map((day) => ({ ...day, week: event.target.value.toUpperCase() })) } : item) })} className="w-36 rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-2 text-lg font-black text-zinc-50" />{draft.weeks.length > 1 && <button onClick={() => patch({ ...draft, weeks: draft.weeks.filter((_, index) => index !== weekIndex) })} className="rounded-2xl border border-red-900 px-3 py-2 text-sm font-bold text-red-200 hover:bg-red-950">Remover semana</button>}</div><div className="grid gap-3 lg:grid-cols-2">{week.days.map((day, dayIndex) => <div key={day.day} className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4"><div className="mb-3 grid gap-2 sm:grid-cols-[1fr_auto]"><input value={day.title} onChange={(event) => updateDay(weekIndex, dayIndex, (current) => ({ ...current, title: event.target.value }))} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm font-black text-zinc-50" /><select value={day.type} onChange={(event) => updateDay(weekIndex, dayIndex, (current) => ({ ...current, type: event.target.value as TrainingType }))} className="rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">{Object.keys(typeStyle).map((type) => <option key={type} value={type}>{typeStyle[type as TrainingType].label}</option>)}</select></div><p className="mb-3 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">{day.day}</p><div className="grid gap-2">{day.exercises.map((exercise, exerciseIndex) => <div key={`${exercise.id}-${exerciseIndex}`} className="flex items-center gap-2 rounded-xl bg-zinc-950 px-3 py-2 text-sm text-zinc-200"><span className="min-w-0 flex-1 truncate">{exercise.order}. {exercise.name}</span><button onClick={() => moveExercise(weekIndex, dayIndex, exerciseIndex, -1)} className="rounded-lg bg-zinc-800 px-2 py-1 text-xs">↑</button><button onClick={() => moveExercise(weekIndex, dayIndex, exerciseIndex, 1)} className="rounded-lg bg-zinc-800 px-2 py-1 text-xs">↓</button><button onClick={() => updateDay(weekIndex, dayIndex, (current) => ({ ...current, exercises: current.exercises.filter((_, index) => index !== exerciseIndex).map((item, index) => ({ ...item, order: index + 1 })) }))} className="rounded-lg bg-red-950 px-2 py-1 text-xs text-red-100">Remover</button></div>)}<button onClick={() => addExercise(weekIndex, dayIndex)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-100 px-3 py-2 text-sm font-black text-zinc-950"><Plus className="h-4 w-4" /> Adicionar</button></div></div>)}</div></section>)}
         <div className="sticky bottom-0 z-10 -mx-5 -mb-5 grid gap-2 border-t border-zinc-800 bg-zinc-900/95 p-4 backdrop-blur sm:hidden">
@@ -957,6 +1001,7 @@ export default function TrainingPlanApp() {
   const syncTimerRef = useRef<number | null>(null);
   const syncRetryTimerRef = useRef<number | null>(null);
   const syncRetryCountRef = useRef(0);
+  const syncPendingSinceRef = useRef(readJson<number>(SYNC_PENDING_SINCE_KEY, Date.now()));
   const exerciseRefs = useRef<Record<string, HTMLElement | null>>({});
   const startDateInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -1020,8 +1065,18 @@ export default function TrainingPlanApp() {
       const remote = await getUserAppData(currentUser.id);
       const next = mode === "merge" && hasRemoteData(remote) ? mergeUserAppData(local, remote) : local;
       if (mode === "merge") applySyncPayload(next);
+      const remaining = SYNC_AFTER_MS - (Date.now() - syncPendingSinceRef.current);
+      if (remaining > 0) {
+        syncReadyRef.current = true;
+        if (syncTimerRef.current) window.clearTimeout(syncTimerRef.current);
+        syncTimerRef.current = window.setTimeout(() => void syncWithSupabase(currentUser, "push"), remaining);
+        setSyncStatus("Aguardando sincronização");
+        return;
+      }
       await saveUserAppData(currentUser.id, next);
       syncReadyRef.current = true;
+      syncPendingSinceRef.current = 0;
+      localStorage.removeItem(SYNC_PENDING_SINCE_KEY);
       syncRetryCountRef.current = 0;
       if (syncRetryTimerRef.current) window.clearTimeout(syncRetryTimerRef.current);
       setSyncStatus("Sincronizado");
@@ -1073,9 +1128,13 @@ export default function TrainingPlanApp() {
   }, []);
   useEffect(() => {
     if (!user || !syncReadyRef.current) return;
-    setSyncStatus("Sincronizando");
+    const pendingSince = syncPendingSinceRef.current || Date.now();
+    syncPendingSinceRef.current = pendingSince;
+    localStorage.setItem(SYNC_PENDING_SINCE_KEY, String(pendingSince));
+    const remaining = Math.max(0, SYNC_AFTER_MS - (Date.now() - pendingSince));
+    setSyncStatus("Aguardando sincronização");
     if (syncTimerRef.current) window.clearTimeout(syncTimerRef.current);
-    syncTimerRef.current = window.setTimeout(() => void syncWithSupabase(user, "push"), 900);
+    syncTimerRef.current = window.setTimeout(() => void syncWithSupabase(user, "push"), remaining);
     return () => {
       if (syncTimerRef.current) window.clearTimeout(syncTimerRef.current);
     };
@@ -1307,8 +1366,9 @@ export default function TrainingPlanApp() {
   }
 
   const doneCount = visibleExercises.filter(({ plan, exercise }) => getLog(plan, exercise)?.done).length;
-  const increaseCount = Object.values(logs).filter(shouldIncrease).length;
   const totalCount = visibleExercises.length;
+  const todayDoneCount = todayExercises.filter(({ plan, exercise }) => getLog(plan, exercise)?.done).length;
+  const todayPlan = filteredPlans.find((plan) => plan.scheduledDate === todayDateKey());
 
   function buildWeeklySummary(block: number): WeeklySummary {
     const summaryWeekId = weekIds[block % Math.max(weekIds.length, 1)] ?? "A";
@@ -1449,7 +1509,7 @@ export default function TrainingPlanApp() {
   }
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden bg-[radial-gradient(circle_at_top_left,rgba(201,182,255,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(244,166,193,0.12),transparent_28%),linear-gradient(180deg,#141218,#17131d)] text-zinc-100">
+    <div className="min-h-screen w-full overflow-x-hidden bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.18),transparent_32%),radial-gradient(circle_at_top_right,rgba(109,40,217,0.16),transparent_28%),linear-gradient(180deg,#000000,#07020d_55%,#000000)] text-zinc-100">
       <header className="cute-topbar sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur">
         <div className="mx-auto grid w-full max-w-7xl gap-3 px-3 py-3 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center justify-between gap-3">
@@ -1522,15 +1582,14 @@ export default function TrainingPlanApp() {
       <main className="mx-auto grid w-full max-w-7xl gap-8 px-3 py-8 sm:px-6 lg:px-8">
         {appView === "training" ? <>
         <section className="cute-hero grid gap-5 p-5 sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="cute-eyebrow">Começar treino</p><h2 className="mt-1 text-2xl font-black leading-tight text-zinc-50 sm:text-3xl">{activePlan.name} · Semana {week}</h2><p className="mt-2 text-sm leading-6 text-zinc-400">Use "Só hoje" para focar no treino do dia, ou busque qualquer exercício da semana selecionada.</p></div><button onClick={startWorkout} className="cute-button cute-button-primary px-5"><CalendarDays className="h-4 w-4" /> Começar treino</button></div>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="cute-eyebrow">Seu foco agora</p><h2 className="mt-1 text-2xl font-black leading-tight text-zinc-50 sm:text-3xl">{todayPlan ? todayPlan.title : "Seu próximo treino"}</h2><p className="mt-2 text-sm leading-6 text-zinc-400">{todayExercises.length ? `${todayDoneCount} de ${todayExercises.length} exercícios concluídos hoje.` : "Escolha um dia para começar seu próximo treino."}</p></div><button onClick={startWorkout} className="cute-button cute-button-primary px-5"><Play className="h-4 w-4" /> {todayExercises.length ? "Continuar treino" : "Ver próximo treino"}</button></div>
           <div className="cute-progress">
             <div className="cute-progress-fill" style={{ width: `${totalCount ? Math.round((doneCount / totalCount) * 100) : 0}%` }} />
           </div>
           <div className="flex flex-wrap gap-2">
-            <StatBadge icon={<CheckCircle2 className="h-4 w-4" />} title="Feitos" value={`${doneCount}/${totalCount}`} tooltip="Exercícios marcados como feitos na tela atual." />
-            <StatBadge icon={<Activity className="h-4 w-4" />} title="Progressão" value={`${increaseCount}`} tooltip="Registros que bateram 3x15 e sugerem aumento de carga." />
-            <StatBadge icon={<TimerReset className="h-4 w-4" />} title="Descanso" value="60-120s" tooltip="Timer por exercício, com presets rápidos." />
-            <StatBadge icon={<RotateCcw className="h-4 w-4" />} title="Plano" value={activePlan.name} tooltip={`Semana automática alterna entre ${weekIds.join(", ") || "A"}; ocorrência atual: ${weekBlock + 1}.`} />
+            <StatBadge icon={<CheckCircle2 className="h-4 w-4" />} title="Hoje" value={`${todayDoneCount}/${todayExercises.length || 0}`} tooltip="Exercícios concluídos no treino de hoje." />
+            <StatBadge icon={<Activity className="h-4 w-4" />} title="Na semana" value={`${doneCount}/${totalCount}`} tooltip="Exercícios concluídos na semana exibida." />
+            <StatBadge icon={<Sparkles className="h-4 w-4" />} title="Próximo passo" value={todayExercises.length ? "Treinar" : "Planejar"} tooltip="Use o botão principal para ir direto ao próximo exercício." />
           </div>
           <div className="flex flex-wrap gap-2">
             <button onClick={() => setQuickLogModal("cardio")} className="cute-button cute-button-secondary"><Activity className="h-4 w-4" /> Registrar cardio</button>

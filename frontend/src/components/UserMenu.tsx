@@ -1,7 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 import { LogOut, RefreshCcw, UserCircle } from "lucide-react";
 
-type SyncStatus = "Local" | "Sincronizado" | "Sincronizando" | "Erro ao sincronizar";
+type SyncStatus = "Local" | "Aguardando sincronização" | "Sincronizado" | "Sincronizando" | "Erro ao sincronizar";
 
 type Props = {
   user: User | null;
@@ -12,12 +12,12 @@ type Props = {
 };
 
 export function UserMenu({ user, syncStatus, onOpenAuth, onSignOut, onSyncNow }: Props) {
-  const statusClass = syncStatus === "Sincronizado" ? "text-emerald-200 ring-emerald-800 bg-emerald-950/40" : syncStatus === "Sincronizando" ? "text-blue-200 ring-blue-800 bg-blue-950/40" : syncStatus === "Erro ao sincronizar" ? "text-rose-200 ring-rose-800 bg-rose-950/40" : "text-zinc-300 ring-zinc-700 bg-zinc-950";
-  const statusTitle = syncStatus === "Erro ao sincronizar" ? "Erro ao sincronizar. O app salva localmente e tenta reenviar sozinho quando a conexão voltar." : syncStatus;
+  const statusClass = syncStatus === "Sincronizado" ? "text-emerald-200 ring-emerald-800 bg-emerald-950/40" : syncStatus === "Sincronizando" ? "text-blue-200 ring-blue-800 bg-blue-950/40" : syncStatus === "Aguardando sincronização" ? "text-violet-200 ring-violet-800 bg-violet-950/40" : syncStatus === "Erro ao sincronizar" ? "text-rose-200 ring-rose-800 bg-rose-950/40" : "text-zinc-300 ring-zinc-700 bg-zinc-950";
+  const statusTitle = syncStatus === "Aguardando sincronização" ? "Alterações ficam neste aparelho por 24 horas antes de serem enviadas ao Supabase." : syncStatus === "Erro ao sincronizar" ? "Erro ao sincronizar. O app salva localmente e tenta reenviar sozinho quando a conexão voltar." : syncStatus;
   return (
     <div className="relative flex items-center gap-2">
       <span title={statusTitle} className={`cute-badge hidden md:inline-flex ${statusClass}`}>{syncStatus === "Erro ao sincronizar" ? "Tentando novamente" : syncStatus}</span>
-      <span title={statusTitle} className={`inline-flex h-2.5 w-2.5 rounded-full ring-2 ring-zinc-950 md:hidden ${syncStatus === "Sincronizado" ? "bg-emerald-400" : syncStatus === "Sincronizando" ? "bg-blue-400" : syncStatus === "Erro ao sincronizar" ? "bg-rose-400" : "bg-zinc-500"}`} />
+      <span title={statusTitle} className={`inline-flex h-2.5 w-2.5 rounded-full ring-2 ring-zinc-950 md:hidden ${syncStatus === "Sincronizado" ? "bg-emerald-400" : syncStatus === "Sincronizando" ? "bg-blue-400" : syncStatus === "Aguardando sincronização" ? "bg-violet-400" : syncStatus === "Erro ao sincronizar" ? "bg-rose-400" : "bg-zinc-500"}`} />
       {user ? (
         <details className="group relative">
           <summary className="list-none">
@@ -28,7 +28,7 @@ export function UserMenu({ user, syncStatus, onOpenAuth, onSignOut, onSyncNow }:
           </summary>
           <div className="cute-card-elevated absolute right-0 z-50 mt-3 w-64 rounded-2xl border border-zinc-800 bg-zinc-950 p-2 shadow-2xl shadow-black/50">
             <p className="truncate px-3 py-2 text-xs font-bold text-zinc-500">{user.email}</p>
-            <button onClick={onSyncNow} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-bold text-zinc-200 hover:bg-zinc-900"><RefreshCcw className="h-4 w-4" /> Sincronizar agora</button>
+            <button onClick={onSyncNow} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-bold text-zinc-200 hover:bg-zinc-900"><RefreshCcw className="h-4 w-4" /> Verificar sincronização</button>
             <button onClick={onSignOut} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-bold text-zinc-200 hover:bg-zinc-900"><LogOut className="h-4 w-4" /> Sair</button>
           </div>
         </details>

@@ -2,27 +2,27 @@
 
 :root {
   color-scheme: dark;
-  --cute-bg: #14121a;
-  --cute-bg-soft: #1b1723;
-  --cute-card: #241d2e;
-  --cute-card-strong: #2a2135;
-  --cute-card-deep: #15101b;
-  --cute-border: #3a3046;
-  --cute-border-soft: #51425f;
-  --cute-text: #fff7fb;
-  --cute-text-soft: #d7cadc;
-  --cute-muted: #b9aabe;
-  --cute-muted-2: #9e91a8;
-  --cute-pink: #f4a6c1;
-  --cute-pink-strong: #ec6fa8;
-  --cute-lavender: #c9b6ff;
-  --cute-violet: #a98bff;
+  --cute-bg: #000000;
+  --cute-bg-soft: #09050f;
+  --cute-card: #100719;
+  --cute-card-strong: #180a26;
+  --cute-card-deep: #050208;
+  --cute-border: #301548;
+  --cute-border-soft: #512477;
+  --cute-text: #fbf8ff;
+  --cute-text-soft: #ded2f2;
+  --cute-muted: #b9a9cc;
+  --cute-muted-2: #8d7ca3;
+  --cute-pink: #c394ff;
+  --cute-pink-strong: #a65cff;
+  --cute-lavender: #9a6cff;
+  --cute-violet: #7d42d8;
   --cute-peach: #ffc8a2;
   --cute-mint: #9ed8b5;
   --cute-blue: #a9d6ff;
   --cute-teal: #9ee7da;
-  --cute-shadow: 0 18px 60px rgba(7, 5, 10, 0.42);
-  --cute-shadow-soft: 0 10px 28px rgba(7, 5, 10, 0.28);
+  --cute-shadow: 0 18px 60px rgba(0, 0, 0, 0.72);
+  --cute-shadow-soft: 0 10px 28px rgba(0, 0, 0, 0.52);
 }
 
 html,
@@ -40,10 +40,10 @@ body,
 
 body {
   background:
-    radial-gradient(circle at 8% -8%, rgba(244, 166, 193, 0.2), transparent 32%),
-    radial-gradient(circle at 88% 10%, rgba(201, 182, 255, 0.18), transparent 30%),
-    radial-gradient(circle at 84% 92%, rgba(169, 214, 255, 0.12), transparent 34%),
-    linear-gradient(180deg, var(--cute-bg), #18131f 52%, #14121a);
+    radial-gradient(circle at 8% -8%, rgba(166, 92, 255, 0.24), transparent 32%),
+    radial-gradient(circle at 88% 10%, rgba(116, 63, 214, 0.22), transparent 30%),
+    radial-gradient(circle at 84% 92%, rgba(92, 45, 168, 0.16), transparent 34%),
+    linear-gradient(180deg, var(--cute-bg), #06020c 52%, var(--cute-bg));
   color: var(--cute-text);
   text-rendering: geometricPrecision;
 }
@@ -399,13 +399,13 @@ header {
 .cute-hero {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(244, 166, 193, 0.24);
+  border: 1px solid rgba(139, 92, 246, 0.42);
   border-radius: 2rem;
   background:
-    radial-gradient(circle at 85% 18%, rgba(244, 166, 193, 0.18), transparent 26%),
-    radial-gradient(circle at 10% 100%, rgba(158, 216, 181, 0.12), transparent 28%),
-    linear-gradient(135deg, rgba(42, 33, 53, 0.98), rgba(30, 24, 39, 0.95));
-  box-shadow: 0 22px 70px rgba(13, 8, 19, 0.48);
+    radial-gradient(circle at 85% 18%, rgba(139, 92, 246, 0.32), transparent 30%),
+    radial-gradient(circle at 10% 100%, rgba(91, 33, 182, 0.2), transparent 32%),
+    linear-gradient(135deg, rgba(18, 6, 32, 0.98), rgba(3, 1, 7, 0.98));
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.72);
 }
 
 .cute-hero > * {
@@ -583,8 +583,8 @@ header {
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
   background:
-    linear-gradient(180deg, rgba(20, 18, 26, 0.94), rgba(20, 18, 26, 0.82)),
-    radial-gradient(circle at 12% 0%, rgba(244, 166, 193, 0.12), transparent 36%) !important;
+    linear-gradient(180deg, rgba(0, 0, 0, 0.96), rgba(4, 1, 8, 0.9)),
+    radial-gradient(circle at 12% 0%, rgba(139, 92, 246, 0.18), transparent 36%) !important;
 }
 
 .settings-details > button {
@@ -691,6 +691,35 @@ header {
   transform: translateY(-1px);
   border-color: rgba(244, 166, 193, 0.32) !important;
   box-shadow: 0 16px 38px rgba(7, 5, 10, 0.34) !important;
+}
+
+/* O treino é uma sequência de ações; os cartões evitam a parede de tabela. */
+.cute-day-card {
+  box-shadow: 0 14px 42px rgba(7, 5, 10, 0.24);
+}
+
+.cute-day-card:has(.cute-exercise-card) .cute-day-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.cute-exercise-card {
+  min-height: 0;
+}
+
+.cute-exercise-card:focus-within {
+  border-color: rgba(244, 166, 193, 0.72) !important;
+  box-shadow: 0 0 0 3px rgba(244, 166, 193, 0.12), var(--cute-shadow-soft) !important;
+}
+
+.cute-exercise-card input::placeholder {
+  color: #b9aabe;
+  opacity: 1;
+}
+
+@media (min-width: 1024px) {
+  .cute-exercise-card {
+    padding: 1.35rem !important;
+  }
 }
 
 @media (max-width: 640px) {

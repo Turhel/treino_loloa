@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Laboratório · Treino Loloa</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  </head>
+  <body class="lab-body">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="/"><span class="brand-mark">L</span><span>LOLOA <b>LAB</b></span></a>
+        <nav aria-label="Navegação do laboratório">
+          <a class="nav-item active" href="/laboratorio"><span>◫</span> Laboratório</a>
+          <span class="nav-item muted"><span>◌</span> Blocos</span>
+          <span class="nav-item muted"><span>↗</span> Progresso</span>
+          <span class="nav-item muted"><span>⚙</span> Ajustes</span>
+        </nav>
+        <div class="sidebar-note"><span class="pulse"></span> motor local<br><small>Python · sem cronograma</small></div>
+      </aside>
+
+      <main class="workspace">
+        <header class="topline"><p>LABORATÓRIO / 001</p><span>motor adaptativo</span></header>
+        <section class="block-hero">
+          <div>
+            <p class="eyebrow">Bloco ativo · base</p>
+            <h1>Construir antes de acelerar.</h1>
+            <p class="intro">O bloco avança quando cada movimento recebe exposições suficientes. Não existe treino atrasado — apenas o próximo passo útil.</p>
+          </div>
+          <div class="block-count"><strong>02</strong><span>de 06<br>exposições</span></div>
+        </section>
+        <div class="progress-line" aria-label="Progresso do bloco: 2 de 6 exposições"><i></i><i></i><i class="pending"></i><i class="pending"></i><i class="pending"></i><i class="pending"></i></div>
+
+        <section class="workspace-grid">
+          <section class="session-zone">
+            <div class="section-heading"><div><p class="eyebrow">Próxima exposição</p><h2>Remada com apoio</h2></div><span class="counter">0 / 3 no bloco</span></div>
+            <p class="movement-note">O motor escolheu este movimento porque ele é o menos atendido do bloco atual.</p>
+            <form id="intensity-form" class="attempt-form">
+              <div class="fields">
+                <label>Carga<input name="load_kg" type="number" min="0" step="0.5" value="80"><span>kg</span></label>
+                <label>Repetições<input name="reps" type="number" min="0" value="10"></label>
+                <label>Meta<input name="target_reps" type="number" min="1" value="10"></label>
+                <label>Margem<input name="rir" type="number" min="0" value="2"><span>RIR</span></label>
+                <label>Dor<input name="pain" type="number" min="0" max="3" value="0"><span>0–3</span></label>
+              </div>
+              <button>Testar decisão <span>→</span></button>
+            </form>
+          </section>
+
+          <aside class="decision-zone">
+            <p class="eyebrow">Decisão para a próxima vez</p>
+            <output id="result" class="result" aria-live="polite"><strong>Aguardando tentativa</strong><span>Registre o que aconteceu; o motor responde ao seu desempenho, não a um calendário.</span></output>
+            <div class="rules"><p>O que o motor protege</p><span>Dor tem prioridade</span><span>Falha não vira punição</span><span>Progressão é gradual</span></div>
+          </aside>
+        </section>
+      </main>
+    </div>
+    <script src="{{ url_for('static', filename='laboratorio.js') }}"></script>
+  </body>
+</html>
