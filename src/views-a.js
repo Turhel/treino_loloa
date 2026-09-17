@@ -96,10 +96,10 @@ function recentPRs(n) {
 function weighForm() {
   const last = sortedWeights().slice(-1)[0];
   return `<form class="row wrap" data-form="weigh" style="gap:8px;align-items:flex-end">
-    <div class="field" style="width:150px"><label>Date</label><input class="inp" type="date" name="d" value="${todayISO()}" required></div>
-    <div class="field" style="width:110px"><label>Weight (lb)</label><input class="inp" type="number" step="0.1" min="80" max="500" name="w" placeholder="${last ? last.w : S.settings.startWeight}" required></div>
-    <div class="field" style="width:110px"><label>Body fat %</label><input class="inp" type="number" step="0.1" min="3" max="60" name="bf" placeholder="optional"></div>
-    <button class="btn primary" type="submit">${icon('plus')}Log</button></form>`;
+    <div class="field" style="width:150px"><label>Data</label><input class="inp" type="date" name="d" value="${todayISO()}" required></div>
+    <div class="field" style="width:110px"><label>Peso (kg)</label><input class="inp" type="number" step="0.1" min="30" max="300" name="w" placeholder="${last ? last.w : S.settings.startWeight}" required></div>
+    <div class="field" style="width:110px"><label>GC %</label><input class="inp" type="number" step="0.1" min="3" max="60" name="bf" placeholder="opcional"></div>
+    <button class="btn primary" type="submit">${icon('plus')}Registrar</button></form>`;
 }
 
 /* ---------------- CALENDAR ---------------- */
@@ -207,7 +207,7 @@ function libraryHTML() {
   return `<aside class="card lib"><div class="row"><h3 style="flex:1">Library</h3><div class="seg"><button class="${UI.libTab === 'workouts' ? 'on' : ''}" data-act="lib-tab" data-v="workouts">Workouts</button><button class="${UI.libTab === 'meals' ? 'on' : ''}" data-act="lib-tab" data-v="meals">Meals</button></div></div>
     ${UI.libTab === 'meals' ? `<div class="filters" style="margin-top:10px">${['all', 'breakfast', 'lunch', 'dinner', 'snack'].map(f => `<button class="${UI.libFilter === f ? 'on' : ''}" data-act="lib-filter" data-v="${f}">${f[0].toUpperCase() + f.slice(1)}</button>`).join('')}</div>
       <input class="inp" style="margin-top:8px;height:32px" placeholder="Search meals…" data-input="libq" value="${esc(UI.libQ)}">` : '<div class="tiny muted" style="margin-top:8px">Drop a session on any day. Exercise variations follow that day’s week in the rotation.</div>'}
-    <div class="lib-list">${list}</div><div class="trash" data-drop="trash">${icon('trash')}Drag here to remove</div></aside>`;
+    <div class="lib-list">${list}</div><div class="trash" data-drop="trash">${icon('trash')}Remove from this day</div></aside>`;
 }
 
 /* ---------- drag & drop ---------- */
@@ -294,7 +294,7 @@ function viewDay(date) {
         <button class="btn ${S.done[date] ? 'primary' : ''}" data-act="toggle-done" data-date="${date}">${icon('check')}${S.done[date] ? 'Completed' : 'Mark complete'}</button><button class="btn primary" data-act="wo-open" data-d="${date}" title="One exercise at a time, with the rest timer">${icon('play')}Workout mode</button></div>
       <div class="scroll-x"><table class="ex-table"><thead><tr><th>#</th><th>Exercise</th><th>Target</th><th>Log sets (lb × reps)</th></tr></thead><tbody>
       ${rows.map((r, i) => exRowHTML(date, r, i)).join('')}</tbody></table></div>
-      <div class="note" style="margin-top:12px">${icon('info')}<span><b>RIR</b> = reps in reserve (how many more clean reps you could do). Strength sets <span class="type-s">S</span>: rest 2–3 min. Hypertrophy sets <span class="type-h">H</span>: rest 60–120 s. Hover any exercise for step-by-step form.</span></div></div>`;
+      <div class="note" style="margin-top:12px">${icon('info')}<span><b>RIR</b> = rep. em reserva (quantas rep. limpas você ainda conseguiria fazer). Séries de força <span class="type-s">F</span>: descanso de 2–3 min. Séries de hipertrofia <span class="type-h">H</span>: descanso de 60–120 s. Passe o cursor sobre um exercício para ver a execução passo a passo.</span></div></div>`;
   } else {
     woCard = `<div class="card"><div class="card-h"><h2>Rest &amp; recover</h2></div><div class="note acc">${icon('info')}<span>No lifting today. Walk 8–10k steps, get 7–9 h of sleep and keep protein on target. Today’s calorie target is ${fmt(S.settings.sessionKcal)} kcal lower than a training day, and portions are resized to match.</span></div>
       <div class="row wrap" style="margin-top:14px"><span class="small sub">Add a session:</span><select class="inp" data-input="day-wo" data-date="${date}" style="max-width:280px">${opts}</select></div></div>`;
@@ -334,12 +334,12 @@ function exRowHTML(date, r, i) {
     <td><div class="sets">${sets}</div>${hintHTML(date, r, sug)}</td></tr>`;
 }
 function setInputsHTML(date, r) {
-  const logs = (S.logs[date] || {})[r.ex.id] || []; const wl = r.ex.assist ? 'assist' : isBW(r.ex.id) ? '+lb' : 'lb';
+  const logs = (S.logs[date] || {})[r.ex.id] || []; const wl = r.ex.assist ? 'assist.' : isBW(r.ex.id) ? '+kg' : 'kg';
   return Array.from({ length: r.sets }, (_, k) => { const s = logs[k] || {};
     return `<div class="set ${s.r > 0 ? 'logged' : ''}"><span class="n">${k + 1}</span><input class="w num" type="number" inputmode="decimal" step="2.5" min="0" placeholder="${wl}" value="${s.w != null ? esc(s.w) : ''}" data-log="${date}|${r.ex.id}|${k}|w" aria-label="${esc(r.ex.name)} set ${k + 1} weight"><span class="x">×</span><input class="r num" type="number" inputmode="numeric" min="0" max="100" placeholder="reps" value="${s.r != null ? esc(s.r) : ''}" data-log="${date}|${r.ex.id}|${k}|r" aria-label="${esc(r.ex.name)} set ${k + 1} reps"></div>`; }).join('');
 }
 const swapBtnHTML = (date, r, back) => `<button type="button" class="swap-btn ${r.daySwap ? 'on' : ''}" data-act="swap-day" data-date="${date}" data-i="${r.i}"${back ? ` data-back="${back}"` : ''} title="Swap ${esc(r.ex.name)} for this day" aria-label="Swap ${esc(r.ex.name)} for this day">${icon('loop')}</button>`;
-const typeBadge = r => `<span class="type-${r.type.toLowerCase()}">${r.type === 'S' ? 'S' : r.type === 'T' ? 'TEST' : 'H'}</span>`;
+const typeBadge = r => `<span class="type-${r.type.toLowerCase()}">${r.type === 'S' ? 'F' : r.type === 'T' ? 'TEST' : 'H'}</span>`;
 const hintHTML = (date, r, sug) => `<div class="hint" id="hint-${r.ex.id}">${prBadge(date, r.ex.id)}${sug ? icon('zap') + `<span>${esc(sug.text)}</span>` : `<span class="muted">First time — pick a weight you can do for the target reps at RIR ${esc(r.rir)}.</span>`}</div>`;
 /* sets logged (reps entered) for a session, counting only the planned sets */
 function loggedSets(date, rows) { let done = 0, total = 0; rows.forEach(r => { const l = (S.logs[date] || {})[r.ex.id] || []; total += r.sets; for (let k = 0; k < r.sets; k++) if (l[k] && +l[k].r > 0) done++; }); return { done, total }; }

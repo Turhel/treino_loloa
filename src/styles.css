@@ -267,6 +267,8 @@ body.dragging .slot-empty.drop-ok { border-color: var(--accent-2); background: v
   display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; font-size: 12.5px; transition: all .15s;
 }
 .trash svg { width: 16px; height: 16px; }
+.lib > .trash { display: none; }
+body.dragging-cal .lib > .trash { display: flex; }
 body.dragging-cal .trash { border-color: var(--bad); color: var(--bad); }
 .trash.drop-ok { background: color-mix(in srgb, var(--bad) 14%, transparent); }
 .filters { display: flex; gap: 5px; flex-wrap: wrap; }

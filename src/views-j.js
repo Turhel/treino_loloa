@@ -26,7 +26,7 @@ const CBAR = { 0: '0000011', 1: '0000110', 2: '0001001', 3: '1100000', 4: '00100
 Object.keys(CBAR).forEach(k => { CBAR[k] = CBAR[k].split('').map(Number); });
 const ITF = ['00110', '10001', '01001', '11000', '00101', '10100', '01100', '00011', '10010', '01010'].map(p => p.split('').map(Number));
 
-const GYM_FMTS = [['auto', 'Automatic'], ['code128', 'Code 128'], ['code39', 'Code 39'], ['codabar', 'Codabar'], ['itf', 'Interleaved 2 of 5'], ['ean13', 'EAN-13'], ['upca', 'UPC-A'], ['ean8', 'EAN-8'], ['upce', 'UPC-E'], ['qr', 'QR code']];
+const GYM_FMTS = [['auto', 'Automático'], ['code128', 'Code 128'], ['code39', 'Code 39'], ['codabar', 'Codabar'], ['itf', 'Intercalado 2 de 5'], ['ean13', 'EAN-13'], ['upca', 'UPC-A'], ['ean8', 'EAN-8'], ['upce', 'UPC-E'], ['qr', 'Código QR']];
 const fmtName = f => (GYM_FMTS.find(x => x[0] === f) || [, f])[1];
 const gtinOk = c => /^\d+$/.test(c) && bcCheck(c);
 // which barcode type a typed number becomes when the type is left on Automatic
@@ -38,7 +38,7 @@ function gymAutoFmt(code) {
 }
 // null when the code can be drawn in that type, otherwise why not
 function gymCodeProblem(code, fmt) {
-  if (!code) return 'Enter the number on the card.';
+  if (!code) return 'Digite o número do cartão.';
   if (fmt === 'code128') return /^[\x20-\x7e]{1,80}$/.test(code) ? null : 'Code 128 takes letters, numbers and common symbols (up to 80).';
   if (fmt === 'code39') return /^[0-9A-Z\-. $/+%]{1,60}$/.test(code) ? null : 'Code 39 takes capital letters, numbers, spaces and - . $ / + %.';
   if (fmt === 'codabar') return /^[A-D]?[0-9\-$:/.+]{1,60}[A-D]?$/.test(code) ? null : 'Codabar takes numbers and - $ : / . +, optionally between A–D start and stop letters.';
@@ -254,31 +254,31 @@ let GC = null;            // card being added or edited: { id?, name, code, fmt 
 function gymCardModal(draft) {
   GC = Object.assign({ name: '', code: '', fmt: 'auto' }, draft || {});
   const edit = GC.id && gymCards().some(c => c.id === GC.id);
-  modal(`<div class="gc-m"><div class="row"><h2 style="flex:1">${edit ? 'Edit gym card' : 'Add a gym card'}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Close">${icon('x')}</button></div>
-    <div class="tiny muted" style="margin:2px 0 12px">Scan the barcode on your membership card or key tag, or type the number printed under it. The app shows it on the dashboard so you can check in with your phone.</div>
+  modal(`<div class="gc-m"><div class="row"><h2 style="flex:1">${edit ? 'Editar cartão da academia' : 'Adicionar cartão da academia'}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
+    <div class="tiny muted" style="margin:2px 0 12px">Escaneie o código do cartão ou chaveiro da academia, ou digite o número impresso abaixo dele. O app o exibirá no painel para facilitar sua entrada.</div>
     <form data-form="gym-card" class="grid" style="gap:12px">
-      <div class="field"><label>Name</label><input class="inp" name="name" value="${esc(GC.name)}" maxlength="40" placeholder="e.g. Iron Works Gym" autocomplete="off"></div>
-      <div class="field"><label>Card number</label><div class="row" style="gap:8px"><input class="inp" name="code" id="gc-code" data-input="gc-code" value="${esc(GC.code)}" maxlength="200" placeholder="The number under the barcode" autocomplete="off" style="flex:1;min-width:0">
-        <button type="button" class="btn" data-act="gym-scan">${icon('scan')}Scan card</button></div></div>
-      <div class="field"><label>Barcode type</label><select class="inp" name="fmt" data-input="gc-fmt">${GYM_FMTS.map(([k, l]) => `<option value="${k}" ${GC.fmt === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>
-        <span class="tiny muted">Scanning sets this for you. When typing, Automatic works with most gym scanners; if check-in fails, pick the type your card uses.</span></div>
+      <div class="field"><label>Nome</label><input class="inp" name="name" value="${esc(GC.name)}" maxlength="40" placeholder="Ex.: Minha academia" autocomplete="off"></div>
+      <div class="field"><label>Número do cartão</label><div class="row" style="gap:8px"><input class="inp" name="code" id="gc-code" data-input="gc-code" value="${esc(GC.code)}" maxlength="200" placeholder="Número abaixo do código" autocomplete="off" style="flex:1;min-width:0">
+        <button type="button" class="btn" data-act="gym-scan">${icon('scan')}Escanear cartão</button></div></div>
+      <div class="field"><label>Tipo de código</label><select class="inp" name="fmt" data-input="gc-fmt">${GYM_FMTS.map(([k, l]) => `<option value="${k}" ${GC.fmt === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>
+        <span class="tiny muted">O escaneamento identifica o tipo automaticamente. Ao digitar, a opção Automático funciona com a maioria dos leitores.</span></div>
       <div class="gc-prev" id="gc-prev">${gymPreviewHTML()}</div>
-      <div class="row wrap" style="justify-content:flex-end;gap:8px">${edit ? `<button type="button" class="btn danger" data-act="gym-del" data-id="${GC.id}" style="margin-right:auto">${icon('trash')}Delete</button>` : ''}<button type="button" class="btn" data-act="close-modal">Cancel</button><button class="btn primary" type="submit">${edit ? 'Save' : 'Add card'}</button></div></form></div>`, 'gc-modal');
+      <div class="row wrap" style="justify-content:flex-end;gap:8px">${edit ? `<button type="button" class="btn danger" data-act="gym-del" data-id="${GC.id}" style="margin-right:auto">${icon('trash')}Excluir</button>` : ''}<button type="button" class="btn" data-act="close-modal">Cancelar</button><button class="btn primary" type="submit">${edit ? 'Salvar' : 'Adicionar cartão'}</button></div></form></div>`, 'gc-modal');
 }
 function gymResolve(code, fmt) { code = String(code || '').trim(); const f = fmt === 'auto' ? gymAutoFmt(code) : fmt; return { code: f === 'code39' ? code.toUpperCase() : code, fmt: f }; }
 function gymPreviewHTML() {
-  const r = gymResolve(GC.code, GC.fmt); if (!r.code) return '<div class="tiny muted gc-empty">The barcode preview shows here.</div>';
+  const r = gymResolve(GC.code, GC.fmt); if (!r.code) return '<div class="tiny muted gc-empty">A prévia do código aparecerá aqui.</div>';
   const bad = gymCodeProblem(r.code, r.fmt); if (bad) return `<div class="note warn">${icon('info')}<span>${esc(bad)}</span></div>`;
-  return `<div class="gc-code ${r.fmt === 'qr' ? 'qr' : ''}">${barcodeSVG(r.code, r.fmt)}</div><div class="tiny muted" style="text-align:center;margin-top:4px">${esc(fmtName(r.fmt))}${GC.fmt === 'auto' ? ' (automatic)' : ''}</div>`;
+  return `<div class="gc-code ${r.fmt === 'qr' ? 'qr' : ''}">${barcodeSVG(r.code, r.fmt)}</div><div class="tiny muted" style="text-align:center;margin-top:4px">${esc(fmtName(r.fmt))}${GC.fmt === 'auto' ? ' (automático)' : ''}</div>`;
 }
 function gymSave(form) {
   const fd = new FormData(form); const r = gymResolve(fd.get('code'), fd.get('fmt'));
   const bad = gymCodeProblem(r.code, r.fmt); if (bad) { toast(bad); return; }
-  const name = String(fd.get('name') || '').trim().slice(0, 40) || 'Gym card';
+  const name = String(fd.get('name') || '').trim().slice(0, 40) || 'Cartão da academia';
   S.gymCards = gymCards().slice(); const cur = GC.id && S.gymCards.find(c => c.id === GC.id);
   if (cur) Object.assign(cur, { name, code: r.code, fmt: r.fmt });
   else { const c = { id: 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name, code: r.code, fmt: r.fmt, added: todayISO() }; S.gymCards.push(c); if (!S.gymActive || S.gymCards.length === 1) S.gymActive = c.id; }
-  saveState(); GC = null; closeModal(); render(); toast(cur ? 'Gym card saved' : `${name} added — it’s on your dashboard`);
+  saveState(); GC = null; closeModal(); render(); toast(cur ? 'Cartão da academia salvo' : `${name} adicionado — ele está no seu painel`);
 }
 function gymScanned(code, fmt) {
   const d = Object.assign({}, (SCN && SCN.draft) || GC || {}, { code, fmt: fmt || gymAutoFmt(code) }); scanStop(); SCN = null;
@@ -289,9 +289,9 @@ function gymScanned(code, fmt) {
 // the dashboard panel
 function gymPanelHTML() {
   const cards = gymCards(); const c = gymActive();
-  const head = `<div class="card-h"><h2>${icon('dumbbell')}Gym card</h2>${cards.length > 1 ? `<select class="inp gc-pick" data-input="gc-pick" aria-label="Choose a card">${cards.map(x => `<option value="${x.id}" ${x === c ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>` : ''}<a class="btn sm ghost" href="#/settings" data-act="gym-manage">Manage</a></div>`;
-  if (!c) return `<div class="card gym-card">${head}<div class="empty-state" style="padding:14px 6px">${icon('scan')}<div>Add your membership card and check in with your phone.</div><button class="btn primary" data-act="gym-add" style="margin-top:10px">${icon('plus')}Add gym card</button></div></div>`;
-  return `<div class="card gym-card">${head}<button type="button" class="gc-show ${c.fmt === 'qr' ? 'qr' : ''}" data-act="gym-full" data-id="${c.id}" title="Show full screen for the scanner">${barcodeSVG(c.code, c.fmt)}</button>
+  const head = `<div class="card-h"><h2>${icon('dumbbell')}Cartão da academia</h2>${cards.length > 1 ? `<select class="inp gc-pick" data-input="gc-pick" aria-label="Escolher um cartão">${cards.map(x => `<option value="${x.id}" ${x === c ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>` : ''}<a class="btn sm ghost" href="#/settings" data-act="gym-manage">Gerenciar</a></div>`;
+  if (!c) return `<div class="card gym-card">${head}<div class="empty-state" style="padding:14px 6px">${icon('scan')}<div>Adicione seu cartão de acesso e entre na academia usando o celular.</div><button class="btn primary" data-act="gym-add" style="margin-top:10px">${icon('plus')}Adicionar cartão</button></div></div>`;
+  return `<div class="card gym-card">${head}<button type="button" class="gc-show ${c.fmt === 'qr' ? 'qr' : ''}" data-act="gym-full" data-id="${c.id}" title="Mostrar em tela cheia para o leitor">${barcodeSVG(c.code, c.fmt)}</button>
     <div class="gc-num"><b>${esc(c.name)}</b><span class="num">${esc(gymHuman(c))}</span></div>
     <div class="row wrap" style="gap:6px;justify-content:center;margin-top:8px"><button class="btn sm primary" data-act="gym-full" data-id="${c.id}">${icon('expand')}Full screen</button></div></div>`;
 }
@@ -310,19 +310,19 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') gymFullClose
 // Settings
 function gymSettingsHTML() {
   const cards = gymCards(); const act = gymActive();
-  return `<div class="card" id="gym-cards"><div class="card-h"><h2>${icon('dumbbell')}Gym cards</h2><button class="btn sm primary" data-act="gym-add">${icon('plus')}Add card</button></div>
-    ${cards.length ? cards.map(c => `<div class="gc-row"><button type="button" class="gc-mini ${c.fmt === 'qr' ? 'qr' : ''}" data-act="gym-full" data-id="${c.id}" title="Show full screen">${barcodeSVG(c.code, c.fmt, { h: 40 })}</button>
+  return `<div class="card" id="gym-cards"><div class="card-h"><h2>${icon('dumbbell')}Cartões da academia</h2><button class="btn sm primary" data-act="gym-add">${icon('plus')}Adicionar cartão</button></div>
+    ${cards.length ? cards.map(c => `<div class="gc-row"><button type="button" class="gc-mini ${c.fmt === 'qr' ? 'qr' : ''}" data-act="gym-full" data-id="${c.id}" title="Mostrar em tela cheia">${barcodeSVG(c.code, c.fmt, { h: 40 })}</button>
       <div class="gc-t"><b>${esc(c.name)}</b><span class="tiny muted">${esc(gymHuman(c))} · ${esc(fmtName(c.fmt))}</span></div>
-      <div class="gc-acts">${c === act ? '<span class="pill acc">On dashboard</span>' : `<button class="btn sm ghost" data-act="gym-show" data-id="${c.id}">Show on dashboard</button>`}<button class="btn sm" data-act="gym-edit" data-id="${c.id}">${icon('edit')}Edit</button></div></div>`).join('')
-      : `<div class="small muted">No cards yet. Add your gym membership card to show its barcode on the dashboard${cards.length ? '' : ' — scan it or type the number'}.</div>`}
-    <div class="tiny muted" style="margin-top:10px">Cards are saved with your plan and aren’t shared with anyone you sync meals with.</div></div>`;
+      <div class="gc-acts">${c === act ? '<span class="pill acc">No painel</span>' : `<button class="btn sm ghost" data-act="gym-show" data-id="${c.id}">Mostrar no painel</button>`}<button class="btn sm" data-act="gym-edit" data-id="${c.id}">${icon('edit')}Editar</button></div></div>`).join('')
+      : `<div class="small muted">Nenhum cartão adicionado. Cadastre o cartão da academia para exibir o código no painel — escaneie ou digite o número.</div>`}
+    <div class="tiny muted" style="margin-top:10px">Os cartões são salvos com seu plano e não são compartilhados na sincronização de refeições.</div></div>`;
 }
 
 Object.assign(ACT, {
   'gym-add': () => gymCardModal(null),
   'gym-edit': el => { const c = gymCards().find(x => x.id === el.dataset.id); if (c) gymCardModal(Object.assign({}, c)); },
-  'gym-del': el => { const c = gymCards().find(x => x.id === el.dataset.id); if (!c) return; confirmBox(`Delete ${esc(c.name)}?`, 'The card comes off your dashboard. You can add it again any time.', 'Delete', () => {
-    pushUndo('delete gym card'); S.gymCards = gymCards().filter(x => x.id !== c.id); if (S.gymActive === c.id) S.gymActive = S.gymCards[0] ? S.gymCards[0].id : null; saveState(); render(); toast(`${c.name} deleted`, true); }, true); },
+  'gym-del': el => { const c = gymCards().find(x => x.id === el.dataset.id); if (!c) return; confirmBox(`Excluir ${esc(c.name)}?`, 'O cartão será removido do painel. Você poderá adicioná-lo novamente quando quiser.', 'Excluir', () => {
+    pushUndo('delete gym card'); S.gymCards = gymCards().filter(x => x.id !== c.id); if (S.gymActive === c.id) S.gymActive = S.gymCards[0] ? S.gymCards[0].id : null; saveState(); render(); toast(`${c.name} excluído`, true); }, true); },
   'gym-show': el => { S.gymActive = el.dataset.id; saveState(); render(); },
   'gym-full': el => gymFull(el.dataset.id),
   'gym-scan': () => { const f = $('#modal form[data-form="gym-card"]'); const draft = Object.assign({}, GC, f ? { name: f.name.value, code: f.code.value, fmt: f.fmt.value } : {}); openScanner('gym', null, draft); },

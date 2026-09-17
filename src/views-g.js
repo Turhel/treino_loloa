@@ -425,18 +425,18 @@ function impStartQueue() {
 /* ---------- Settings → API connections ---------- */
 function apiCardHTML() {
   if (AUTH.mode !== 'server') return '';
-  return `<div style="height:16px"></div><div class="card" id="api-card"><div class="card-h"><h2>API connections</h2></div><div id="api-body"><div class="muted small">Loading…</div></div></div>`;
+  return `<div style="height:16px"></div><div class="card" id="api-card"><div class="card-h"><h2>Conexões de API</h2></div><div id="api-body"><div class="muted small">Carregando…</div></div></div>`;
 }
 function apiBodyHTML() {
   const m = (INTEG && INTEG.mealie) || {}; const on = m.configured;
-  const status = on ? `<span class="pill acc">${icon('check')}Connected</span>` : `<span class="pill">Not connected</span>`;
-  const detail = on ? `<div class="tiny muted" style="margin-top:6px">${esc(m.url)}${m.user ? ` · signed in as ${esc(m.user)}` : ''}${m.version ? ` · Mealie ${esc(m.version)}` : ''}${m.checkedAt ? ` · checked ${ago(m.checkedAt)}` : ''}</div>` : '';
-  const head = `<div class="row wrap" style="gap:8px"><b>Mealie</b>${status}</div><div class="small sub" style="margin-top:4px">Import recipes from a Mealie server on the Foods &amp; recipes page. Everyone on this server can import from it.</div>${detail}`;
-  if (!m.canEdit) return head + `<div class="tiny muted" style="margin-top:10px">${on ? 'Managed by an administrator.' : 'An administrator can connect Mealie here.'}</div>`;
+  const status = on ? `<span class="pill acc">${icon('check')}Conectado</span>` : `<span class="pill">Não conectado</span>`;
+  const detail = on ? `<div class="tiny muted" style="margin-top:6px">${esc(m.url)}${m.user ? ` · conectado como ${esc(m.user)}` : ''}${m.version ? ` · Mealie ${esc(m.version)}` : ''}${m.checkedAt ? ` · verificado ${ago(m.checkedAt)}` : ''}</div>` : '';
+  const head = `<div class="row wrap" style="gap:8px"><b>Mealie</b>${status}</div><div class="small sub" style="margin-top:4px">Importe receitas de um servidor Mealie pela página Alimentos e receitas. Todos neste servidor poderão usá-lo.</div>${detail}`;
+  if (!m.canEdit) return head + `<div class="tiny muted" style="margin-top:10px">${on ? 'Gerenciado por um administrador.' : 'Um administrador pode conectar o Mealie aqui.'}</div>`;
   return head + `<form data-form="mealie" class="grid g2" style="gap:12px;margin-top:12px" autocomplete="off">
-      <div class="field"><label>Mealie address</label><input class="inp" name="url" value="${esc(m.url || '')}" placeholder="http://192.168.1.10:9925" inputmode="url" required><span class="tiny muted">The address you open Mealie at.</span></div>
-      <div class="field"><label>API token</label><input class="inp" name="token" type="password" autocomplete="new-password" placeholder="${m.tokenSet ? 'Saved — leave blank to keep it' : 'Paste a token'}" ${m.tokenSet ? '' : 'required'}><span class="tiny muted">In Mealie: your profile → API Tokens → create one.</span></div>
-      <div class="row wrap" style="grid-column:1/-1;gap:8px"><button class="btn primary" type="submit">Save</button><button class="btn" type="button" data-act="mealie-test">Test connection</button>${on ? `<button class="btn ghost danger" type="button" data-act="mealie-off" style="margin-left:auto">Disconnect</button>` : ''}</div>
+      <div class="field"><label>Endereço do Mealie</label><input class="inp" name="url" value="${esc(m.url || '')}" placeholder="http://192.168.1.10:9925" inputmode="url" required><span class="tiny muted">O endereço usado para abrir o Mealie.</span></div>
+      <div class="field"><label>Token da API</label><input class="inp" name="token" type="password" autocomplete="new-password" placeholder="${m.tokenSet ? 'Salvo — deixe em branco para manter' : 'Cole um token'}" ${m.tokenSet ? '' : 'required'}><span class="tiny muted">No Mealie: perfil → Tokens da API → criar.</span></div>
+      <div class="row wrap" style="grid-column:1/-1;gap:8px"><button class="btn primary" type="submit">Salvar</button><button class="btn" type="button" data-act="mealie-test">Testar conexão</button>${on ? `<button class="btn ghost danger" type="button" data-act="mealie-off" style="margin-left:auto">Desconectar</button>` : ''}</div>
       <div id="mealie-msg" class="small" style="grid-column:1/-1"></div></form>`;
 }
 async function settingsAfter() { if (AUTH.mode !== 'server') return; await loadInteg(true); const b = $('#api-body'); if (b) b.innerHTML = apiBodyHTML(); }
@@ -454,14 +454,14 @@ Object.assign(ACT, {
   're-imp-paste-show': () => { if (!RE || !RE.imp) return; RE.imp.paste = true; impRefresh(); const t = $('#re-imp-paste'); if (t) t.focus(); },
   're-imp-paste': () => { const t = $('#re-imp-paste'); if (!t || !RE) return; const n = impAddLines(t.value.split(/\n+/)); if (!n) { toast('No ingredients found in that text'); return; } RE.imp.paste = false; RE.imp.noIng = false; RE.imp.error = ''; renderRecipeEditor(); toast(`Added ${n} ingredient${n > 1 ? 's' : ''}`); },
   're-skip': () => { if (IMPQ) impNext(); else closeModal(); },
-  'mealie-test': async el => { el.disabled = true; mealieMsg(true, 'Testing…'); try { const r = await api('POST', '/api/integrations/mealie/test', mealieFormData()); mealieMsg(true, `Connected${r.user ? ' as ' + r.user : ''}${r.version ? ' · Mealie ' + r.version : ''}. Save to use it.`); } catch (e) { mealieMsg(false, e.message); } el.disabled = false; },
-  'mealie-off': () => confirmBox('Disconnect Mealie?', 'Nobody on this server will be able to import from Mealie until it’s connected again. Recipes already imported stay.', 'Disconnect', async () => { try { INTEG = { mealie: (await api('DELETE', '/api/integrations/mealie')).mealie }; IMPUI.loaded = false; IMPUI.items = []; render(); toast('Mealie disconnected'); } catch (e) { toast(e.message); } }, true)
+  'mealie-test': async el => { el.disabled = true; mealieMsg(true, 'Testando…'); try { const r = await api('POST', '/api/integrations/mealie/test', mealieFormData()); mealieMsg(true, `Conectado${r.user ? ' como ' + r.user : ''}${r.version ? ' · Mealie ' + r.version : ''}. Salve para usar.`); } catch (e) { mealieMsg(false, e.message); } el.disabled = false; },
+  'mealie-off': () => confirmBox('Desconectar o Mealie?', 'Ninguém neste servidor poderá importar do Mealie até que ele seja conectado novamente. As receitas já importadas serão mantidas.', 'Desconectar', async () => { try { INTEG = { mealie: (await api('DELETE', '/api/integrations/mealie')).mealie }; IMPUI.loaded = false; IMPUI.items = []; render(); toast('Mealie desconectado'); } catch (e) { toast(e.message); } }, true)
 });
 document.addEventListener('submit', async e => {
   const f = e.target; if (!f.dataset) return;
   if (f.dataset.form === 'imp-url') { e.preventDefault(); impFromUrl(); }
-  if (f.dataset.form === 'mealie') { e.preventDefault(); const b = f.querySelector('button[type="submit"]'); b.disabled = true; mealieMsg(true, 'Checking the connection…');
-    try { INTEG = { mealie: (await api('PUT', '/api/integrations/mealie', mealieFormData())).mealie }; IMPUI.loaded = false; IMPUI.items = []; const body = $('#api-body'); if (body) body.innerHTML = apiBodyHTML(); mealieMsg(true, 'Saved. Mealie is connected.'); toast('Mealie connected'); }
+  if (f.dataset.form === 'mealie') { e.preventDefault(); const b = f.querySelector('button[type="submit"]'); b.disabled = true; mealieMsg(true, 'Verificando a conexão…');
+    try { INTEG = { mealie: (await api('PUT', '/api/integrations/mealie', mealieFormData())).mealie }; IMPUI.loaded = false; IMPUI.items = []; const body = $('#api-body'); if (body) body.innerHTML = apiBodyHTML(); mealieMsg(true, 'Salvo. O Mealie está conectado.'); toast('Mealie conectado'); }
     catch (err) { mealieMsg(false, err.message); b.disabled = false; } }
 });
 let _impQT = null;

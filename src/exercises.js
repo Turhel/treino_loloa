@@ -6,10 +6,10 @@
 
 // Muscle regions used by the muscle-map SVG
 const REGION_LABEL = {
-  chest: 'Chest', frontDelt: 'Front delts', sideDelt: 'Side delts', rearDelt: 'Rear delts',
-  traps: 'Traps', lats: 'Lats', upperBack: 'Upper back', lowerBack: 'Lower back',
-  biceps: 'Biceps', triceps: 'Triceps', forearms: 'Forearms', abs: 'Abs', obliques: 'Obliques',
-  quads: 'Quads', hamstrings: 'Hamstrings', glutes: 'Glutes', adductors: 'Adductors', calves: 'Calves'
+  chest: 'Peito', frontDelt: 'Deltoide anterior', sideDelt: 'Deltoide lateral', rearDelt: 'Deltoide posterior',
+  traps: 'Trapézio', lats: 'Dorsais', upperBack: 'Parte superior das costas', lowerBack: 'Lombar',
+  biceps: 'Bíceps', triceps: 'Tríceps', forearms: 'Antebraços', abs: 'Abdômen', obliques: 'Oblíquos',
+  quads: 'Quadríceps', hamstrings: 'Posteriores de coxa', glutes: 'Glúteos', adductors: 'Adutores', calves: 'Panturrilhas'
 };
 
 // E(id, name, group, equipment, primary[], secondary[], compound?, steps[], cues[], mistake)

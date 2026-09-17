@@ -44,18 +44,18 @@ function tone(c, out, { type = 'sine', f, f2, glide, t, a = 0.005, hold = 0, d =
 function lowpass(c, out, f, q = 0.7) { const fl = c.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = f; fl.Q.value = q; fl.connect(out); return fl; }
 // id, name, description, length (s), lead = seconds it starts before the timer reaches 0
 const REST_SOUNDS = [
-  { id: 'beeps', n: 'Classic beeps', d: 'Three short stopwatch beeps', dur: .75,
+  { id: 'beeps', n: 'Bipes clássicos', d: 'Três bipes curtos de cronômetro', dur: .75,
     play: (c, o, t) => { const l = lowpass(c, o, 3500); [0, .22, .44].forEach(s => tone(c, l, { type: 'square', f: 1046, t: t + s, a: .004, hold: .1, d: .03, v: .5 })); } },
-  { id: 'watch', n: 'Digital watch', d: 'Two quick high double-chirps', dur: .65,
+  { id: 'watch', n: 'Relógio digital', d: 'Dois alertas agudos e rápidos', dur: .65,
     play: (c, o, t) => { const l = lowpass(c, o, 6500); [0, .09, .4, .49].forEach(s => tone(c, l, { type: 'square', f: 3150, t: t + s, a: .002, hold: .045, d: .012, v: .45 })); } },
-  { id: 'count', n: 'Countdown 3-2-1', d: 'Ticks for the last 3 seconds, then a long beep', dur: 3.9, lead: 3,
+  { id: 'count', n: 'Contagem 3-2-1', d: 'Toques nos últimos 3 segundos e um bipe longo', dur: 3.9, lead: 3,
     play: (c, o, t) => { [0, 1, 2].forEach(s => tone(c, o, { f: 740, t: t + s, a: .004, hold: .08, d: .12, v: .5 }));
       tone(c, o, { f: 1480, t: t + 3, a: .006, hold: .55, d: .25, v: .45 }); tone(c, o, { type: 'triangle', f: 1480, t: t + 3, a: .006, hold: .55, d: .25, v: .18 }); } },
-  { id: 'chime', n: 'Chime', d: 'Soft rising four-note chime', dur: 1.5,
+  { id: 'chime', n: 'Sino', d: 'Quatro notas suaves em sequência crescente', dur: 1.5,
     play: (c, o, t) => [1047, 1319, 1568, 2093].forEach((f, k) => { tone(c, o, { f, t: t + k * .13, a: .004, d: 1.3, v: .38 }); tone(c, o, { f: f * 2, t: t + k * .13, a: .004, d: .5, v: .1 }); }) },
-  { id: 'marimba', n: 'Marimba', d: 'Bright wooden five-note tune', dur: 1.1,
+  { id: 'marimba', n: 'Marimba', d: 'Melodia vibrante de cinco notas', dur: 1.1,
     play: (c, o, t) => [[784, 0], [988, .12], [1175, .24], [988, .36], [1568, .52]].forEach(([f, s], k) => { tone(c, o, { f, t: t + s, a: .003, d: k === 4 ? .7 : .35, v: .45 }); tone(c, o, { f: f * 3.93, t: t + s, a: .002, d: .07, v: .14 }); }) },
-  { id: 'none', n: 'Silent', d: 'No sound — vibrate only', dur: 0 }
+  { id: 'none', n: 'Silencioso', d: 'Sem som — apenas vibração', dur: 0 }
 ];
 const restSoundOf = id => REST_SOUNDS.find(x => x.id === id) || REST_SOUNDS[0];
 const restSoundId = () => restSoundOf(S.settings.restSound).id;
@@ -128,7 +128,7 @@ function rtPill() {
 }
 
 /* ---------------- workout mode ---------------- */
-let WO = null;            // { d, i, w: {exId: lb}, r: {exId: reps}, edit: set index | null, open, done }
+let WO = null;            // { d, i, w: {exId: kg}, r: {exId: reps}, edit: set index | null, open, done }
 let WO_LOCK = null;
 const woEntry = () => WO && S.plan[WO.d];
 const woRows = () => { const e = woEntry(); return e && e.w ? sessionRows(e.w) : []; };
@@ -158,13 +158,13 @@ function woPrefill(r) {
   const [lo, hi] = repRange(r.reps); const last = lastPerformance(id, WO.d); const ex = EX[id];
   if (last && last.bestSet) {
     const w = +last.bestSet.w || 0, br = +last.bestSet.r || lo, allTop = last.sets.every(s => +s.r >= hi);
-    const inc = /Dumbbell|DB/.test(ex.name) || ['Shoulders', 'Biceps', 'Triceps'].includes(ex.group) ? 5 : 10;
+    const inc = /Dumbbell|DB/.test(ex.name) || ['Shoulders', 'Biceps', 'Triceps'].includes(ex.group) ? 2 : 5;
     if (isBW(id)) { WO.w[id] = w; WO.r[id] = Math.min(hi, (last.bestReps || lo) + 1); }
-    else if (ex.assist) { WO.w[id] = allTop ? Math.max(0, w - 10) : w; WO.r[id] = allTop ? lo : Math.min(hi, br + 1); }
+    else if (ex.assist) { WO.w[id] = allTop ? Math.max(0, w - 5) : w; WO.r[id] = allTop ? lo : Math.min(hi, br + 1); }
     else { WO.w[id] = allTop ? w + inc : w; WO.r[id] = allTop ? lo : Math.min(hi, br + 1); }
   } else { WO.w[id] = isBW(id) ? 0 : ''; WO.r[id] = lo; }
 }
-function woWeightLabel(id) { const ex = EX[id]; return ex && ex.assist ? 'Assistance · lb' : isBW(id) ? 'Added weight · lb' : 'Weight · lb'; }
+function woWeightLabel(id) { const ex = EX[id]; return ex && ex.assist ? 'Assistência · kg' : isBW(id) ? 'Carga adicional · kg' : 'Carga · kg'; }
 function woRender() {
   const root = $('#wo-root'); if (!root || !WO || !WO.open) return;
   const rows = woRows(); if (!rows.length) { woClose(); return; }
@@ -187,7 +187,7 @@ function woRender() {
   const sets = Array.from({ length: Math.max(r.sets, logs.length) }, (_, k) => { const s = logs[k]; const has = s && +s.r > 0;
     const isPR = has && today && today.pr && today.bestSet === s;
     return `<li class="${has ? 'done' : k === (WO.edit != null ? WO.edit : firstOpen) ? 'cur' : ''} ${WO.edit === k ? 'edit' : ''}">${has ? `<button type="button" class="wo-set" data-act="wo-edit" data-k="${k}" aria-label="Change set ${k + 1}">` : '<span class="wo-set">'}
-      <span class="n">${has ? icon('check') : k + 1}</span>${has ? `<span class="num"><b>${fmt(+s.w || 0, (+s.w || 0) % 1 ? 1 : 0)} lb × ${s.r}</b></span>${isPR ? '<span class="pill acc">PR</span>' : ''}<span class="wo-ed">${icon('edit')}</span>` : `<span class="muted">${k === firstOpen ? 'Next set' : 'Set ' + (k + 1)}</span>`}${has ? '</button>' : '</span>'}</li>`; }).join('');
+      <span class="n">${has ? icon('check') : k + 1}</span>${has ? `<span class="num"><b>${fmt(+s.w || 0, (+s.w || 0) % 1 ? 1 : 0)} kg × ${s.r}</b></span>${isPR ? '<span class="pill acc">PR</span>' : ''}<span class="wo-ed">${icon('edit')}</span>` : `<span class="muted">${k === firstOpen ? 'Next set' : 'Set ' + (k + 1)}</span>`}${has ? '</button>' : '</span>'}</li>`; }).join('');
   const last = lastPerformance(id, d); const sug = suggestion(id, r.reps, d);
   const lastTxt = last ? `Last time <span class="num">${last.sets.map(s => `${fmt(+s.w || 0, (+s.w || 0) % 1 ? 1 : 0)}×${s.r}`).join(', ')}</span>${sug ? ` → <b>${esc(sug.text.replace(/^Last best: [^→]*→\s*/, ''))}</b>` : ''}` : `First time — pick a weight you can lift for ${esc(r.reps)} reps with ${esc(r.rir)} in reserve.`;
   const nextEx = rows[WO.i + 1]; const allDone = rows.every(x => exLogged(d, x));
@@ -211,7 +211,7 @@ function woRender() {
       ${allDone && !S.done[d] && !(full && !nextEx) ? `<button type="button" class="btn block" data-act="wo-finish">${icon('check')}Every set is logged — finish the workout</button>` : ''}
     </div>
     ${rtHTML()}
-    <div class="wo-f"><button type="button" class="btn" data-act="wo-go" data-i="${WO.i - 1}" ${WO.i ? '' : 'disabled'}>${icon('left')}Back</button><button type="button" class="btn icon" data-act="wo-list" aria-label="All exercises" title="All exercises">${icon('list')}</button><button type="button" class="btn" data-act="wo-go" data-i="${WO.i + 1}" ${nextEx ? '' : 'disabled'}>${nDone ? 'Next' : 'Skip'}${icon('right')}</button></div>
+    <div class="wo-f"><button type="button" class="btn" data-act="wo-go" data-i="${WO.i - 1}" ${WO.i ? '' : 'disabled'}>${icon('left')}Voltar</button><button type="button" class="btn icon" data-act="wo-list" aria-label="All exercises" title="All exercises">${icon('list')}</button><button type="button" class="btn" data-act="wo-go" data-i="${WO.i + 1}" ${nextEx ? '' : 'disabled'}>${nDone ? 'Next' : 'Skip'}${icon('right')}</button></div>
   </div></div>`;
 }
 function woLog() {
@@ -246,18 +246,18 @@ function woList() {
 function restSettingsHTML(inModal) {
   const st = S.settings, def = +st.restDef || 90, snd = restSoundId();
   const tog = (k, title, sub) => `<div class="set-tog"><span><b class="small">${title}</b><span class="tiny muted">${sub}</span></span>${sw(st[k] !== false, 'rest-tog', k)}</div>`;
-  const body = `<div class="rs-def"><span class="tiny muted rs-lbl">Default rest</span><div class="big-num"><button type="button" data-act="rest-def" data-v="-15" aria-label="15 seconds less">−</button><b class="num">${mmss(def * 1000)}</b><button type="button" data-act="rest-def" data-v="15" aria-label="15 seconds more">+</button></div>
+  const body = `<div class="rs-def"><span class="tiny muted rs-lbl">Descanso padrão</span><div class="big-num"><button type="button" data-act="rest-def" data-v="-15" aria-label="Diminuir 15 segundos">−</button><b class="num">${mmss(def * 1000)}</b><button type="button" data-act="rest-def" data-v="15" aria-label="Aumentar 15 segundos">+</button></div>
       <div class="row wrap rs-chips">${[60, 90, 120, 180].map(v => `<button type="button" class="btn sm ${def === v ? 'primary' : ''}" data-act="rest-def-set" data-v="${v}">${mmss(v * 1000)}</button>`).join('')}</div></div>
-    ${tog('restPlan', 'Use each exercise’s suggested rest', st.restPlan !== false ? `On: heavy compound sets rest 2–3 min, isolation 60–90 s. Exercises without a suggestion use ${mmss(def * 1000)}.` : `Off: every exercise rests ${mmss(def * 1000)}.`)}
-    ${tog('restAuto', 'Start after each logged set', st.restAuto !== false ? 'On: logging a set starts the timer.' : 'Off: start it yourself with ▶.')}
-    ${tog('restVib', 'Vibrate when rest is over', 'Works on Android phones. iPhone browsers don’t allow it.')}
-    <div class="tiny muted rs-lbl" style="margin-top:14px">Sound · tap one to hear it</div>
+    ${tog('restPlan', 'Usar o descanso sugerido de cada exercício', st.restPlan !== false ? `Ativado: exercícios compostos pesados usam 2–3 min; isoladores, 60–90 s. Sem sugestão, use ${mmss(def * 1000)}.` : `Desativado: todos os exercícios usam ${mmss(def * 1000)}.`)}
+    ${tog('restAuto', 'Iniciar após registrar cada série', st.restAuto !== false ? 'Ativado: registrar uma série inicia o cronômetro.' : 'Desativado: inicie manualmente com ▶.')}
+    ${tog('restVib', 'Vibrar ao terminar o descanso', 'Funciona em celulares Android. Navegadores do iPhone não permitem vibração.')}
+    <div class="tiny muted rs-lbl" style="margin-top:14px">Som · toque para ouvir</div>
     <div class="rs-snds">${REST_SOUNDS.map(x => { const on = snd === x.id, pl = REST_PLAYING === x.id;
       return `<button type="button" class="rs-snd ${on ? 'on' : ''}" data-act="rest-snd" data-v="${x.id}" aria-pressed="${on}"><span class="ic">${pl ? '<span class="eqz" aria-hidden="true"><i></i><i></i><i></i></span>' : icon(x.id === 'none' ? 'mute' : 'bell')}</span><span class="t"><b>${esc(x.n)}</b><small>${esc(x.d)}</small></span>${on ? `<span class="ok">${icon('check')}</span>` : ''}</button>`; }).join('')}</div>
-    <div class="rs-vol">${icon('vol')}<input type="range" min="0" max="1" step="0.05" value="${restVol()}" data-input="rest-vol" aria-label="Timer volume"></div>
-    <div class="tiny muted">The sound plays when a rest ends, even with the workout screen closed. Phones pause web pages that aren’t on screen, so keep FORGE 90 open (workout mode keeps the screen on). On iPhone the silent switch mutes it.</div>`;
-  if (inModal) return `<div class="rest-m" id="rest-card"><div class="row"><h2 style="flex:1">Rest timer</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Close">${icon('x')}</button></div>${body}</div>`;
-  return `<div class="card" id="rest-card"><div class="card-h"><h2>${icon('clock')}Rest timer</h2><span class="pill">${mmss(def * 1000)} · ${esc(restSoundOf(snd).n)}</span></div>${body}</div>`;
+    <div class="rs-vol">${icon('vol')}<input type="range" min="0" max="1" step="0.05" value="${restVol()}" data-input="rest-vol" aria-label="Volume do cronômetro"></div>
+    <div class="tiny muted">O som toca ao terminar o descanso, mesmo com a tela do treino fechada. Celulares podem pausar páginas fora da tela; mantenha o app aberto. No iPhone, o modo silencioso também silencia o aviso.</div>`;
+  if (inModal) return `<div class="rest-m" id="rest-card"><div class="row"><h2 style="flex:1">Cronômetro de descanso</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>${body}</div>`;
+  return `<div class="card" id="rest-card"><div class="card-h"><h2>${icon('clock')}Cronômetro de descanso</h2><span class="pill">${mmss(def * 1000)} · ${esc(restSoundOf(snd).n)}</span></div>${body}</div>`;
 }
 let REST_PLAYING = null, restPlayT = null;
 function restCardRefresh() {

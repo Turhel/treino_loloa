@@ -53,19 +53,19 @@ function weighSheet(date) {
 function renderWeigh() {
   const t = todayISO(); const last = sortedWeights().filter(x => x.d < WS.d).slice(-1)[0];
   modal(`<div class="ws-m"><div class="row"><h2 style="flex:1">Log weight</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Close">${icon('x')}</button></div>
-    <div class="tiny muted" style="text-align:center">${WS.d === t ? 'This morning' : esc(fmtDate(WS.d))}${last ? ` · last ${fmt(last.w, 1)} lb on ${esc(fmtDate(last.d, { weekday: 'short', month: 'short', day: 'numeric' }))}` : ''}</div>
-    <div class="big-num"><button type="button" data-act="ws-step" data-v="-0.1" aria-label="0.1 lb less">−</button><input id="ws-v" class="num" type="number" inputmode="decimal" step="0.1" min="80" max="500" value="${fmt(WS.v, 1).replace(/,/g, '')}" data-input="ws-v" aria-label="Weight in lb"><button type="button" data-act="ws-step" data-v="0.1" aria-label="0.1 lb more">+</button></div>
-    <div class="row wrap ws-chips">${[-1, -0.5, 0.5, 1].map(v => `<button type="button" class="btn sm" data-act="ws-step" data-v="${v}">${v > 0 ? '+' : '−'}${Math.abs(v)} lb</button>`).join('')}</div>
-    <div class="grid g2" style="gap:10px"><div class="field"><label for="ws-bf">Body fat % (optional)</label><input id="ws-bf" class="inp" type="number" inputmode="decimal" step="0.1" min="3" max="60" value="${esc(WS.bf)}" placeholder="Estimated if blank" data-input="ws-bf"></div>
+    <div class="tiny muted" style="text-align:center">${WS.d === t ? 'Hoje pela manhã' : esc(fmtDate(WS.d))}${last ? ` · última: ${fmt(last.w, 1)} kg em ${esc(fmtDate(last.d, { weekday: 'short', month: 'short', day: 'numeric' }))}` : ''}</div>
+    <div class="big-num"><button type="button" data-act="ws-step" data-v="-0.1" aria-label="Diminuir 0,1 kg">−</button><input id="ws-v" class="num" type="number" inputmode="decimal" step="0.1" min="30" max="300" value="${fmt(WS.v, 1).replace(/,/g, '')}" data-input="ws-v" aria-label="Peso em kg"><button type="button" data-act="ws-step" data-v="0.1" aria-label="Aumentar 0,1 kg">+</button></div>
+    <div class="row wrap ws-chips">${[-1, -0.5, 0.5, 1].map(v => `<button type="button" class="btn sm" data-act="ws-step" data-v="${v}">${v > 0 ? '+' : '−'}${Math.abs(v)} kg</button>`).join('')}</div>
+    <div class="grid g2" style="gap:10px"><div class="field"><label for="ws-bf">GC % (opcional)</label><input id="ws-bf" class="inp" type="number" inputmode="decimal" step="0.1" min="3" max="60" value="${esc(WS.bf)}" placeholder="Estimativa se ficar em branco" data-input="ws-bf"></div>
       <div class="field"><label for="ws-d">Date</label><input id="ws-d" class="inp" type="date" value="${WS.d}" max="${t}" data-input="ws-d"></div></div>
-    <button type="button" class="btn primary block big" id="ws-save" data-act="ws-save">${icon('check')}Save ${fmt(WS.v, 1)} lb</button></div>`, 'sm ws-modal');
+    <button type="button" class="btn primary block big" id="ws-save" data-act="ws-save">${icon('check')}Salvar ${fmt(WS.v, 1)} kg</button></div>`, 'sm ws-modal');
 }
-function wsSync() { const i = $('#ws-v'), b = $('#ws-save'); if (i && document.activeElement !== i) i.value = fmt(WS.v, 1).replace(/,/g, ''); if (b) b.innerHTML = `${icon('check')}Save ${fmt(WS.v, 1)} lb`; }
+function wsSync() { const i = $('#ws-v'), b = $('#ws-save'); if (i && document.activeElement !== i) i.value = fmt(WS.v, 1).replace(/,/g, ''); if (b) b.innerHTML = `${icon('check')}Salvar ${fmt(WS.v, 1)} kg`; }
 function wsSave() {
-  const w = Math.round(+WS.v * 10) / 10; if (!(w >= 80 && w <= 500)) { toast('Enter a weight between 80 and 500 lb'); return; }
-  const bf = WS.bf === '' || WS.bf == null ? null : +WS.bf; if (bf != null && !(bf >= 3 && bf <= 60)) { toast('Body fat should be between 3 and 60 %'); return; }
+  const w = Math.round(+WS.v * 10) / 10; if (!(w >= 30 && w <= 300)) { toast('Informe um peso entre 30 e 300 kg'); return; }
+  const bf = WS.bf === '' || WS.bf == null ? null : +WS.bf; if (bf != null && !(bf >= 3 && bf <= 60)) { toast('A GC deve ficar entre 3 e 60%'); return; }
   S.weights = S.weights.filter(x => x.d !== WS.d); S.weights.push({ d: WS.d, w, bf }); saveState(); closeModal(); render();
-  const t = latestStats(); toast(`Logged ${w} lb${bf != null ? ' · ' + bf + '%' : ''} — targets now ${targetsFor(t.w, t.bf, true).kcal}/${targetsFor(t.w, t.bf, false).kcal} kcal`); WS = null;
+  const t = latestStats(); toast(`Registrado: ${w} kg${bf != null ? ' · GC ' + bf + '%' : ''} — metas atualizadas para ${targetsFor(t.w, t.bf, true).kcal}/${targetsFor(t.w, t.bf, false).kcal} kcal`); WS = null;
 }
 
 /* ---------------- meal swap sheet: searchable, favorites first, macros shown ---------------- */
@@ -118,7 +118,7 @@ function viewToday(date) {
   const frac = idx < 0 ? 0 : Math.min(1, (idx + 1) / (idx < LAUNCH_DAYS ? LAUNCH_DAYS : 91));
   const bar = `<div class="ph-cyc" title="${idx >= 0 ? `Day ${idx + 1}` : 'Before Day 1'}"><i style="width:${frac * 100}%"></i></div>`;
   const weighed = S.weights.some(x => x.d === t); const last = sortedWeights().slice(-1)[0];
-  const prompt = date === t && !weighed ? `<button type="button" class="ph-prompt" data-act="weigh-sheet">${icon('scale')}<span><b>Log this morning’s weight</b><small class="num">${last ? `Last: ${fmt(last.w, 1)} lb on ${esc(fmtDate(last.d, { weekday: 'short' }))}` : 'Your first weigh-in sets the trend line'}</small></span><span class="go">Log</span></button>` : '';
+  const prompt = date === t && !weighed ? `<button type="button" class="ph-prompt" data-act="weigh-sheet">${icon('scale')}<span><b>Registrar o peso desta manhã</b><small class="num">${last ? `Último: ${fmt(last.w, 1)} kg em ${esc(fmtDate(last.d, { weekday: 'short' }))}` : 'Sua primeira pesagem inicia a linha de tendência'}</small></span><span class="go">Registrar</span></button>` : '';
   if (!inPlan(date)) {
     const before = date < st.startDate;
     return head + bar + prompt + `<div class="card empty-state">${icon('cal')}<h2 style="margin:8px 0 4px">${before ? `Your plan starts ${esc(fmtDate(st.startDate, { weekday: 'long', month: 'long', day: 'numeric' }))}` : 'That day isn’t in the plan'}</h2>
@@ -158,11 +158,11 @@ function progressCardHTML() {
   const pr = recentPRs(1)[0];
   const mon = mondayOf(todayISO()); const wk = Array.from({ length: 7 }, (_, i) => addDays(mon, i)).filter(d => S.plan[d] && S.plan[d].w);
   const done = wk.filter(d => S.done[d]).length;
-  return `<a class="card pcard" href="#/progress" aria-label="Progress: ${fmt(cur.w, 1)} lb${hasW ? `, ${sign(dW)} lb since the start` : ''}. Open the progress page">
-    <span class="pc-top"><span class="h">Progress</span><span class="see">See all${icon('right')}</span></span>
-    <span class="pc-main"><span><small>Weight</small><b class="num">${fmt(cur.w, 1)} <span>lb</span></b><small class="num ${hasW ? (dW <= 0 ? 'good' : '') : ''}">${hasW ? `${sign(dW)} lb since the start` : 'Log a weigh-in to start the trend'}</small></span>${spark}</span>
-    <span class="pc-mini"><span><small>Body fat</small><b class="num">${fmt(cur.bf, 1)}<span class="u">%${cur.est ? ' est.' : ''}</span></b></span><span><small>Trend</small><b class="num">${trend ? sign(-trend.rate, 2) : '—'}<span class="u"> lb/wk</span></b></span><span><small>To goal</small><b class="num">${fmt(Math.max(0, cur.w - st.goalWeight), 1)}<span class="u"> lb</span></b></span></span>
-    <span class="pc-foot"><span class="pc-pr">${icon('trophy')}<span>${pr ? `${esc(EX[pr.ex].name)} ${fmt(+pr.set.w || 0, (+pr.set.w || 0) % 1 ? 1 : 0)} × ${pr.set.r} · ${esc(fmtDate(pr.d, { weekday: 'short' }))}` : 'Log sets to start your PR board'}</span></span>${wk.length ? `<span class="wkdots">${wk.map(d => `<i class="${S.done[d] ? 'done' : ''}"></i>`).join('')}<span class="num">${done}/${wk.length} this week</span></span>` : ''}</span></a>`;
+  return `<a class="card pcard" href="#/progress" aria-label="Progresso: ${fmt(cur.w, 1)} kg${hasW ? `, ${sign(dW)} kg desde o início` : ''}. Abrir a página de progresso">
+    <span class="pc-top"><span class="h">Progresso</span><span class="see">Ver tudo${icon('right')}</span></span>
+    <span class="pc-main"><span><small>Peso</small><b class="num">${fmt(cur.w, 1)} <span>kg</span></b><small class="num ${hasW ? (dW <= 0 ? 'good' : '') : ''}">${hasW ? `${sign(dW)} kg desde o início` : 'Registre uma pesagem para iniciar a tendência'}</small></span>${spark}</span>
+    <span class="pc-mini"><span><small>GC</small><b class="num">${fmt(cur.bf, 1)}<span class="u">%${cur.est ? ' est.' : ''}</span></b></span><span><small>Tendência</small><b class="num">${trend ? sign(-trend.rate, 2) : '—'}<span class="u"> kg/sem.</span></b></span><span><small>Até a meta</small><b class="num">${fmt(Math.max(0, cur.w - st.goalWeight), 1)}<span class="u"> kg</span></b></span></span>
+    <span class="pc-foot"><span class="pc-pr">${icon('trophy')}<span>${pr ? `${esc(EX[pr.ex].name)} ${fmt(+pr.set.w || 0, (+pr.set.w || 0) % 1 ? 1 : 0)} kg × ${pr.set.r} rep. · ${esc(fmtDate(pr.d, { weekday: 'short' }))}` : 'Registre séries para iniciar seu painel de recordes'}</span></span>${wk.length ? `<span class="wkdots">${wk.map(d => `<i class="${S.done[d] ? 'done' : ''}"></i>`).join('')}<span class="num">${done}/${wk.length} nesta semana</span></span>` : ''}</span></a>`;
 }
 function todayMacroHTML(day) {
   return `<div class="card ph-macro"><div class="kc"><b class="num">${fmt(day.totals.k)}</b><small>of ${fmt(day.tg.kcal)} kcal${(day.extras || []).length ? ' · incl. added food' : ''}</small><span class="pill ${day.isTrain ? 'acc' : ''}">${day.isTrain ? 'Training' : 'Rest'} day</span></div><div class="mb">${macroBars(day.totals, day.tg)}</div></div>`;
@@ -218,18 +218,18 @@ function viewPrep() {
 
 /* ---------------- YOU (phone) ---------------- */
 const SET_GROUPS = {
-  training: ['Training days & rest timer', () => trainingDaysCardHTML() + restSettingsHTML()],
-  targets: ['Targets & loss rate', () => lossRateCardHTML() + nutritionCardHTML()],
-  body: ['Body & goals', () => bodyGoalsCardHTML()],
-  gym: ['Gym cards', () => gymSettingsHTML()],
-  food: ['Food preferences', () => foodPrefsCardHTML()],
-  money: ['Money saver', () => moneyCardHTML()],
-  app: ['Appearance & data', () => appearanceCardHTML()],
-  api: ['API connections', () => apiCardHTML()]
+  training: ['Dias de treino e cronômetro', () => trainingDaysCardHTML() + restSettingsHTML()],
+  targets: ['Metas e ritmo de perda', () => lossRateCardHTML() + nutritionCardHTML()],
+  body: ['Corpo e objetivos', () => bodyGoalsCardHTML()],
+  gym: ['Cartões da academia', () => gymSettingsHTML()],
+  food: ['Preferências alimentares', () => foodPrefsCardHTML()],
+  money: ['Economia', () => moneyCardHTML()],
+  app: ['Aparência e dados', () => appearanceCardHTML()],
+  api: ['Conexões de API', () => apiCardHTML()]
 };
 function settingsGroupHTML(g) {
   const [title, f] = SET_GROUPS[g];
-  return `<div class="page-head"><div class="t"><a class="back-lnk" href="${isPhone() ? '#/you' : '#/settings'}">${icon('left')}${isPhone() ? 'You' : 'Settings'}</a><h1>${esc(title)}</h1></div></div><div class="set-group">${f()}</div>`;
+  return `<div class="page-head"><div class="t"><a class="back-lnk" href="${isPhone() ? '#/you' : '#/settings'}">${icon('left')}${isPhone() ? 'Você' : 'Configurações'}</a><h1>${esc(title)}</h1></div></div><div class="set-group">${f()}</div>`;
 }
 function viewYou() {
   const st = S.settings; const u = AUTH.user; const srv = AUTH.mode === 'server';
@@ -242,14 +242,14 @@ function viewYou() {
   return `<div class="you-top"><div class="me">${avatarHTML(u || { name })}<div><b>${esc(name)}</b><div class="tiny muted">${srv && u ? (u.role === 'admin' ? 'Administrator · ' : '') + esc(u.email || '') : 'Saved in this browser'}${syncActive() ? ` · meals synced with ${esc(syncName())}` : ''}</div></div></div>${srv && u ? `<button type="button" class="btn icon ghost" data-act="logout" aria-label="Sign out" title="Sign out">${icon('logout')}</button>` : ''}</div>
     ${progressCardHTML()}
     <section class="ygroup"><div class="ph-sec"><h2>Recent PRs</h2><span class="spacer"></span><a class="btn sm ghost" href="#/progress">All progress ${icon('right')}</a></div>
-      ${prs.length ? `<div class="card pad0">${prs.map(p => `<a class="yrow" href="#/progress"><span class="yi pr">${icon('trophy')}</span><span class="t"><b>${esc(EX[p.ex].name)}</b><small class="num">${fmt(+p.set.w || 0, (+p.set.w || 0) % 1 ? 1 : 0)} lb × ${p.set.r} · ${esc(fmtDate(p.d))}</small></span>${icon('right')}</a>`).join('')}</div>` : `<div class="card empty-state">${icon('trophy')}<div>Log your sets in a workout and personal records show up here.</div></div>`}</section>
-    <section class="ygroup"><div class="ph-sec"><h2>Gym cards</h2><span class="spacer"></span><a class="btn sm ghost" href="#/settings/gym">Manage</a></div>
+      ${prs.length ? `<div class="card pad0">${prs.map(p => `<a class="yrow" href="#/progress"><span class="yi pr">${icon('trophy')}</span><span class="t"><b>${esc(EX[p.ex].name)}</b><small class="num">${fmt(+p.set.w || 0, (+p.set.w || 0) % 1 ? 1 : 0)} kg × ${p.set.r} rep. · ${esc(fmtDate(p.d))}</small></span>${icon('right')}</a>`).join('')}</div>` : `<div class="card empty-state">${icon('trophy')}<div>Registre suas séries em um treino para exibir os recordes pessoais aqui.</div></div>`}</section>
+    <section class="ygroup"><div class="ph-sec"><h2>Cartões da academia</h2><span class="spacer"></span><a class="btn sm ghost" href="#/settings/gym">Gerenciar</a></div>
       ${cards.length ? `<div class="card pad0">${cards.map(c => `<button type="button" class="yrow" data-act="gym-full" data-id="${c.id}"><span class="gcy ${c.fmt === 'qr' ? 'qr' : ''}">${barcodeSVG(c.code, c.fmt, { h: 40 })}</span><span class="t"><b>${esc(c.name)}</b><small class="num">${esc(gymHuman(c))}</small></span>${icon('expand')}</button>`).join('')}</div>`
-        : `<button type="button" class="btn block" data-act="gym-add">${icon('plus')}Add your gym card</button>`}</section>
-    ${group('Plan', [row('dumbbell', 'Workout plan', 'Sessions, swaps and the exercise library', 'href="#/workouts"'), row('clock', 'Training days & rest timer', `${st.trainDays.length} days a week · rest ${mmss((+st.restDef || 90) * 1000)} · ${esc(restSoundOf(st.restSound).n)}`, 'href="#/settings/training"'),
-      row('target', 'Targets & loss rate', `${fmt(st.rate, 2)} lb/wk · ${fmt(tT.kcal)} / ${fmt(tR.kcal)} kcal`, 'href="#/settings/targets"'), row('scale', 'Body & goals', `Goal ${st.goalWeight} lb · ${st.goalBF}%`, 'href="#/settings/body"')])}
-    ${group('Food', [row('food', 'Food preferences', esc(fpCountText()), 'href="#/settings/food"'), row('book', 'Foods & macros', `${Object.keys(ING).length} foods`, 'href="#/foods" data-act="go-foods" data-v="foods"'), row('flame', 'Money saver', st.shareIngredients !== false ? 'On · recipes share ingredients' : 'Off', 'href="#/settings/money"')])}
-    ${group('App', [row(effTheme() === 'light' ? 'sun' : 'moon', 'Appearance & data', `${st.theme[0].toUpperCase() + st.theme.slice(1)} theme · backup and restore`, 'href="#/settings/app"'), srv ? row('users', 'Meal sync', syncActive() ? `Synced with ${esc(syncName())}` : 'Share meals and a shopping list with someone', 'href="#/account" data-act="go-acc-sync"') : '', srv && isAdmin() ? row('link', 'API connections', 'Mealie recipe import', 'href="#/settings/api"') : ''])}
+        : `<button type="button" class="btn block" data-act="gym-add">${icon('plus')}Adicionar cartão da academia</button>`}</section>
+    ${group('Plano', [row('dumbbell', 'Plano de treino', 'Sessões, trocas e biblioteca de exercícios', 'href="#/workouts"'), row('clock', 'Dias de treino e cronômetro', `${st.trainDays.length} ${st.trainDays.length === 1 ? 'dia' : 'dias'} por semana · descanso ${mmss((+st.restDef || 90) * 1000)} · ${esc(restSoundOf(st.restSound).n)}`, 'href="#/settings/training"'),
+      row('target', 'Metas e ritmo de perda', `${fmt(st.rate, 2)} kg/sem. · ${fmt(tT.kcal)} / ${fmt(tR.kcal)} kcal`, 'href="#/settings/targets"'), row('scale', 'Corpo e objetivos', `Meta: ${st.goalWeight} kg · GC ${st.goalBF}%`, 'href="#/settings/body"')])}
+    ${group('Alimentação', [row('food', 'Preferências alimentares', esc(fpCountText()), 'href="#/settings/food"'), row('book', 'Alimentos e macros', `${Object.keys(ING).length} alimentos`, 'href="#/foods" data-act="go-foods" data-v="foods"'), row('flame', 'Economia', st.shareIngredients !== false ? 'Ativada · receitas compartilham ingredientes' : 'Desativada', 'href="#/settings/money"')])}
+    ${group('Aplicativo', [row(effTheme() === 'light' ? 'sun' : 'moon', 'Aparência e dados', `${{ dark: 'Tema escuro', light: 'Tema claro', system: 'Tema do sistema' }[st.theme] || st.theme} · backup e restauração`, 'href="#/settings/app"'), srv ? row('users', 'Sincronização de refeições', syncActive() ? `Sincronizado com ${esc(syncName())}` : 'Compartilhe refeições e a lista de compras com alguém', 'href="#/account" data-act="go-acc-sync"') : '', srv && isAdmin() ? row('link', 'Conexões de API', 'Importação de receitas do Mealie', 'href="#/settings/api"') : ''])}
     ${srv ? group('Account', [row('user', 'Profile & password', esc((u && u.email) || ''), 'href="#/account"'), isAdmin() ? row('shield', 'Admin console', 'Users, email, security', 'href="#/admin"') : '']) : ''}
     <div class="you-foot"><button type="button" class="btn sm ghost" data-act="theme-toggle">${icon(effTheme() === 'light' ? 'moon' : 'sun')}${effTheme() === 'light' ? 'Dark' : 'Light'} mode</button>${settingsFootHTML()}</div>`;
 }
@@ -277,7 +277,7 @@ Object.assign(ACT, {
   'go-acc-sync': () => { UI._scrollTo = 'acc-sync'; location.hash = '#/account'; }
 });
 document.addEventListener('input', e => { const t = e.target; if (!t || !t.dataset) return;
-  if (t.dataset.input === 'ws-v' && WS) { WS.v = +t.value || 0; const b = $('#ws-save'); if (b) b.innerHTML = `${icon('check')}Save ${fmt(WS.v, 1)} lb`; }
+  if (t.dataset.input === 'ws-v' && WS) { WS.v = +t.value || 0; const b = $('#ws-save'); if (b) b.innerHTML = `${icon('check')}Salvar ${fmt(WS.v, 1)} kg`; }
   if (t.dataset.input === 'ws-bf' && WS) WS.bf = t.value;
   if (t.dataset.input === 'ws-d' && WS && t.value) { WS.d = t.value > todayISO() ? todayISO() : t.value; }
   if (t.dataset.input === 'ms-q' && MS) { MS.q = t.value; const l = $('#ms-list'); if (l) l.innerHTML = msListHTML(); }

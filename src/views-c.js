@@ -54,31 +54,31 @@ function resizeImageFile(file, maxW = 1920) {
   });
 }
 function backgroundsHTML() {
-  return `<div class="field"><label>Background visibility</label><input type="range" min="0.1" max="0.75" step="0.05" value="${(1 - S.settings.bgDim).toFixed(2)}" data-input="bg-dim"><span class="tiny muted">Slide right to show more of the photo behind the glass.</span></div>
+  return `<div class="field"><label>Visibilidade do fundo</label><input type="range" min="0.1" max="0.75" step="0.05" value="${(1 - S.settings.bgDim).toFixed(2)}" data-input="bg-dim"><span class="tiny muted">Deslize para a direita para mostrar mais da foto atrás dos cartões.</span></div>
     <div class="bg-grid" style="margin-top:12px">${Object.entries(SECTION_BG).map(([k, b]) => `<div class="bg-item"><div class="bg-thumb" style="background-image:url('${esc(bgURL(k))}'), ${BG_FALLBACK[k]}"></div>
-      <div style="min-width:0;flex:1"><b class="small">${b.label}</b><div class="tiny muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${S.bgCustom[k] ? 'Your image' : esc(b.alt)}</div>
-      <div class="row" style="gap:4px;margin-top:4px"><label class="btn sm">${icon('upload')}Upload<input type="file" accept="image/*" hidden data-input="bg-file" data-sec="${k}"></label>
-      <button class="btn sm" data-act="bg-url" data-sec="${k}">URL</button>${S.bgCustom[k] ? `<button class="btn sm ghost" data-act="bg-reset" data-sec="${k}">Reset</button>` : ''}</div></div></div>`).join('')}</div>
-    <div class="tiny muted" style="margin-top:12px">Default photos from Unsplash (free Unsplash License): ${Object.values(SECTION_BG).map(b => `<a href="https://unsplash.com/photos/${b.slug}" target="_blank" rel="noopener">${esc(b.who)}</a>`).join(' · ')}. Photos load from the internet; offline you’ll see tinted gradients instead.</div>`;
+      <div style="min-width:0;flex:1"><b class="small">${b.label}</b><div class="tiny muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${S.bgCustom[k] ? 'Sua imagem' : esc(b.alt)}</div>
+      <div class="row" style="gap:4px;margin-top:4px"><label class="btn sm">${icon('upload')}Enviar<input type="file" accept="image/*" hidden data-input="bg-file" data-sec="${k}"></label>
+      <button class="btn sm" data-act="bg-url" data-sec="${k}">URL</button>${S.bgCustom[k] ? `<button class="btn sm ghost" data-act="bg-reset" data-sec="${k}">Restaurar</button>` : ''}</div></div></div>`).join('')}</div>
+    <div class="tiny muted" style="margin-top:12px">Fotos padrão do Unsplash, sob a licença gratuita do serviço: ${Object.values(SECTION_BG).map(b => `<a href="https://unsplash.com/photos/${b.slug}" target="_blank" rel="noopener">${esc(b.who)}</a>`).join(' · ')}. As fotos carregam pela internet; sem conexão, serão exibidos fundos em degradê.</div>`;
 }
 
 /* ---------------- food preferences (checkbox tree: group → subgroup → food) ---------------- */
 function sw(on, act, k, dis) { return `<button class="switch ${on ? 'on' : ''}" data-act="${act}" data-k="${k}" role="switch" aria-checked="${on}" ${dis ? 'disabled' : ''}><i></i></button>`; }
 const fpOpen = k => { const o = UI.fpOpen || {}; return k in o ? o[k] : k.startsWith('cat:'); };
-function fpCountText() { const allowed = RECIPES.filter(r => recipeAllowed(r)).length; return `${allowed} of ${RECIPES.length} recipes available`; }
+function fpCountText() { const allowed = RECIPES.filter(r => recipeAllowed(r)).length; return `${allowed} de ${RECIPES.length} receitas disponíveis`; }
 function foodPrefsHTML() {
   const n = Object.keys(ING).length;
   return `<div class="fp-tools"><span class="pill acc" data-fp-count>${fpCountText()}</span>
-      <label class="fp-search">${icon('search')}<input class="inp" type="search" placeholder="Search ${n} foods…" data-input="fpq" value="${esc(UI.fpQ || '')}" aria-label="Search foods"></label>
-      <div class="row" style="gap:4px;margin-left:auto"><button class="btn sm ghost" data-act="fp-all" data-v="1">Expand all</button><button class="btn sm ghost" data-act="fp-all" data-v="0">Collapse all</button></div></div>
-    <div class="tiny muted" style="margin:8px 0 12px">Uncheck a whole group, a subgroup or a single food. Any recipe that uses something unchecked is hidden and swapped out of your upcoming meals. Checking a partly-checked row turns everything in it back on.</div>
+      <label class="fp-search">${icon('search')}<input class="inp" type="search" placeholder="Buscar entre ${n} alimentos…" data-input="fpq" value="${esc(UI.fpQ || '')}" aria-label="Buscar alimentos"></label>
+      <div class="row" style="gap:4px;margin-left:auto"><button class="btn sm ghost" data-act="fp-all" data-v="1">Expandir tudo</button><button class="btn sm ghost" data-act="fp-all" data-v="0">Recolher tudo</button></div></div>
+    <div class="tiny muted" style="margin:8px 0 12px">Desmarque um grupo, subgrupo ou alimento. Receitas que usam itens desmarcados são ocultadas e substituídas nas próximas refeições.</div>
     <div class="fp-tree" data-fp-tree>${fpTreeHTML()}</div>`;
 }
 function fpTreeHTML() {
   const P = S.foodPrefs || {}; const q = (UI.fpQ || '').trim().toLowerCase();
   const bySub = {}; Object.values(ING).forEach(g => (bySub[g.sub] = bySub[g.sub] || []).push(g));
   const uses = {}; RECIPES.forEach(r => new Set(r.ing.map(([id]) => id)).forEach(id => { uses[id] = (uses[id] || 0) + 1; }));
-  const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  const plural = (n, w) => `${n} ${w}${n === 1 ? '' : w === 'alimento' ? 's' : 's'}`;
   const html = FOOD_CATS.map(c => {
     const catOn = P['cat:' + c.id] !== false; const catHit = q && c.name.toLowerCase().includes(q);
     let partial = false, total = 0, onCount = 0;
@@ -91,24 +91,24 @@ function fpTreeHTML() {
       const shown = q && !catHit && !subHit ? foods.filter(g => g.n.toLowerCase().includes(q)) : foods;
       if (q && !catHit && !subHit && !shown.length) return '';
       const open = q ? shown.length > 0 && (!subHit || shown.length <= 40) : fpOpen(sid);
-      const onTxt = subOnP && offFoods ? `${foods.length - offFoods} of ${plural(foods.length, 'food')}` : plural(foods.length, 'food');
+      const onTxt = subOnP && offFoods ? `${foods.length - offFoods} de ${plural(foods.length, 'alimento')}` : plural(foods.length, 'alimento');
       return `<div class="fp-sub ${subOnP && catOn ? '' : 'off'}">
-        <div class="fp-row l1"><button class="fp-caret ${open ? 'open' : ''}" data-act="fp-open" data-k="${sid}" aria-label="Show foods" ${foods.length ? '' : 'disabled'}>${icon('right')}</button>
+        <div class="fp-row l1"><button class="fp-caret ${open ? 'open' : ''}" data-act="fp-open" data-k="${sid}" aria-label="Mostrar alimentos" ${foods.length ? '' : 'disabled'}>${icon('right')}</button>
           <label class="fp-lab"><input type="checkbox" data-fp="${sid}" ${subOnP ? 'checked' : ''} ${catOn ? '' : 'disabled'} ${subOnP && offFoods ? 'data-ind="1"' : ''}><span>${esc(label)}</span></label><span class="fp-n">${onTxt}</span></div>
         ${open ? `<div class="fp-foods">${shown.map(g => { const on = P['f:' + g.id] !== false;
-          return `<label class="fp-food ${on ? '' : 'off'}"><input type="checkbox" data-fp="f:${g.id}" ${on ? 'checked' : ''} ${catOn && subOnP ? '' : 'disabled'}><span>${esc(g.n)}${g.custom ? ' <em class="fp-tag">custom</em>' : ''}${uses[g.id] ? `<small>${plural(uses[g.id], 'recipe')}</small>` : ''}</span></label>`; }).join('')}</div>` : ''}
+          return `<label class="fp-food ${on ? '' : 'off'}"><input type="checkbox" data-fp="f:${g.id}" ${on ? 'checked' : ''} ${catOn && subOnP ? '' : 'disabled'}><span>${esc(g.n)}${g.custom ? ' <em class="fp-tag">personalizado</em>' : ''}${uses[g.id] ? `<small>${plural(uses[g.id], 'receita')}</small>` : ''}</span></label>`; }).join('')}</div>` : ''}
       </div>`;
     }).join('');
     if (q && !subs) return '';
     const open = q ? true : fpOpen('cat:' + c.id);
     const recs = RECIPES.filter(r => r.ing.some(([id]) => ING[id] && SUB_CAT[ING[id].sub] === c.id)).length;
     return `<div class="fp-cat ${catOn ? '' : 'off'}">
-      <div class="fp-row l0"><button class="fp-caret ${open ? 'open' : ''}" data-act="fp-open" data-k="cat:${c.id}" aria-label="Show subgroups">${icon('right')}</button>
+      <div class="fp-row l0"><button class="fp-caret ${open ? 'open' : ''}" data-act="fp-open" data-k="cat:${c.id}" aria-label="Mostrar subgrupos">${icon('right')}</button>
         <label class="fp-lab"><input type="checkbox" data-fp="cat:${c.id}" ${catOn ? 'checked' : ''} ${catOn && partial ? 'data-ind="1"' : ''}><span class="fp-ic">${c.icon}</span><b>${esc(c.name)}</b></label>
-        <span class="fp-n">${catOn && partial ? `${onCount} of ${total}` : catOn ? total : `0 of ${total}`} foods · ${plural(recs, 'recipe')}</span></div>
+        <span class="fp-n">${catOn && partial ? `${onCount} de ${total}` : catOn ? total : `0 de ${total}`} alimentos · ${plural(recs, 'receita')}</span></div>
       ${open ? `<div class="fp-children">${subs}</div>` : ''}</div>`;
   }).join('');
-  return html || `<div class="muted small" style="padding:10px 4px">No foods match “${esc(q)}”.</div>`;
+  return html || `<div class="muted small" style="padding:10px 4px">Nenhum alimento corresponde a “${esc(q)}”.</div>`;
 }
 function fpAfter() { $$('input[data-fp][data-ind]').forEach(el => { el.indeterminate = true; }); }
 function refreshFoodPrefs() {
@@ -463,8 +463,8 @@ Object.assign(ACT, {
       delete S.customFoods[id]; Object.values(S.customRecipes).forEach(r => r.ing = r.ing.filter(([x]) => x !== id)); Object.values(S.recipeOverrides).forEach(r => r.ing = r.ing.filter(([x]) => x !== id));
       rebuildCatalog(); saveState(); render(); toast('Food deleted'); }, true); },
   'bg-reset': el => { delete S.bgCustom[el.dataset.sec]; bgCurrent = null; saveState(); render(); },
-  'bg-url': el => { const sec = el.dataset.sec; modal(`<h2>Background for ${esc(SECTION_BG[sec].label)}</h2><p class="sub small">Paste a direct image link (ending in .jpg, .png or .webp, or an images.unsplash.com link).</p><input class="inp" id="bg-url-in" style="width:100%" placeholder="https://…"><div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn" data-act="close-modal">Cancel</button><button class="btn primary" id="bg-url-ok">Use image</button></div>`, 'sm');
-    $('#bg-url-ok').onclick = () => { const v = $('#bg-url-in').value.trim(); if (!/^https?:\/\//.test(v)) { toast('Enter a full http(s) link'); return; } S.bgCustom[sec] = v; bgCurrent = null; saveState(); closeModal(); render(); toast('Background updated'); }; }
+  'bg-url': el => { const sec = el.dataset.sec; modal(`<h2>Fundo de ${esc(SECTION_BG[sec].label)}</h2><p class="sub small">Cole um link direto para uma imagem .jpg, .png ou .webp, ou um endereço images.unsplash.com.</p><input class="inp" id="bg-url-in" style="width:100%" placeholder="https://…"><div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn" data-act="close-modal">Cancelar</button><button class="btn primary" id="bg-url-ok">Usar imagem</button></div>`, 'sm');
+    $('#bg-url-ok').onclick = () => { const v = $('#bg-url-in').value.trim(); if (!/^https?:\/\//.test(v)) { toast('Informe um link http(s) completo'); return; } S.bgCustom[sec] = v; bgCurrent = null; saveState(); closeModal(); render(); toast('Fundo atualizado'); }; }
 });
 document.addEventListener('submit', e => { if (e.target.dataset && e.target.dataset.form === 'food') { e.preventDefault(); saveFood(e.target); } });
 

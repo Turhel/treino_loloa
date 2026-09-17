@@ -19,8 +19,8 @@ function addDays(s, n) { const d = parseISO(s); d.setDate(d.getDate() + n); retu
 function dayDiff(a, b) { return Math.round((parseISO(b) - parseISO(a)) / 86400000); }
 function todayISO() { return iso(new Date()); }
 function nextMonday(from) { const d = parseISO(from); const wd = d.getDay(); const add = wd === 1 ? 0 : (8 - wd) % 7; d.setDate(d.getDate() + add); return iso(d); }
-const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const DOW = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 function fmtDate(s, opts) { return parseISO(s).toLocaleDateString('pt-BR', opts || { weekday: 'short', month: 'short', day: 'numeric' }); }
 const maxISO = (a, b) => a > b ? a : b;
 
@@ -60,7 +60,7 @@ function defaultSettings() {
 }
 let S = null;
 function freshState() {
-  return { v: 6, onboarded: false, profile: null, settings: defaultSettings(), plan: {}, planEnd: null, weights: [], logs: {}, done: {}, created: todayISO(), customExercises: {},
+  return { v: 6, metricV6: true, onboarded: false, profile: null, settings: defaultSettings(), plan: {}, planEnd: null, weights: [], logs: {}, done: {}, created: todayISO(), customExercises: {},
     foodPrefs: Object.assign({}, DEFAULT_FOOD_PREFS), favRecipes: {}, exOff: {}, customFoods: {}, foodOverrides: {}, customRecipes: {}, recipeOverrides: {}, recipeOff: {}, bgCustom: {}, grocery: {}, importMap: {}, favFoods: {}, pantry: [], gymCards: [] };
 }
 function migrateState() {
@@ -69,7 +69,7 @@ function migrateState() {
   S.settings = Object.assign(defaultSettings(), S.settings);
   // v6 stores every body and lifting mass in kg. Older Forge snapshots are
   // imperial, so convert exactly once before any target is calculated.
-  if (!S.metricV6) {
+  if (!S.metricV6 && (!S.v || S.v < 6)) {
     const lbToKg = n => Number.isFinite(+n) ? +(Number(n) * KG_PER_LB).toFixed(3) : n;
     S.settings.startWeight = lbToKg(S.settings.startWeight);
     S.settings.goalWeight = lbToKg(S.settings.goalWeight);
@@ -79,8 +79,10 @@ function migrateState() {
     (S.weights || []).forEach(x => { x.w = lbToKg(x.w); });
     Object.values(S.logs || {}).forEach(day => Object.values(day || {}).forEach(sets => (sets || []).forEach(set => { if (set && set.w != null) set.w = lbToKg(set.w); })));
     if (S.profile && S.profile.heightIn != null && S.profile.heightCm == null) S.profile.heightCm = +(S.profile.heightIn * 2.54).toFixed(1);
-    S.metricV6 = true;
   }
+  // v6 plans were created in metric units. Some early v6 states did not carry
+  // this marker, so mark them without converting their already-metric values.
+  S.metricV6 = true;
   if (S.onboarded === undefined) S.onboarded = true;
   // research-backed extra exercises start switched off — applied once per exercise, so a user's own choice sticks
   S.exDefaults = S.exDefaults || {}; S.exOff = S.exOff || {};

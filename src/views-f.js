@@ -83,7 +83,7 @@ function renderOnboarding() {
     <h3 style="margin:18px 0 8px">Suas metas iniciais</h3><div id="ob-sum">${obSummaryHTML()}</div>
     <div class="tiny muted" style="margin-top:8px">Your plan starts ${fmtDate(S.settings.startDate, { weekday: 'long', month: 'long', day: 'numeric' })} with 3 training days a week — change the start date and training days any time in Settings.</div>`;
   el.innerHTML = `<form class="auth-card onb-card" data-form="onb" novalidate><div class="auth-brand">${LOGO}<b class="wm">FORGE<em>90</em></b></div>${dots}${body}
-    <div class="onb-nav">${s.step ? `<button type="button" class="btn ghost" data-act="onb-back">${icon('left')}Back</button>` : '<span></span>'}<button class="btn primary big" type="submit">${s.step < OB_STEPS.length - 1 ? `Continue ${icon('right')}` : `${icon('check')}Start my plan`}</button></div></form>`;
+    <div class="onb-nav">${s.step ? `<button type="button" class="btn ghost" data-act="onb-back">${icon('left')}Voltar</button>` : '<span></span>'}<button class="btn primary big" type="submit">${s.step < OB_STEPS.length - 1 ? `Continue ${icon('right')}` : `${icon('check')}Start my plan`}</button></div></form>`;
   const f = el.querySelector('input:not([type=checkbox]):not([type=range]), select'); if (f && !s.noFocus) setTimeout(() => { const e = el.querySelector('input:invalid, input[value=""]:not([type=range]):not([name=bf])') || f; e.focus(); }, 30);
   s.noFocus = false;
 }
