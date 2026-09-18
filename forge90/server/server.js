@@ -187,12 +187,12 @@ let LOGO_PNG = null; try { LOGO_PNG = fs.readFileSync(path.join(PUBLIC, 'email-l
 function friendlySmtp(e, host) {
   const m = String(e && e.message || e);
   if (/535|534|Username and Password not accepted|Application-specific password/i.test(m) && /gmail|google/i.test(host)) return m + ' — O Gmail exige uma senha de app (Conta Google → Segurança → Verificação em duas etapas → Senhas de app), e não a senha normal da conta.';
-  if (/ENOTFOUND|EAI_AGAIN/.test(m)) return `Can’t find the mail server “${host}”. Check the SMTP server name and this machine’s internet connection.`;
+  if (/ENOTFOUND|EAI_AGAIN/.test(m)) return `Não foi possível encontrar o servidor de e-mail “${host}”. Verifique o nome do servidor SMTP e a conexão desta máquina com a internet.`;
   if (/ECONNREFUSED|timed out|ETIMEDOUT/i.test(m)) return `Não foi possível conectar a ${host}. Verifique a porta, a configuração de segurança e se a rede permite envio de e-mails.`;
   return m;
 }
 async function deliver(to, toName, msg) {
-  const e = mailConfig(); if (!emailReady()) throw new Error('O e-mail ainda não está configurado (Admin → E-mail).');
+  const e = mailConfig(); if (!emailReady()) throw new Error('O e-mail ainda não está configurado (Administrador → E-mail).');
   try { return await sendMailRaw(e, to, toName, msg); } catch (x) { throw new Error(friendlySmtp(x, e.host)); }
 }
 /* A container's hostname is a random hex id, which reads as a forged HELO to strict receivers.
@@ -232,12 +232,12 @@ async function sendReset(user, reason, req, extra = {}) {
   const link = `${baseUrl(req)}/reset?token=${tok}`;
   const msg = MAIL.resetEmail({ name: user.name, link, minutes: RESET_MINUTES, expiresAt: new Date(expiresAt), reason, attempts: extra.attempts, ip: clientIp(req), ua: req.headers['user-agent'], appUrl: baseUrl(req), appName: db.settings.appName });
   try { await deliver(user.email, user.name, msg); audit('reset_email_sent', { userId: user.id, actorId: extra.actorId || null, ip: clientIp(req), detail: reason }); return { sent: true }; }
-  catch (e) { audit('reset_email_failed', { userId: user.id, actorId: extra.actorId || null, ip: clientIp(req), detail: `${reason}: ${e.message}` }); console.error('[email] reset to', user.email, 'failed:', e.message); return { sent: false, error: e.message }; }
+  catch (e) { audit('reset_email_failed', { userId: user.id, actorId: extra.actorId || null, ip: clientIp(req), detail: `${reason}: ${e.message}` }); console.error('[e-mail] redefinição para', user.email, 'falhou:', e.message); return { sent: false, error: e.message }; }
 }
 function notifyPasswordChanged(user, req, via) {
   if (!db.settings.security.notifyPasswordChange || (user.notify && user.notify.passwordChange === false) || !emailReady()) return;
   deliver(user.email, user.name, MAIL.passwordChangedEmail({ name: user.name, when: new Date(), ip: clientIp(req), appUrl: baseUrl(req), appName: db.settings.appName, via }))
-    .catch(e => audit('email_failed', { userId: user.id, detail: 'password-changed notice: ' + e.message }));
+    .catch(e => audit('email_failed', { userId: user.id, detail: 'aviso de alteração de senha: ' + e.message }));
 }
 
 /* ---------- HTTP plumbing ---------- */
@@ -253,7 +253,7 @@ function readBody(req, limit) {
   return new Promise((resolve, reject) => {
     let size = 0; const chunks = [];
     req.on('data', c => { size += c.length; if (size > limit) { reject(new HttpErr(413, 'Essa solicitação é grande demais.')); req.destroy(); } else chunks.push(c); });
-    req.on('end', () => { if (!chunks.length) return resolve({}); try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))); } catch (e) { reject(new HttpErr(400, 'Invalid JSON')); } });
+    req.on('end', () => { if (!chunks.length) return resolve({}); try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))); } catch (e) { reject(new HttpErr(400, 'JSON inválido')); } });
     req.on('error', reject);
   });
 }
@@ -262,7 +262,7 @@ function serveStatic(req, res, pathname) {
   let file = pathname === '/' || !path.extname(pathname) ? path.join(PUBLIC, 'index.html') : path.join(PUBLIC, path.normalize(pathname).replace(/^([/\\])+/, ''));
   if (!file.startsWith(PUBLIC)) { res.writeHead(403); return res.end(); }
   fs.readFile(file, (e, buf) => {
-    if (e) { res.writeHead(404, SEC_HEADERS); return res.end('Not found'); }
+    if (e) { res.writeHead(404, SEC_HEADERS); return res.end('Não encontrado'); }
     res.writeHead(200, Object.assign({ 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': file.endsWith('.html') ? 'no-store' : 'public, max-age=86400' }, SEC_HEADERS));
     res.end(req.method === 'HEAD' ? undefined : buf);
   });
@@ -687,11 +687,11 @@ route('POST', '/api/integrations/mealie/test', { admin: true }, async (req, res,
 route('PUT', '/api/integrations/mealie', { admin: true }, async (req, res, ctx) => {
   const cfg = mealieInput(ctx.body); const r = await impCall(() => IMP.mealieTest(cfg));
   db.integrations.mealie = { url: cfg.url, token: cfg.token, user: r.user, group: r.group, version: r.version, checkedAt: now(), updatedAt: now(), by: ctx.me.u.id }; saveDb();
-  audit('integration_changed', { userId: ctx.me.u.id, actorId: ctx.me.u.id, ip: clientIp(req), detail: `Mealie connected (${cfg.url})` });
+  audit('integration_changed', { userId: ctx.me.u.id, actorId: ctx.me.u.id, ip: clientIp(req), detail: `Mealie conectado (${cfg.url})` });
   send(res, 200, { mealie: mealieView(ctx.me.u) });
 });
 route('DELETE', '/api/integrations/mealie', { admin: true }, async (req, res, ctx) => {
-  delete db.integrations.mealie; saveDb(); audit('integration_changed', { userId: ctx.me.u.id, actorId: ctx.me.u.id, ip: clientIp(req), detail: 'Mealie disconnected' });
+  delete db.integrations.mealie; saveDb(); audit('integration_changed', { userId: ctx.me.u.id, actorId: ctx.me.u.id, ip: clientIp(req), detail: 'Mealie desconectado' });
   send(res, 200, { mealie: mealieView(ctx.me.u) });
 });
 route('GET', '/api/import/mealie/recipes', { auth: true }, async (req, res, ctx) => { importLimit(ctx, 'search'); send(res, 200, await impCall(() => IMP.mealieSearch(mealieCfg(), ctx.query.q, ctx.query.page))); });
@@ -710,7 +710,7 @@ const target = ctx => { const u = userById(ctx.params.id); if (!u) err(404, 'Usu
 route('GET', '/api/admin/users', { admin: true }, async (req, res) => send(res, 200, { users: db.users.map(adminUserRow) }));
 function inviteRow(i) { return { id: i.id, email: i.email, name: i.name || '', role: i.role, createdAt: i.createdAt, sentAt: i.sentAt, expiresAt: i.expiresAt, sends: i.sends || 0, expired: i.expiresAt <= now(), invitedBy: (userById(i.invitedBy) || {}).name || null }; }
 async function sendInvite(inv, req, actor) {
-  if (!emailReady()) err(400, 'Configure o e-mail primeiro (Admin → E-mail) — os convites são enviados por e-mail.');
+  if (!emailReady()) err(400, 'Configure o e-mail primeiro (Administrador → E-mail) — os convites são enviados por e-mail.');
   const tok = crypto.randomBytes(32).toString('base64url'); const prev = { h: inv.h, sentAt: inv.sentAt, expiresAt: inv.expiresAt };
   inv.h = sha256(tok); inv.sentAt = now(); inv.expiresAt = now() + INVITE_DAYS * 86400000;      // a new link replaces the old one
   const link = `${baseUrl(req)}/invite?token=${tok}`;
@@ -818,7 +818,7 @@ route('PATCH', '/api/admin/settings', { admin: true }, async (req, res, ctx) => 
 });
 route('POST', '/api/admin/email/test', { admin: true }, async (req, res, ctx) => {
   const to = normEmail(ctx.body.to || ctx.me.u.email); if (!validEmail(to)) err(400, 'Informe um endereço válido para enviar o teste.');
-  try { await deliver(to, '', MAIL.simpleEmail({ title: 'E-mail de teste do FORGE 90', heading: 'O e-mail está funcionando ✔', lines: ['Este é um teste do FORGE 90 → Admin → E-mail.', 'Os e-mails de redefinição de senha serão enviados por esta conta.'], buttonUrl: baseUrl(req), buttonLabel: 'Abrir FORGE 90', appUrl: baseUrl(req), appName: db.settings.appName }));
+  try { await deliver(to, '', MAIL.simpleEmail({ title: 'E-mail de teste do FORGE 90', heading: 'O e-mail está funcionando ✔', lines: ['Este é um teste do FORGE 90 → Administrador → E-mail.', 'Os e-mails de redefinição de senha serão enviados por esta conta.'], buttonUrl: baseUrl(req), buttonLabel: 'Abrir FORGE 90', appUrl: baseUrl(req), appName: db.settings.appName }));
     audit('email_test', { actorId: ctx.me.u.id, ip: clientIp(req), detail: 'sent to ' + to }); send(res, 200, { ok: true, to }); }
   catch (e) { audit('email_test', { actorId: ctx.me.u.id, ip: clientIp(req), detail: 'FAILED: ' + e.message.slice(0, 200) }); err(502, e.message); }
 });
@@ -918,7 +918,7 @@ async function cli() {
   server.listen(PORT, HOST, () => {
     console.log(`  FORGE 90 ${VERSION} está em execução → ${ENV.APP_URL || `http://localhost:${PORT}`}`);
     console.log(`  Pasta de dados: ${DATA}`);
-    console.log(`  E-mail: ${emailReady() ? `${mailConfig().host}:${mailConfig().port} como ${mailConfig().user || mailConfig().fromEmail}` : 'não configurado (Admin → E-mail)'}\n`);
+    console.log(`  E-mail: ${emailReady() ? `${mailConfig().host}:${mailConfig().port} como ${mailConfig().user || mailConfig().fromEmail}` : 'não configurado (Administrador → E-mail)'}\n`);
   });
   const stop = () => { saveDb(true); process.exit(0); };
   process.on('SIGINT', stop); process.on('SIGTERM', stop);

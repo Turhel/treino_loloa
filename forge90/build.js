@@ -24,7 +24,7 @@ ${css}
 </style>
 </head>
 <body>
-<noscript>FORGE 90 needs JavaScript enabled.</noscript>
+<noscript>O FORGE 90 precisa do JavaScript ativado.</noscript>
 <script>
 "use strict";
 ${js}
@@ -32,4 +32,4 @@ ${js}
 </body>
 </html>`;
 fs.mkdirSync('dist',{recursive:true}); fs.writeFileSync('dist/FORGE90.html',html); fs.mkdirSync('server/public',{recursive:true}); fs.writeFileSync('server/public/index.html',html);
-console.log('built',VERSION,(html.length/1024).toFixed(1)+'KB');
+console.log('gerado',VERSION,(html.length/1024).toFixed(1)+'KB');
