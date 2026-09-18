@@ -283,6 +283,12 @@ function impGuessEmoji(name, cat) {
   return best || { breakfast: '🍳', lunch: '🥗', dinner: '🍽️', snack: '🍎' }[cat] || '🍽️';
 }
 function impExisting(rec) { const u = rec.url || rec.mealieUrl; const n = impAscii(rec.name).trim(); return RECIPES.find(r => (u && (r.links || []).some(l => l.url === u || l.url === rec.mealieUrl)) || (n && impAscii(r.name).trim() === n)) || null; }
+function impYieldTextPt(value) {
+  let s = String(value || '').trim();
+  s = s.replace(/\b(?:serves?|makes?|yields?)\s*:?\s*(\d+)\b/i, 'rende $1 porções');
+  s = s.replace(/\b(\d+)\s+servings?\b/i, '$1 porções');
+  return s;
+}
 function importToEditor(rec, extra = {}) {
   const rows = [], skipped = [];
   (rec.ingredients || []).forEach(it => { const r = impRow(it); if (r.header) return; if (r.skip) skipped.push({ text: it.text, why: r.skip }); else rows.push(r.row); });
@@ -291,7 +297,7 @@ function importToEditor(rec, extra = {}) {
   const dup = impExisting(rec);
   RE = { id: null, base: false, name: rec.name || '', emoji: impGuessEmoji(rec.name, cat), cat, yield: sv && sv <= 12 ? sv : '', storage: 'fridge', time: rec.minutes || 20, tags: '', fixed: false, rotate: true,
     ing: rows, steps: (rec.steps || []).join('\n'), links,
-    imp: { from: rec.source, site: rec.source === 'mealie' ? 'Mealie' : (rec.site || linkHost(rec.url)), nut: rec.nutrition || null, bigYield: sv > 12 ? sv : null, yieldText: rec.yieldText || '', skipped, noIng: !rows.length, error: extra.error || (rec.loose ? 'A página não tinha dados estruturados de receita, então o conteúdo foi lido diretamente da página. Confira as quantidades e etapas antes de salvar.' : ''), dup: dup ? dup.name : '', q: IMPQ && IMPQ.list.length > 1 ? { i: IMPQ.i + 1, n: IMPQ.list.length } : null, paste: !rows.length } };
+    imp: { from: rec.source, site: rec.source === 'mealie' ? 'Mealie' : (rec.site || linkHost(rec.url)), nut: rec.nutrition || null, bigYield: sv > 12 ? sv : null, yieldText: impYieldTextPt(rec.yieldText), skipped, noIng: !rows.length, error: extra.error || (rec.loose ? 'A página não tinha dados estruturados de receita, então o conteúdo foi lido diretamente da página. Confira as quantidades e etapas antes de salvar.' : ''), dup: dup ? dup.name : '', q: IMPQ && IMPQ.list.length > 1 ? { i: IMPQ.i + 1, n: IMPQ.list.length } : null, paste: !rows.length } };
   renderRecipeEditor();
 }
 
