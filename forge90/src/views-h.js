@@ -33,20 +33,20 @@ function renderSwap() {
     if (x.planned !== x.exId) reset = `<button class="btn sm" data-act="swap-pick" data-id="${x.planned}">${icon('undo')}Back to the planned exercise: ${esc(EX[x.planned].name)}</button>`;
   } else {
     const from = swapStartWeek(x.exId); const orig = progSwapOrigin(x.slot, x.exId, from) || progSwapOrigin(x.slot, x.exId, curPlanWeekStart());
-    scope = `Replaces <b>${esc(cur.name)}</b> everywhere the <b>${esc(sl.label)}</b> rotation uses it, from the week of <b>${fmtDate(from, { month: 'short', day: 'numeric' })}</b>. Earlier weeks keep what was planned.`;
-    if (orig && EX[orig]) reset = `<button class="btn sm" data-act="swap-pick" data-id="${orig}">${icon('undo')}Restore the original: ${esc(EX[orig].name)}</button>`;
+    scope = `Substitui <b>${esc(cur.name)}</b> em todos os lugares onde a rotação <b>${esc(sl.label)}</b> usa esse exercício, a partir da semana de <b>${fmtDate(from, { month: 'short', day: 'numeric' })}</b>. As semanas anteriores mantêm o que foi planejado.`;
+    if (orig && EX[orig]) reset = `<button class="btn sm" data-act="swap-pick" data-id="${orig}">${icon('undo')}Restaurar o original: ${esc(EX[orig].name)}</button>`;
   }
-  const groups = { slot: `Other ${esc(sl.label.toLowerCase())} exercises`, group: `More ${esc(g.toLowerCase())} exercises`, other: 'Other muscle groups' };
+  const groups = { slot: `Outros exercícios de ${esc(sl.label.toLowerCase())}`, group: `Mais exercícios de ${esc(g.toLowerCase())}`, other: 'Outros grupos musculares' };
   let last = ''; const opts = swapCandidates().map(({ e, grp }) => {
     const head = grp !== last ? `<div class="swap-grp">${groups[grp]}</div>` : ''; last = grp;
     const pills = [exOffNow(e.id) ? '<span class="pill">Off in library</span>' : '', e.custom ? '<span class="pill acc">Custom</span>' : '', e.extra ? '<span class="pill">Research pick</span>' : ''].join('');
-    return `${head}<button type="button" class="swap-opt" data-act="swap-pick" data-id="${e.id}" data-n="${esc((e.name + ' ' + e.equip + ' ' + exGroupOf(e)).toLowerCase())}" data-tip-ex="${e.id}">${muscleMap(e.primary, e.secondary)}<span class="swap-t"><b>${esc(e.name)}</b><small>${esc(e.equip || '')} · ${e.compound ? 'compound' : 'isolation'}</small></span><span class="swap-p">${pills}</span></button>`; }).join('');
-  modal(`<div class="swap-m"><div class="row"><h2 style="flex:1">${x.mode === 'day' ? 'Swap for this day' : 'Swap in the program'}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Close">${icon('x')}</button></div>
-    <div class="swap-cur">${muscleMap(cur.primary, cur.secondary)}<div style="min-width:0"><div class="tiny muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.08em">${esc(sl.label)} · now</div><b>${esc(cur.name)}</b><div class="tiny muted">${esc(cur.equip || '')}</div></div></div>
+    return `${head}<button type="button" class="swap-opt" data-act="swap-pick" data-id="${e.id}" data-n="${esc((e.name + ' ' + e.equip + ' ' + exGroupOf(e)).toLowerCase())}" data-tip-ex="${e.id}">${muscleMap(e.primary, e.secondary)}<span class="swap-t"><b>${esc(e.name)}</b><small>${esc(e.equip || '')} · ${e.compound ? 'composto' : 'isolador'}</small></span><span class="swap-p">${pills}</span></button>`; }).join('');
+  modal(`<div class="swap-m"><div class="row"><h2 style="flex:1">${x.mode === 'day' ? 'Trocar somente neste dia' : 'Trocar no programa'}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Close">${icon('x')}</button></div>
+    <div class="swap-cur">${muscleMap(cur.primary, cur.secondary)}<div style="min-width:0"><div class="tiny muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.08em">${esc(sl.label)} · agora</div><b>${esc(cur.name)}</b><div class="tiny muted">${esc(cur.equip || '')}</div></div></div>
     <div class="note" style="margin:10px 0">${icon('info')}<span>${scope}</span></div>${reset ? `<div style="margin-bottom:10px">${reset}</div>` : ''}
-    <div class="row wrap" style="gap:10px;margin-bottom:8px"><input class="inp" type="search" id="swap-q" data-input="swap-q" placeholder="Search exercises…" style="flex:1;min-width:180px" autocomplete="off">
-      <label class="small"><input type="checkbox" data-input="swap-all" ${x.all ? 'checked' : ''}> Show every muscle group</label></div>
-    <div class="swap-list" id="swap-list">${opts || '<div class="muted small" style="padding:12px">No other exercises.</div>'}</div></div>`, 'swap-modal');
+    <div class="row wrap" style="gap:10px;margin-bottom:8px"><input class="inp" type="search" id="swap-q" data-input="swap-q" placeholder="Buscar exercícios…" style="flex:1;min-width:180px" autocomplete="off">
+      <label class="small"><input type="checkbox" data-input="swap-all" ${x.all ? 'checked' : ''}> Mostrar todos os grupos musculares</label></div>
+    <div class="swap-list" id="swap-list">${opts || ' <div class="muted small" style="padding:12px">Nenhum outro exercício.</div>'}</div></div>`, 'swap-modal');
   const q = $('#swap-q'); if (q && x.q) { q.value = x.q; swapFilter(); }
 }
 function swapFilter() {
@@ -58,16 +58,16 @@ function swapFilter() {
 function swapPick(id) {
   const x = SWP; if (!x || !EX[id]) return; const from = EX[x.exId];
   if (x.mode === 'day') {
-    const e = S.plan[x.date]; if (!e || !e.w) return; pushUndo('swap exercise');
+    const e = S.plan[x.date]; if (!e || !e.w) return; pushUndo('troca de exercício');
     const sw = Object.assign({}, e.w.sw || {}); if (id === x.planned) delete sw[x.i]; else sw[x.i] = id;
     e.w = Object.assign({}, e.w); if (Object.keys(sw).length) e.w.sw = sw; else delete e.w.sw;
     const logged = ((S.logs[x.date] || {})[x.exId] || []).some(s => s && +s.r > 0);
     saveState(); SWP = null; closeModal(); render(); if (x.back === 'qe' && typeof renderQuickEdit === 'function' && QE) renderQuickEdit();
-    toast(`${fmtDate(x.date, { weekday: 'short' })}: ${from.name} → ${EX[id].name}${logged ? ' · sets you logged for ' + from.name + ' stay in your history' : ''}`, true);
+    toast(`${fmtDate(x.date, { weekday: 'short' })}: ${from.name} → ${EX[id].name}${logged ? ' · as séries registradas para ' + from.name + ' permanecem no histórico' : ''}`, true);
     return;
   }
   const wkFrom = swapStartWeek(x.exId);
-  pushUndo('swap exercise in the program');
+  pushUndo('troca de exercício no programa');
   S.slotSwap = S.slotSwap || {}; const L = S.slotSwap[x.slot] = S.slotSwap[x.slot] || [];
   const act = L.find(s => s[1] === x.exId && !s[3]);       // the exercise shown is itself a swap → change that swap
   const orig = act ? act[0] : x.exId;
@@ -75,7 +75,7 @@ function swapPick(id) {
   if (id !== orig) L.push([orig, id, wkFrom, null]);
   if (!L.length) delete S.slotSwap[x.slot];
   saveState(); SWP = null; closeModal(); render();
-  toast(id === orig ? `${EX[id].name} is back in the ${SLOTS[x.slot].label.toLowerCase()} rotation from ${fmtDate(wkFrom)}` : `${from.name} → ${EX[id].name} in the program from ${fmtDate(wkFrom)}`, true);
+  toast(id === orig ? `${EX[id].name} voltou para a rotação de ${SLOTS[x.slot].label.toLowerCase()} a partir de ${fmtDate(wkFrom)}` : `${from.name} → ${EX[id].name} no programa a partir de ${fmtDate(wkFrom)}`, true);
 }
 
 /* ---------- collapsible sections (Workout plan) ---------- */

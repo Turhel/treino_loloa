@@ -291,38 +291,38 @@ function importToEditor(rec, extra = {}) {
   const dup = impExisting(rec);
   RE = { id: null, base: false, name: rec.name || '', emoji: impGuessEmoji(rec.name, cat), cat, yield: sv && sv <= 12 ? sv : '', storage: 'fridge', time: rec.minutes || 20, tags: '', fixed: false, rotate: true,
     ing: rows, steps: (rec.steps || []).join('\n'), links,
-    imp: { from: rec.source, site: rec.source === 'mealie' ? 'Mealie' : (rec.site || linkHost(rec.url)), nut: rec.nutrition || null, bigYield: sv > 12 ? sv : null, yieldText: rec.yieldText || '', skipped, noIng: !rows.length, error: extra.error || (rec.loose ? 'That page had no recipe data, so this was read from the page itself. Check the amounts and steps before saving.' : ''), dup: dup ? dup.name : '', q: IMPQ && IMPQ.list.length > 1 ? { i: IMPQ.i + 1, n: IMPQ.list.length } : null, paste: !rows.length } };
+    imp: { from: rec.source, site: rec.source === 'mealie' ? 'Mealie' : (rec.site || linkHost(rec.url)), nut: rec.nutrition || null, bigYield: sv > 12 ? sv : null, yieldText: rec.yieldText || '', skipped, noIng: !rows.length, error: extra.error || (rec.loose ? 'A página não tinha dados estruturados de receita, então o conteúdo foi lido diretamente da página. Confira as quantidades e etapas antes de salvar.' : ''), dup: dup ? dup.name : '', q: IMPQ && IMPQ.list.length > 1 ? { i: IMPQ.i + 1, n: IMPQ.list.length } : null, paste: !rows.length } };
   renderRecipeEditor();
 }
 
 /* ---------- review UI inside the recipe editor ---------- */
-const IMP_ST = { none: ['Needs a food', 'imp-none'], amt: ['Needs an amount', 'imp-amt'], check: ['Check', 'imp-check'], ok: ['Matched', 'imp-ok'] };
+const IMP_ST = { none: ['Precisa de um alimento', 'imp-none'], amt: ['Precisa de uma quantidade', 'imp-amt'], check: ['Verificar', 'imp-check'], ok: ['Correspondente', 'imp-ok'] };
 function impRowState(r) { const m = r[2]; if (!m) return null; if (!ING[r[0]]) return 'none'; if (!(+r[1] > 0)) return 'amt'; return m.st === 'check' ? 'check' : 'ok'; }
 function impSrcHTML(r, i) {
   const m = r[2]; if (!m) return ''; const st = impRowState(r); const [lbl, cls] = IMP_ST[st];
-  return `<div class="re-src ${cls}" data-src="${i}"><span class="pill">${st === 'ok' ? icon('check') : ''}${lbl}</span><span class="re-src-t">“${esc(m.src)}”${m.est ? ` <span class="muted">· ≈ ${esc(m.est)}</span>` : ''}${m.learned ? ' <span class="muted">· matched like last time</span>' : ''}</span>${st === 'check' ? `<button type="button" class="btn sm ghost" data-act="re-imp-ok" data-i="${i}">${icon('check')}Looks right</button>` : ''}</div>`;
+  return `<div class="re-src ${cls}" data-src="${i}"><span class="pill">${st === 'ok' ? icon('check') : ''}${lbl}</span><span class="re-src-t">“${esc(m.src)}”${m.est ? ` <span class="muted">· ≈ ${esc(m.est)}</span>` : ''}${m.learned ? ' <span class="muted">· correspondência aprendida da última vez</span>' : ''}</span>${st === 'check' ? `<button type="button" class="btn sm ghost" data-act="re-imp-ok" data-i="${i}">${icon('check')}Looks right</button>` : ''}</div>`;
 }
 function impNeeds() {
   const e = RE; if (!e || !e.imp) return [];
   const out = []; const nf = e.ing.filter(r => r[2] && impRowState(r) === 'none').length; const na = e.ing.filter(r => r[2] && impRowState(r) === 'amt').length;
-  if (!e.cat) out.push('Choose which meal this is');
-  if (!(+e.yield >= 1)) out.push(e.imp.bigYield ? `Enter the servings — the source says it makes ${e.imp.bigYield}; recipes here go up to 12` : `Enter how many servings it makes${e.imp.yieldText ? ` (the source says “${e.imp.yieldText}”)` : ''}`);
-  else if (+e.yield > 12) out.push('Recipes can make up to 12 servings');
-  if (!e.ing.length) out.push('Add the ingredients');
-  if (nf) out.push(`Pick a food for ${nf} ingredient${nf > 1 ? 's' : ''} (or remove the line)`);
-  if (na) out.push(`Enter the amount for ${na} ingredient${na > 1 ? 's' : ''}`);
+  if (!e.cat) out.push('Escolha a qual refeição pertence');
+  if (!(+e.yield >= 1)) out.push(e.imp.bigYield ? `Informe as porções — a fonte diz que rende ${e.imp.bigYield}; aqui as receitas aceitam até 12 porções` : `Informe quantas porções rende${e.imp.yieldText ? ` (a fonte diz “${e.imp.yieldText}”)` : ''}`);
+  else if (+e.yield > 12) out.push('As receitas podem render até 12 porções');
+  if (!e.ing.length) out.push('Adicione os ingredientes');
+  if (nf) out.push(`Escolha um alimento para ${nf} ingrediente${nf > 1 ? 's' : ''} (ou remova a linha)`);
+  if (na) out.push(`Informe a quantidade para ${na} ingrediente${na > 1 ? 's' : ''}`);
   return out;
 }
 function impBannerHTML() {
   const e = RE; if (!e || !e.imp) return ''; const im = e.imp; const needs = impNeeds(); const nc = e.ing.filter(r => r[2] && impRowState(r) === 'check').length;
   return `<div class="imp-banner ${needs.length ? 'need' : 'ready'}" id="re-imp-banner">
-    <div class="row wrap" style="gap:8px"><b>${icon('download')}Imported from ${esc(im.site || 'the web')}</b>${im.q ? `<span class="pill">Recipe ${im.q.i} of ${im.q.n}</span>` : ''}${im.dup ? `<span class="pill warn-pill" title="You already have a recipe with this name or link">Already have “${esc(im.dup)}”</span>` : ''}</div>
+    <div class="row wrap" style="gap:8px"><b>${icon('download')}Importado de ${esc(im.site || 'a web')}</b>${im.q ? `<span class="pill">Recipe ${im.q.i} of ${im.q.n}</span>` : ''}${im.dup ? `<span class="pill warn-pill" title="Você já tem uma receita com este nome ou link">Já existe “${esc(im.dup)}”</span>` : ''}</div>
     ${im.error ? `<div class="small" style="margin-top:6px">${esc(im.error)}</div>` : ''}
-    ${needs.length ? `<div class="small" style="margin-top:6px">Fill in the highlighted items before saving:</div><ul class="imp-needs">${needs.map(n => `<li>${esc(n)}</li>`).join('')}</ul>`
-      : `<div class="small" style="margin-top:6px">${icon('check')} Everything was filled in.${nc ? ` ${nc} food match${nc > 1 ? 'es are' : ' is'} marked <b>Check</b> — make sure ${nc > 1 ? 'they’re' : 'it’s'} right.` : ''} Review the amounts, then save.</div>`}
-    ${im.skipped.length ? `<div class="imp-skipped tiny"><span class="muted">Left out:</span> ${im.skipped.map((s, i) => `<span class="imp-sk">${esc(s.text)} <button type="button" class="linkish" data-act="re-imp-add" data-i="${i}" title="Add this line as an ingredient">Add</button></span>`).join('')}</div>` : ''}
-    ${im.paste ? `<div class="imp-paste"><label class="small"><b>Paste the ingredients</b>, one per line</label><textarea class="inp" id="re-imp-paste" rows="5" placeholder="2 lb chicken breast&#10;1 cup rice&#10;2 tbsp olive oil"></textarea><div class="row" style="margin-top:6px"><button type="button" class="btn sm primary" data-act="re-imp-paste">Add ingredients</button></div></div>`
-      : `<button type="button" class="linkish tiny" data-act="re-imp-paste-show" style="margin-top:6px">Paste more ingredients</button>`}
+    ${needs.length ? `<div class="small" style="margin-top:6px">Preencha os itens destacados antes de salvar:</div><ul class="imp-needs">${needs.map(n => `<li>${esc(n)}</li>`).join('')}</ul>`
+      : `<div class="small" style="margin-top:6px">${icon('check')} Tudo foi preenchido.${nc ? ` ${nc} food match${nc > 1 ? 'es are' : ' is'} marked <b>Check</b> — make sure ${nc > 1 ? 'they’re' : 'it’s'} right.` : ''} Revise as quantidades e depois salve.</div>`}
+    ${im.skipped.length ? `<div class="imp-skipped tiny"><span class="muted">Ignorados:</span> ${im.skipped.map((s, i) => `<span class="imp-sk">${esc(s.text)} <button type="button" class="linkish" data-act="re-imp-add" data-i="${i}" title="Adicionar esta linha como ingrediente">Adicionar</button></span>`).join('')}</div>` : ''}
+    ${im.paste ? `<div class="imp-paste"><label class="small"><b>Cole os ingredientes</b>, um por linha</label><textarea class="inp" id="re-imp-paste" rows="5" placeholder="2 lb chicken breast&#10;1 cup rice&#10;2 tbsp olive oil"></textarea><div class="row" style="margin-top:6px"><button type="button" class="btn sm primary" data-act="re-imp-paste">Adicionar ingredientes</button></div></div>`
+      : `<button type="button" class="linkish tiny" data-act="re-imp-paste-show" style="margin-top:6px">Colar mais ingredientes</button>`}
   </div>`;
 }
 function impRefresh() {
