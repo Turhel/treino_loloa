@@ -510,7 +510,7 @@ route('POST', '/api/sync/slots', { auth: true }, async (req, res, ctx) => {    /
   send(res, 200, { sync: syncView(s, me.id) });
 });
 route('PUT', '/api/sync/snapshot', { auth: true, limit: 'state' }, async (req, res, ctx) => {  // my shared-meal portions, so the partner's shopping list can include them
-  const s = needSync(ctx); const snap = ctx.body.snap; if (!snap || typeof snap !== 'object') err(400, 'Missing snapshot');
+  const s = needSync(ctx); const snap = ctx.body.snap; if (!snap || typeof snap !== 'object') err(400, 'Falta o snapshot');
   writeAtomic(snapFile(s.id, ctx.me.u.id), JSON.stringify(Object.assign(snap, { at: now() }))); bumpSync(s); send(res, 200, { ok: true, rev: s.rev });
 });
 route('GET', '/api/sync/partner', { auth: true }, async (req, res, ctx) => {
@@ -519,7 +519,7 @@ route('GET', '/api/sync/partner', { auth: true }, async (req, res, ctx) => {
 route('POST', '/api/sync/baseline', { auth: true, limit: 'state' }, async (req, res, ctx) => {   // shared meals planned together (start of sync, new weeks, newly shared meals)
   const me = ctx.me.u; const s = needSync(ctx, 'active'); const b = ctx.body;
   if (b.baseRev != null && +b.baseRev !== s.baseRev) return send(res, 409, { sync: syncView(s, me.id) });
-  if (!b.meals || typeof b.meals !== 'object') err(400, 'Missing meals');
+  if (!b.meals || typeof b.meals !== 'object') err(400, 'Faltam as refeições');
   let n = 0; for (const [k, rid] of Object.entries(b.meals)) { const [d, sl] = k.split('|'); if (!isoDate(d) || !SYNC_SLOTS.includes(sl) || !s.slots[sl] || !ridOk(rid)) continue; s.agreed[k] = rid; delete s.div[k]; n++; if (n > 5000) break; }
   if (isoDate(b.through) && (!s.through || b.through > s.through)) s.through = b.through;
   s.changes = s.changes.filter(c => !(b.meals[c.date + '|' + c.slot] !== undefined));
@@ -542,7 +542,7 @@ route('POST', '/api/sync/changes', { auth: true, limit: 'state' }, async (req, r
 });
 route('POST', '/api/sync/resolve', { auth: true }, async (req, res, ctx) => {    // accept / decline the partner's changes, or cancel my own
   const me = ctx.me.u; const s = needSync(ctx, 'active'); const b = ctx.body; const ids = new Set(Array.isArray(b.ids) ? b.ids : []);
-  if (!['accept', 'decline', 'cancel'].includes(b.action)) err(400, 'Unknown action');
+  if (!['accept', 'decline', 'cancel'].includes(b.action)) err(400, 'Ação desconhecida');
   const done = []; const pn = (userById(partnerId(s, me.id)) || {}).name || 'A outra pessoa';
   s.changes.filter(c => ids.has(c.id)).forEach(c => {
     const mine = c.from === me.id; if (b.action === 'cancel' ? !mine : mine) return;
