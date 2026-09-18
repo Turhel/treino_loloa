@@ -40,8 +40,8 @@ function viewWorkouts() {
     const cw = curPlanWeekStart(); const inProg = new Set(Object.keys(S.slotSwap || {}).flatMap(sl => SLOTS[sl] ? slotSwapsOn(sl, cw).map(x => x[1]) : []));
     return `<div style="margin-bottom:18px"><h3 style="margin-bottom:8px">${g} <span class="muted small" style="font-weight:500">· ${onN} of ${exs.length} in rotation</span></h3><div class="grid g4" style="gap:10px">
       ${exs.map(e => { const on = !exOffNow(e.id); const last = on && onN <= 1;
-        return `<div class="ex-card ${e.custom ? 'custom' : ''} ${on ? '' : 'off'}" data-tip-ex="${e.id}">${muscleMap(e.primary, e.secondary)}<div style="min-width:0;flex:1"><b>${esc(e.name)}</b><span>${esc(e.equip || '—')}</span><div class="row wrap" style="margin-top:4px;gap:4px">${inProg.has(e.id) ? '<span class="pill acc" style="font-size:10.5px">Swapped in</span>' : ''}<span class="pill" style="font-size:10.5px">${e.compound ? 'Compound' : 'Isolation'}</span>${e.custom ? `<span class="pill acc" style="font-size:10.5px">Yours${e.slot && SLOTS[e.slot] ? ' · in rotation' : ''}</span>` : ''}</div>
-          <label class="ex-tog" title="${last ? `This is the only ${g.toLowerCase()} exercise switched on — every muscle group keeps at least one` : on ? 'Switch off to keep it out of your sessions' : 'Switch on to add it back to the rotation'}"><input type="checkbox" data-input="ex-on" data-id="${e.id}" ${on ? 'checked' : ''} ${last ? 'disabled' : ''}><i class="switch ${on ? 'on' : ''}" aria-hidden="true"><i></i></i><span>${on ? (last ? 'Required' : 'In rotation') : 'Off'}</span></label></div>
+        return `<div class="ex-card ${e.custom ? 'custom' : ''} ${on ? '' : 'desativado'}" data-tip-ex="${e.id}">${muscleMap(e.primary, e.secondary)}<div style="min-width:0;flex:1"><b>${esc(e.name)}</b><span>${esc(e.equip || '—')}</span><div class="row wrap" style="margin-top:4px;gap:4px">${inProg.has(e.id) ? '<span class="pill acc" style="font-size:10.5px">Swapped in</span>' : ''}<span class="pill" style="font-size:10.5px">${e.compound ? 'Compound' : 'Isolation'}</span>${e.custom ? `<span class="pill acc" style="font-size:10.5px">Yours${e.slot && SLOTS[e.slot] ? ' · in rotation' : ''}</span>` : ''}</div>
+          <label class="ex-tog" title="${last ? `This is the only ${g.toLowerCase()} exercise switched on — every muscle group keeps at least one` : on ? 'Switch off to keep it out of your sessions' : 'Switch on to add it back to the rotation'}"><input type="checkbox" data-input="ex-on" data-id="${e.id}" ${on ? 'checked' : ''} ${last ? 'disabled' : ''}><i class="switch ${on ? 'ativado' : ''}" aria-hidden="true"><i></i></i><span>${on ? (last ? 'Required' : 'In rotation') : 'Off'}</span></label></div>
         ${e.custom ? `<button class="ex-edit" data-act="ex-edit" data-id="${e.id}" title="Edit exercise" aria-label="Edit ${esc(e.name)}">${icon('edit')}</button>` : ''}</div>`; }).join('')}
       <button class="ex-card ex-add" data-act="ex-new" data-group="${g === 'Rear delts' ? 'Shoulders' : g}" aria-label="Add a ${g.toLowerCase()} exercise"><span class="plus">${icon('plus')}</span><span>Add ${g === 'Rear delts' ? 'rear delt' : g.toLowerCase()} exercise</span></button></div></div>`; }).join('');
   const libCard = `<div class="card ${collCls('lib')}" data-coll="lib"><div class="card-h">${collHead('lib', 'Exercise library', `<span class="muted small">Hover for step-by-step form · switch exercises on or off · add your own with the + card</span>`)}</div><div class="coll-body">
@@ -67,7 +67,7 @@ function viewWorkouts() {
     <div style="height:16px"></div>
     ${libCard}
     <div style="height:16px"></div>
-    <section class="${collCls('sessions')}" data-coll="sessions"><div class="coll-row" style="margin-bottom:12px">${collHead('sessions', 'Sessions & rotation', `<div class="seg">${ALL_PHASES.map(p => `<button class="${ph.key === p.key ? 'on' : ''}" data-act="plan-phase" data-v="${p.key}">${p.name}</button>`).join('')}</div>`)}</div>
+    <section class="${collCls('sessions')}" data-coll="sessions"><div class="coll-row" style="margin-bottom:12px">${collHead('sessions', 'Sessions & rotation', `<div class="seg">${ALL_PHASES.map(p => `<button class="${ph.key === p.key ? 'ativado' : ''}" data-act="plan-phase" data-v="${p.key}">${p.name}</button>`).join('')}</div>`)}</div>
     <div class="coll-body"><div class="tiny muted" style="margin:-4px 0 12px">Use ${icon('loop').replace('<svg', '<svg style="width:12px;height:12px;vertical-align:-2px"')} on any exercise to swap it in the program from this week on.</div>${sessions}</div></section>`;
 }
 
@@ -247,20 +247,20 @@ function moneySaverHTML(wd) {
     const a = shoppingStats(real(days)), o = shoppingStats(Object.fromEntries(days.map(d => [d, sim[d] || {}]))); pk4 += on ? o.packs - a.packs : a.packs - o.packs; }
   const good = dPk > 0 || dIt > 0;
   const headline = on
-    ? (good ? `Sharing ingredients saves about <b>${Math.max(0, dPk)} fresh package${dPk === 1 ? '' : 's'}</b>${dIt > 0 ? ` and <b>${dIt} item${dIt === 1 ? '' : 's'}</b>` : ''} this week${dLb > 0.2 ? `, and less fresh food left sitting in opened packages` : ''}.` : `This week already lines up well — the plain rotation wouldn’t need fewer packages.`)
-    : (dPk < 0 || dIt < 0 ? `Turning ingredient sharing on would save about <b>${Math.max(0, -dPk)} fresh package${-dPk === 1 ? '' : 's'}</b>${-dIt > 0 ? ` and <b>${-dIt} item${-dIt === 1 ? '' : 's'}</b>` : ''} this week.` : `Ingredient sharing is off.`);
+    ? (good ? `Compartilhar ingredientes economiza cerca de <b>${Math.max(0, dPk)} embalagem${dPk === 1 ? '' : 'ns'} de alimento fresco</b>${dIt > 0 ? ` e <b>${dIt} item${dIt === 1 ? '' : 'ns'}</b>` : ''} nesta semana${dLb > 0.2 ? `, com menos alimento fresco sobrando em embalagens abertas` : ''}.` : `This week already lines up well — the plain rotation wouldn’t need fewer packages.`)
+    : (dPk < 0 || dIt < 0 ? `Ativar o compartilhamento de ingredientes economizaria cerca de <b>${Math.max(0, -dPk)} embalagem${-dPk === 1 ? '' : 'ns'} de alimento fresco</b>${-dIt > 0 ? ` e <b>${-dIt} item${-dIt === 1 ? '' : 'ns'}</b>` : ''} nesta semana.` : `O compartilhamento de ingredientes está desativado.`);
   const chips = actual.shared.filter(x => packInfo(x.id).w >= .3).slice(0, 10).map(x => `<span class="pill share-chip" data-tip="${esc(x.recipes.map(r => RECIPE[r] ? RECIPE[r].name : r).join(' · '))}">${esc(ING[x.id].n.split(',')[0])} <b>×${x.n}</b></span>`).join('');
-  const sum = on ? (dPk > 0 ? `−${dPk} package${dPk === 1 ? '' : 's'} this week` : 'on') : 'off';
-  return `<div class="card money ${collCls('money')}" data-coll="money"><div class="card-h">${collHead('money', `${icon('target')}Money saver`, `<span class="pill coll-sum">${sum}</span>`)}
-      <label class="share-tog" title="Plan meals so recipes in the same week share ingredients"><span class="small">Share ingredients between recipes</span>${`<input type="checkbox" data-input="share" ${on ? 'checked' : ''}>`}<i class="switch ${on ? 'on' : ''}" aria-hidden="true"><i></i></i></label></div><div class="coll-body">
+  const sum = on ? (dPk > 0 ? `−${dPk} embalagem${dPk === 1 ? '' : 'ns'} nesta semana` : 'ativado') : 'desativado';
+  return `<div class="card money ${collCls('money')}" data-coll="money"><div class="card-h">${collHead('money', `${icon('target')}Economia`, `<span class="pill coll-sum">${sum}</span>`)}
+      <label class="share-tog" title="Planejar refeições para que receitas da mesma semana compartilhem ingredientes"><span class="small">Compartilhar ingredientes entre receitas</span>${`<input type="checkbox" data-input="share" ${on ? 'checked' : ''}>`}<i class="switch ${on ? 'ativado' : ''}" aria-hidden="true"><i></i></i></label></div><div class="coll-body">
     <div class="grid g4" style="gap:10px">
-      <div class="ms-stat"><span class="tiny muted">Items to buy</span><b class="num">${actual.items}</b><span class="tiny ${dIt > 0 ? 'good' : 'muted'}">${on ? (dIt > 0 ? `−${dIt} vs plain rotation` : 'same as plain rotation') : (dIt < 0 ? `${-dIt} fewer with sharing` : '')}</span></div>
-      <div class="ms-stat"><span class="tiny muted">Fresh packages</span><b class="num">${actual.packs}</b><span class="tiny ${dPk > 0 ? 'good' : 'muted'}">${on ? (dPk > 0 ? `−${dPk} vs plain rotation` : 'same as plain rotation') : (dPk < 0 ? `${-dPk} fewer with sharing` : '')}</span></div>
-      <div class="ms-stat"><span class="tiny muted">Ingredients in 2+ recipes</span><b class="num">${actual.shared.filter(x => packInfo(x.id).w >= .3).length}</b><span class="tiny muted">fresh foods bought once, used twice</span></div>
-      <div class="ms-stat"><span class="tiny muted">Next ${n4} weeks</span><b class="num">${on ? (pk4 > 0 ? '−' + pk4 : '0') : (pk4 < 0 ? -pk4 : '0')}<small> packages</small></b><span class="tiny ${on && pk4 > 0 ? 'good' : 'muted'}">${on ? 'fewer fresh packages than the plain rotation' : 'you could save with sharing on'}</span></div></div>
+      <div class="ms-stat"><span class="tiny muted">Itens para comprar</span><b class="num">${actual.items}</b><span class="tiny ${dIt > 0 ? 'good' : 'muted'}">${on ? (dIt > 0 ? `−${dIt} vs. rotação padrão` : 'igual à rotação padrão') : (dIt < 0 ? `${-dIt} a menos com compartilhamento` : '')}</span></div>
+      <div class="ms-stat"><span class="tiny muted">Embalagens de frescos</span><b class="num">${actual.packs}</b><span class="tiny ${dPk > 0 ? 'good' : 'muted'}">${on ? (dPk > 0 ? `−${dPk} vs. rotação padrão` : 'igual à rotação padrão') : (dPk < 0 ? `${-dPk} a menos com compartilhamento` : '')}</span></div>
+      <div class="ms-stat"><span class="tiny muted">Ingredientes em 2+ receitas</span><b class="num">${actual.shared.filter(x => packInfo(x.id).w >= .3).length}</b><span class="tiny muted">alimentos frescos comprados uma vez e usados duas vezes</span></div>
+      <div class="ms-stat"><span class="tiny muted">Próximas ${n4} semanas</span><b class="num">${on ? (pk4 > 0 ? '−' + pk4 : '0') : (pk4 < 0 ? -pk4 : '0')}<small> embalagens</small></b><span class="tiny ${on && pk4 > 0 ? 'good' : 'muted'}">${on ? 'menos embalagens de frescos que na rotação padrão' : 'você poderia economizar ativando o compartilhamento'}</span></div></div>
     <div class="note ${on && good ? 'acc' : ''}" style="margin-top:12px">${icon('info')}<span>${headline}</span></div>
-    ${chips ? `<div class="row wrap" style="gap:6px;margin-top:10px"><span class="tiny muted">Shared this week:</span>${chips}</div>` : ''}
-    <details class="formula"><summary>How the formula works</summary>
+    ${chips ? `<div class="row wrap" style="gap:6px;margin-top:10px"><span class="tiny muted">Compartilhados nesta semana:</span>${chips}</div>` : ''}
+    <details class="formula"><summary>Como a fórmula funciona</summary>
       <p>When meals are planned, each slot looks at the <b>next 3 recipes</b> in its rotation and picks the one with the best <b>shopping score</b> against everything already on that week’s list:</p>
       <div class="eq">score = Σ<sub>ingredients</sub> w × ( min(a, R) ÷ P − ⌈ max(0, a − R) ÷ P ⌉ ) ÷ servings</div>
       <ul><li><b>a</b> — how much of the ingredient the recipe needs (the whole batch for batch recipes)</li>
@@ -316,7 +316,7 @@ function viewProgress() {
     const moved = lr == null ? '' : bulking ? `Ganhando <b>${fmt(-lr, 2)} kg/sem.</b> (plano: ${fmt(planRate(cur.w), 2)}). ` : goalKind() === 'maintain' ? `Peso variando <b>${sign(-lr, 2)} kg/sem.</b> (plano: manter). ` : `Perdendo <b>${fmt(lr, 2)} kg/sem.</b> (plano: ${fmt(st.rate, 2)}). `;
     pace = `<div class="note ${Math.abs(gap) <= 0.3 || ahead ? 'acc' : 'warn'}" style="margin-top:12px">${icon('trend')}<span>${moved}A média de 7 dias está ${Math.abs(gap) <= 0.3 ? '<b>na linha do plano</b>' : `<b>${fmt(Math.abs(gap), 1)} kg ${gap > 0 ? 'acima' : 'abaixo'}</b> do plano`}.${when && (bulking ? cur.w < st.goalWeight : cur.w > st.goalWeight) ? ` Nesse ritmo, você alcançará ${st.goalWeight} kg por volta de <b>${esc(fmtDate(when, { month: 'long', year: 'numeric' }))}</b>.` : ''}</span></div>`;
   }
-  const range = `<div class="seg prange" role="group" aria-label="Período">${[['all', 'Desde o dia 1'], ['14', 'Últimas 2 semanas']].map(([k, l]) => `<button class="${R.key === k ? 'on' : ''}" data-act="pr-range" data-v="${k}" aria-pressed="${R.key === k}">${l}</button>`).join('')}</div>`;
+  const range = `<div class="seg prange" role="group" aria-label="Período">${[['all', 'Desde o dia 1'], ['14', 'Últimas 2 semanas']].map(([k, l]) => `<button class="${R.key === k ? 'ativado' : ''}" data-act="pr-range" data-v="${k}" aria-pressed="${R.key === k}">${l}</button>`).join('')}</div>`;
   const weighCard = phone ? '' : `<div class="card"><div class="card-h"><h2>Registrar pesagem</h2></div>${weighForm()}<div class="tiny muted" style="margin-top:8px">Pese-se pela manhã, após ir ao banheiro, de 3 a 7 vezes por semana. A gordura corporal é opcional; quando fica em branco, o app a estima mantendo a última massa magra medida.</div></div><div style="height:16px"></div>`;
   return `<div class="page-head"><div class="t">${phone ? `<a class="back-lnk" href="#/you">${icon('left')}Você</a>` : ''}<h1>Progresso</h1><p>Peso, gordura corporal e força — registrados aqui ou no treino de cada dia.</p></div><div class="row wrap">${range}${phone ? `<button class="btn primary" data-act="weigh-sheet">${icon('scale')}Registrar peso</button>` : ''}</div></div>
     ${weighCard}${tiles}<div style="height:16px"></div>
@@ -372,7 +372,7 @@ function rateInfoHTML(rate) {
 const setField = (lbl, name, val, attrs = '', hint = '') => `<div class="field"><label>${lbl}</label><input class="inp" name="${name}" value="${esc(val)}" ${attrs}>${hint ? `<span class="tiny muted">${hint}</span>` : ''}</div>`;
 function trainingDaysCardHTML(coll) { const st = S.settings; const f = setField;
   const pill = `<span class="pill acc" id="td-count">${st.trainDays.length} ${st.trainDays.length === 1 ? 'dia' : 'dias'} / semana</span>`;
-  const body = `<div class="row wrap td-pick">${[1, 2, 3, 4, 5, 6, 0].map(i => `<label class="td ${st.trainDays.includes(i) ? 'on' : ''}"><input type="checkbox" data-input="td" value="${i}" ${st.trainDays.includes(i) ? 'checked' : ''}><span>${DOW[i]}</span></label>`).join('')}</div>
+  const body = `<div class="row wrap td-pick">${[1, 2, 3, 4, 5, 6, 0].map(i => `<label class="td ${st.trainDays.includes(i) ? 'ativado' : ''}"><input type="checkbox" data-input="td" value="${i}" ${st.trainDays.includes(i) ? 'checked' : ''}><span>${DOW[i]}</span></label>`).join('')}</div>
         <div class="note" style="margin-top:12px">${icon('dumbbell')}<span>Escolha quantos dias quiser; o plano é atualizado imediatamente a partir de hoje. As sessões alternam entre <b>Empurrar → Puxar → Pernas</b>, então cada grupo muscular é treinado cerca de <b>${fmt(st.trainDays.length / 3, 1)}×</b> por semana. ${st.trainDays.length >= 6 ? 'Com seis ou mais dias, o treino se torna um PPL clássico duas vezes por semana.' : st.trainDays.length <= 2 ? 'Com um ou dois dias, a rotação continua ao longo das semanas.' : ''}</span></div>
         <form data-form="plan" class="row wrap" style="gap:10px;margin-top:14px;align-items:flex-end">
           ${f('Data inicial (Dia 1)', 'startDate', st.startDate, 'type="date" required')}
@@ -382,7 +382,7 @@ function trainingDaysCardHTML(coll) { const st = S.settings; const f = setField;
     : `<div class="card"><div class="card-h"><h2>Dias de treino</h2>${pill}</div>${body}</div>`; }
 const GOALS = [['cut', 'Perder gordura', 'Déficit calórico com proteína elevada para preservar a massa muscular.'], ['maintain', 'Manter', 'Consumir as calorias de manutenção e treinar.'], ['bulk', 'Ganhar massa muscular', 'Superávit controlado, com a maior parte das calorias extras em carbo.']];
 function lossRateCardHTML() { const st = S.settings; const k = goalKind(); const cur = latestStats();
-  const goalPick = `<div class="field" style="margin-bottom:12px"><label>Objetivo</label><div class="seg seg-goal">${GOALS.map(([v, l]) => `<button type="button" class="${k === v ? 'on' : ''}" data-act="set-goal" data-v="${v}">${l}</button>`).join('')}</div>
+  const goalPick = `<div class="field" style="margin-bottom:12px"><label>Objetivo</label><div class="seg seg-goal">${GOALS.map(([v, l]) => `<button type="button" class="${k === v ? 'ativado' : ''}" data-act="set-goal" data-v="${v}">${l}</button>`).join('')}</div>
     <div class="tiny muted" style="margin-top:6px">${esc((GOALS.find(g => g[0] === k) || GOALS[0])[2])}</div></div>`;
   if (k === 'maintain') return `<div class="card"><div class="card-h"><h2>Objetivo</h2><span class="pill acc">Manutenção</span></div>${goalPick}
     <div class="tiny muted">As calorias permanecem na manutenção diária, sem déficit nem superávit. O acompanhamento de tendência continua indicando variações nas duas direções.</div></div>`;
@@ -456,8 +456,8 @@ function appearanceCardHTML() {
   const st = S.settings;
   const themeLabel = { dark: 'Escuro', light: 'Claro', system: 'Sistema' };
   return `<div class="card"><div class="card-h"><h2>Aparência e dados</h2></div>
-        <div class="field"><label>Tema</label><div class="seg">${['dark', 'light', 'system'].map(t => `<button class="${st.theme === t ? 'on' : ''}" data-act="theme" data-v="${t}">${themeLabel[t]}</button>`).join('')}</div></div>
-        <label class="set-tog" style="margin-top:12px"><span><b class="small">Fotos de fundo</b><span class="tiny muted">${st.bgPhotos !== false ? 'Uma foto de treino atrás de cada página.' : 'Desativadas — fundo simples, carregamento mais rápido e melhor leitura.'}</span></span><input type="checkbox" data-input="bg-photos" ${st.bgPhotos !== false ? 'checked' : ''}><i class="switch ${st.bgPhotos !== false ? 'on' : ''}" aria-hidden="true"><i></i></i></label>
+        <div class="field"><label>Tema</label><div class="seg">${['dark', 'light', 'system'].map(t => `<button class="${st.theme === t ? 'ativado' : ''}" data-act="theme" data-v="${t}">${themeLabel[t]}</button>`).join('')}</div></div>
+        <label class="set-tog" style="margin-top:12px"><span><b class="small">Fotos de fundo</b><span class="tiny muted">${st.bgPhotos !== false ? 'Uma foto de treino atrás de cada página.' : 'Desativadas — fundo simples, carregamento mais rápido e melhor leitura.'}</span></span><input type="checkbox" data-input="bg-photos" ${st.bgPhotos !== false ? 'checked' : ''}><i class="switch ${st.bgPhotos !== false ? 'ativado' : ''}" aria-hidden="true"><i></i></i></label>
         <hr class="sep"><div class="row wrap"><button class="btn" data-act="export">${icon('download')}Exportar backup</button><label class="btn">${icon('upload')}Importar backup<input type="file" accept="application/json" data-input="import" hidden></label>
         <button class="btn danger" data-act="reset">${icon('trash')}Redefinir tudo</button></div>
         <div class="tiny muted" style="margin-top:10px">${AUTH.mode === 'server' ? `Seus dados ficam salvos na sua conta FORGE 90 no servidor e acompanham você em qualquer dispositivo conectado. <a href="#/account">Configurações da conta</a>` : 'Os dados ficam armazenados localmente neste navegador. Ao abrir o app em outro navegador, ele começa vazio — use Exportar/Importar para transferi-los. Execute o servidor do FORGE 90 para usar contas e acesso autenticado.'}</div>
@@ -465,14 +465,14 @@ function appearanceCardHTML() {
 }
 function moneyCardHTML() {
   const st = S.settings;
-  return `<div class="card"><div class="card-h"><h2>Economia no planejamento</h2><label class="share-tog"><span class="small">Compartilhar ingredientes entre receitas</span><input type="checkbox" data-input="share" ${st.shareIngredients !== false ? 'checked' : ''}><i class="switch ${st.shareIngredients !== false ? 'on' : ''}" aria-hidden="true"><i></i></i></label></div>
+  return `<div class="card"><div class="card-h"><h2>Economia no planejamento</h2><label class="share-tog"><span class="small">Compartilhar ingredientes entre receitas</span><input type="checkbox" data-input="share" ${st.shareIngredients !== false ? 'checked' : ''}><i class="switch ${st.shareIngredients !== false ? 'ativado' : ''}" aria-hidden="true"><i></i></i></label></div>
       <div class="small sub">Quando ativado, o planejador organiza as refeições da semana para reaproveitar ingredientes frescos: menos embalagens e menos desperdício. A variedade e os favoritos não mudam. Veja a economia da semana em <a href="#/grocery">Compras e preparo</a>.</div></div>`;
 }
 function foodPrefsCardHTML() { return `<div class="card"><div class="card-h"><h2>Preferências alimentares</h2><a class="btn sm" href="#/foods">Gerenciar alimentos e receitas ${icon('right')}</a></div>${foodPrefsHTML()}</div>`; }
 function settingsFootHTML() { return `<div class="tiny muted" style="margin-top:14px;text-align:center">FORGE 90 ${APP_VERSION} · <a href="${SOURCE_URL}/blob/main/LICENSE" target="_blank" rel="noopener">AGPL-3.0</a> · <a href="${SOURCE_URL}" target="_blank" rel="noopener">Código-fonte</a></div>`; }
 
 /* ---------------- router ---------------- */
-const NAV = [['', 'Dashboard', 'grid'], ['calendar', 'Calendar', 'cal'], ['workouts', 'Workout plan', 'dumbbell'], ['diet', 'Diet plan', 'food'], ['foods', 'Foods & recipes', 'book'], ['grocery', 'Grocery & prep', 'cart'], ['pantry', 'Pantry', 'box'], ['progress', 'Progress', 'trend'], ['settings', 'Settings', 'sliders']];
+const NAV = [['', 'Painel', 'grid'], ['calendar', 'Calendário', 'cal'], ['workouts', 'Plano de treino', 'dumbbell'], ['diet', 'Plano alimentar', 'food'], ['foods', 'Alimentos e receitas', 'book'], ['grocery', 'Compras e preparo', 'cart'], ['pantry', 'Despensa', 'box'], ['progress', 'Progresso', 'trend'], ['settings', 'Configurações', 'sliders']];
 function shell() {
   document.body.innerHTML = `<div id="bg" aria-hidden="true"><div class="bg-layer"></div><div class="bg-layer"></div></div><div class="app"><aside class="side"><div class="brand"><a class="brand-link" href="#/" title="FORGE 90 — Dashboard">${LOGO}<b class="wm">FORGE<em>90</em></b></a><button class="side-toggle" data-act="nav-toggle" id="side-toggle"></button></div>
     <nav class="nav">${navItems().map(([k, l, i]) => `<a href="#/${k}" data-nav="${k}" title="${l}">${icon(i)}<span>${l}</span></a>`).join('')}</nav><div class="side-foot" id="side-foot"></div></aside>
@@ -481,11 +481,11 @@ function shell() {
 function sideFoot() {
   const t = todayISO(); const i = planIndex(t); const d = Math.max(0, i + 1);
   const ph = i >= 0 ? phaseForWeek(planWeek(t)) : null;
-  const lbl = i < 0 ? `Starts in ${-i} day${-i === 1 ? '' : 's'}` : `Cycle ${ph.cycle} · ${ph.name}`;
+  const lbl = i < 0 ? `Começa em ${-i} dia${-i === 1 ? '' : 's'}` : `Ciclo ${ph.cycle} · ${ph.name}`;
   const frac = i < 0 ? 0 : ph.cycle === 1 ? Math.min(1, d / LAUNCH_DAYS) : (ph.wic - 1 + ((i % 7) + 1) / 7) / 13;
-  $('#side-foot').innerHTML = userChipHTML() + `<div class="lbl">${i >= 0 && ph.cycle > 1 ? 'Cycle ' + ph.cycle : 'Progress'}</div><div class="big">Day ${d}${i >= 0 && ph.cycle === 1 && d <= LAUNCH_DAYS ? '<span class="muted" style="font-size:14px"> / 90</span>' : ''}</div><div class="small sub">${lbl}</div><div class="pbar"><i style="width:${frac * 100}%"></i></div>
+  $('#side-foot').innerHTML = userChipHTML() + `<div class="lbl">${i >= 0 && ph.cycle > 1 ? 'Ciclo ' + ph.cycle : 'Progresso'}</div><div class="big">Day ${d}${i >= 0 && ph.cycle === 1 && d <= LAUNCH_DAYS ? '<span class="muted" style="font-size:14px"> / 90</span>' : ''}</div><div class="small sub">${lbl}</div><div class="pbar"><i style="width:${frac * 100}%"></i></div>
     <button class="btn sm ghost theme-btn" data-act="theme-toggle" title="Mudar para o tema ${effTheme() === 'light' ? 'escuro' : 'claro'}" aria-label="Mudar para o tema ${effTheme() === 'light' ? 'escuro' : 'claro'}">${icon(effTheme() === 'light' ? 'moon' : 'sun')}<span>Tema ${effTheme() === 'light' ? 'escuro' : 'claro'}</span></button><div class="app-ver" title="FORGE 90 ${APP_VERSION}">${APP_VERSION}</div>`;
-  const tg = $('#side-toggle'); if (tg) { const c = !!UI.navCollapsed; tg.innerHTML = icon(c ? 'sideR' : 'sideL'); tg.title = c ? 'Expand menu' : 'Collapse menu'; tg.setAttribute('aria-label', tg.title); tg.setAttribute('aria-expanded', String(!c)); }
+  const tg = $('#side-toggle'); if (tg) { const c = !!UI.navCollapsed; tg.innerHTML = icon(c ? 'sideR' : 'sideL'); tg.title = c ? 'Expandir menu' : 'Recolher menu'; tg.setAttribute('aria-label', tg.title); tg.setAttribute('aria-expanded', String(!c)); }
 }
 function effTheme() { const t = document.documentElement.dataset.theme; return t === 'system' ? (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : t; }
 const appTitle = () => (typeof AUTH !== 'undefined' && AUTH.config && AUTH.config.appName) || 'FORGE 90';   // Admin → App settings → App name
@@ -503,7 +503,7 @@ function render() {
   if (page === 'day' && arg) ensurePlanThrough(arg);
   const sec = ({ '': 'dashboard', calendar: 'calendar', day: 'day', workouts: 'workouts', diet: 'diet', foods: 'foods', recipe: 'foods', grocery: 'grocery', pantry: 'grocery', prep: 'grocery', progress: 'progress', settings: 'settings', account: 'settings', admin: 'settings', you: 'settings' })[page || ''] || 'dashboard';
   document.body.dataset.sec = sec; applyBackground(sec);
-  $$('.nav a').forEach(a => a.classList.toggle('on', a.dataset.nav === (page === 'day' ? 'calendar' : page === 'recipe' ? 'foods' : (page || ''))));
+  $$('.nav a').forEach(a => a.classList.toggle('ativado', a.dataset.nav === (page === 'day' ? 'calendar' : page === 'recipe' ? 'foods' : (page || ''))));
   const sy = window.scrollY; const same = render._last === h; render._last = h;
   if (page !== 'calendar') UI._calCompact = null;
   let html;
@@ -538,7 +538,7 @@ function applyTheme() { const t = (S && S.settings.theme) || UI.lastTheme || 'da
 /* ---------------- actions ---------------- */
 const ACT = {
   undo: () => undo(),
-  'toast-close': () => { clearTimeout(toastTimer); const t = $('#toast'); if (t) t.classList.remove('on'); },
+  'toast-close': () => { clearTimeout(toastTimer); const t = $('#toast'); if (t) t.classList.remove('ativado'); },
   'close-modal': () => closeModal(),
   'cal-view': el => { UI.calView = el.dataset.v; if (UI.calView === 'week') { const t = todayISO(); UI.calWeek = mondayOf(inPlan(t) ? t : (UI.calMonth + '-01' < S.settings.startDate ? S.settings.startDate : UI.calMonth + '-01')); } saveUI(); render(); },
   'cal-prev': () => shiftCal(-1), 'cal-next': () => shiftCal(1),

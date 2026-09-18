@@ -173,7 +173,7 @@ function woRender() {
   if (WO.done) {
     const c = loggedSets(d, rows); const prs = rows.filter(r => { const h = exerciseHistory(r.ex.id).find(x => x.d === d); return h && h.pr; }).length;
     root.innerHTML = `<div class="wom" role="dialog" aria-label="Workout done"><div class="wo-in">
-      <div class="wo-h"><button type="button" class="btn icon ghost" data-act="wo-close" aria-label="Close">${icon('x')}</button><div class="t"><b>${esc(t.name)}</b><small>${esc(fmtDate(d, { weekday: 'long', month: 'short', day: 'numeric' }))}</small></div></div>
+      <div class="wo-h"><button type="button" class="btn icon ghost" data-act="wo-close" aria-label="Fechar">${icon('x')}</button><div class="t"><b>${esc(t.name)}</b><small>${esc(fmtDate(d, { weekday: 'long', month: 'short', day: 'numeric' }))}</small></div></div>
       <div class="wo-b"><div class="wo-done"><span class="pill acc">${icon('check')}Workout complete</span><b class="num">${c.done} sets</b><p class="muted">${prs ? `${prs} new PR${prs > 1 ? 's' : ''} · ` : ''}~${estMinutes(rows)} min · saved to Progress</p></div>
         <div class="wo-sum">${rows.map(r => { const s = setsOf(d, r.ex.id).filter(x => x && +x.r > 0); return `<div><b>${esc(r.ex.name)}</b><span class="num">${s.map(x => `${fmt(+x.w || 0, (+x.w || 0) % 1 ? 1 : 0)}×${x.r}`).join(', ') || 'skipped'}</span></div>`; }).join('')}</div>
         <button type="button" class="btn primary block" data-act="wo-close">Done</button></div></div></div>`;
@@ -217,7 +217,7 @@ function woRender() {
 function woLog() {
   const r = woRow(); if (!r) return; const id = r.ex.id, d = WO.d;
   const w = WO.w[id] === '' || WO.w[id] == null ? 0 : +WO.w[id], reps = Math.round(+WO.r[id] || 0);
-  if (!(reps > 0)) { toast('Enter how many reps you did'); return; }
+  if (!(reps > 0)) { toast('Informe quantas repetições você fez'); return; }
   const before = exerciseHistory(id).filter(h => h.d !== d).reduce((a, h) => Math.max(a, h.best), 0);
   S.logs[d] = S.logs[d] || {}; const arr = S.logs[d][id] = S.logs[d][id] || [];
   let k = WO.edit; if (k == null) { k = 0; while (arr[k] && +arr[k].r > 0) k++; }
@@ -228,7 +228,7 @@ function woLog() {
   if (lastEx && exDone) { if (rtBusy()) rtIdle(r); }                     // no rest after the very last set
   else if (S.settings.restAuto !== false) { rtIdle(r); rtStart(); }
   woRender();
-  if (pr) toast(`New PR on ${r.ex.name}: ${isBW(id) ? h.best + ' reps' : 'e1RM ' + fmt(h.best)}`); else if (exDone && k === r.sets - 1) toast(`${r.ex.name} done`);
+  if (pr) toast(`Novo recorde em ${r.ex.name}: ${isBW(id) ? h.best + ' rep.' : 'e1RM ' + fmt(h.best)}`); else if (exDone && k === r.sets - 1) toast(`${r.ex.name} concluído`);
 }
 function woStep(k, dir) {
   const r = woRow(); if (!r) return; const id = r.ex.id;
@@ -238,8 +238,8 @@ function woStep(k, dir) {
 }
 function woList() {
   const rows = woRows();
-  modal(`<div class="row"><h2 style="flex:1">Exercises</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Close">${icon('x')}</button></div>
-    <div class="wo-list">${rows.map((r, k) => `<button type="button" class="wo-li ${k === WO.i ? 'on' : ''}" data-act="wo-go" data-i="${k}"><span class="t"><b>${esc(r.ex.name)}</b><small class="num">${r.sets} × ${esc(r.reps)} · ${doneSets(WO.d, r.ex.id)}/${r.sets} sets</small></span>${exLogged(WO.d, r) ? `<span class="ok">${icon('check')}</span>` : ''}</button>`).join('')}</div>`, 'sm');
+  modal(`<div class="row"><h2 style="flex:1">Exercícios</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
+    <div class="wo-list">${rows.map((r, k) => `<button type="button" class="wo-li ${k === WO.i ? 'on' : ''}" data-act="wo-go" data-i="${k}"><span class="t"><b>${esc(r.ex.name)}</b><small class="num">${r.sets} × ${esc(r.reps)} · ${doneSets(WO.d, r.ex.id)}/${r.sets} séries</small></span>${exLogged(WO.d, r) ? `<span class="ok">${icon('check')}</span>` : ''}</button>`).join('')}</div>`, 'sm');
 }
 
 /* ---------------- rest timer settings (Settings page and the clock in workout mode) ---------------- */
@@ -277,7 +277,7 @@ Object.assign(ACT, {
   'wo-step': el => woStep(el.dataset.k, +el.dataset.v),
   'wo-edit': el => { const r = woRow(); if (!r) return; const s = setsOf(WO.d, r.ex.id)[+el.dataset.k]; if (!s) return; WO.edit = +el.dataset.k; WO.w[r.ex.id] = s.w != null ? +s.w : ''; WO.r[r.ex.id] = +s.r; woRender(); },
   'wo-edit-x': () => { if (WO) { WO.edit = null; woRender(); } },
-  'wo-unlog': () => { const r = woRow(); if (!r || WO.edit == null) return; const arr = setsOf(WO.d, r.ex.id); if (arr[WO.edit]) arr[WO.edit] = {}; while (arr.length && !(arr[arr.length - 1] && +arr[arr.length - 1].r > 0)) arr.pop(); WO.edit = null; saveState(); woRender(); toast('Set removed'); },
+  'wo-unlog': () => { const r = woRow(); if (!r || WO.edit == null) return; const arr = setsOf(WO.d, r.ex.id); if (arr[WO.edit]) arr[WO.edit] = {}; while (arr.length && !(arr[arr.length - 1] && +arr[arr.length - 1].r > 0)) arr.pop(); WO.edit = null; saveState(); woRender(); toast('Série removida'); },
   'wo-finish': () => { if (!WO) return; S.done[WO.d] = true; saveState(); WO.done = true; rtIdle(); woRender(); },
   'rt-go': () => { if (RT.run) rtPause(); else rtStart(); },
   'rt-reset': () => { rtIdle(); rtPaint(true); },

@@ -301,7 +301,7 @@ async function gymFull(id) {
   const c = gymCards().find(x => x.id === id); if (!c) return; gymFullClose();
   const el = document.createElement('div'); el.id = 'gym-full'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', c.name);
   el.innerHTML = `<div class="gf-in"><div class="gf-name">${esc(c.name)}</div><div class="gf-code ${c.fmt === 'qr' ? 'qr' : ''}">${barcodeSVG(c.code, c.fmt, { h: 60 })}</div><div class="gf-num">${esc(gymHuman(c))}</div>
-    <div class="gf-tip">Turn the screen brightness up if the scanner struggles. Tap anywhere, or go back, to close.</div></div>`;
+    <div class="gf-tip">Aumente o brilho da tela se o leitor tiver dificuldade. Toque em qualquer lugar ou volte para fechar.</div></div>`;
   el.addEventListener('click', gymFullClose); document.body.appendChild(el); backPush('gym-full', gymFullClose);
   try { if (navigator.wakeLock) GYM_LOCK = await navigator.wakeLock.request('screen'); } catch (e) { GYM_LOCK = null; }
 }
@@ -322,7 +322,7 @@ Object.assign(ACT, {
   'gym-add': () => gymCardModal(null),
   'gym-edit': el => { const c = gymCards().find(x => x.id === el.dataset.id); if (c) gymCardModal(Object.assign({}, c)); },
   'gym-del': el => { const c = gymCards().find(x => x.id === el.dataset.id); if (!c) return; confirmBox(`Excluir ${esc(c.name)}?`, 'O cartão será removido do painel. Você poderá adicioná-lo novamente quando quiser.', 'Excluir', () => {
-    pushUndo('delete gym card'); S.gymCards = gymCards().filter(x => x.id !== c.id); if (S.gymActive === c.id) S.gymActive = S.gymCards[0] ? S.gymCards[0].id : null; saveState(); render(); toast(`${c.name} excluído`, true); }, true); },
+    pushUndo('exclusão de cartão da academia'); S.gymCards = gymCards().filter(x => x.id !== c.id); if (S.gymActive === c.id) S.gymActive = S.gymCards[0] ? S.gymCards[0].id : null; saveState(); render(); toast(`${c.name} excluído`, true); }, true); },
   'gym-show': el => { S.gymActive = el.dataset.id; saveState(); render(); },
   'gym-full': el => gymFull(el.dataset.id),
   'gym-scan': () => { const f = $('#modal form[data-form="gym-card"]'); const draft = Object.assign({}, GC, f ? { name: f.name.value, code: f.code.value, fmt: f.fmt.value } : {}); openScanner('gym', null, draft); },

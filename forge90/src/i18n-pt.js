@@ -2590,9 +2590,29 @@ const PT_PHRASES = {
   ", one per line": ", um por linha",
   "Add ingredients": "Adicionar ingredientes",
   "Paste more ingredients": "Colar mais ingredientes",
+  "Cycle": "Ciclo",
+  "Expand menu": "Expandir menu",
+  "Collapse menu": "Recolher menu",
+  "Money saver": "Economia",
+  "Share ingredients between recipes": "Compartilhar ingredientes entre receitas",
+  "Items to buy": "Itens para comprar",
+  "Fresh packages": "Embalagens de frescos",
+  "Ingredients in 2+ recipes": "Ingredientes em 2+ receitas",
+  "fresh foods bought once, used twice": "alimentos frescos comprados uma vez e usados duas",
+  "Next ": "Próximas ",
+  " weeks": " semanas",
+  "Shared this week:": "Compartilhados nesta semana:",
+  "How the formula works": "Como a fórmula funciona",
+  "Quick edit": "Edição rápida",
+  "training day": "dia de treino",
+  "rest day": "dia de descanso",
+  "favorites first": "favoritos primeiro",
+  "changes keep your hand-picked meals when the plan re-plans": "alterações preservam suas refeições escolhidas manualmente quando o plano é recalculado",
+  "Set removed": "Série removida",
+  "Turn the screen brightness up if the scanner struggles. Tap anywhere, or go back, to close.": "Aumente o brilho da tela se o leitor tiver dificuldade. Toque em qualquer lugar ou volte para fechar.",
 };
 
-const PT_EXACT_KEYS = new Set(['Off', 'Rest', 'Test', 'Week', 'Progress', 'lb', 'of', 'all', 'breakfast', 'lunch', 'dinner', 'snack', '— none —', "Browser", "Decline", "Unsync", "List", "Prep", "Plan", "Kitchen", "Workout", "This week", "Upper", "Lower", "Full body", "Mixed", "Gym card", "Body stats", "Recent PRs", "Required", "You", "Food", "Name", "Plain HTTP", "Direct connection", "Account", "Administrator", "Owner", "Remove", "Security", "Scan", "Approve", "Unlock", "Swap", "Today", "Sync", "Recent", "Active", "Pending", "Expired", "Resend", "Revoke", "Accounts", "Member", "Manage", "User", "Role", "Status", "Devices", "Ready", "Send", "Accept", "Undo", "Refresh", "Overview", "Users", "Activity log", "Data & backup", "Invite", "Admins", "All", "Disabled", "Not set", "Stored data", "License", "Source code", "Turkey", "Pork", "Seafood", "Eggs", "Beans", "Fruit", "Vegetables", "Seeds", "Olives", "Chest", "Back", "Shoulders", "Biceps", "Triceps", "Breakfast", "Lunch", "Dinner", "Snack", "Snack 2", "Fixed", "Meal", "Storage", "Ingredients", "Links", "Skip", "Foundation", "Build", "Intensify", "Volume", "Check", "Matched", "Custom", "now", "compound", "isolation"]);
+const PT_EXACT_KEYS = new Set(['Off', 'Rest', 'Test', 'Week', 'Progress', 'lb', 'of', 'all', 'breakfast', 'lunch', 'dinner', 'snack', '— none —', "Browser", "Decline", "Unsync", "List", "Prep", "Plan", "Kitchen", "Workout", "This week", "Upper", "Lower", "Full body", "Mixed", "Gym card", "Body stats", "Recent PRs", "Required", "You", "Food", "Name", "Plain HTTP", "Direct connection", "Account", "Administrator", "Owner", "Remove", "Security", "Scan", "Approve", "Unlock", "Swap", "Today", "Sync", "Recent", "Active", "Pending", "Expired", "Resend", "Revoke", "Accounts", "Member", "Manage", "User", "Role", "Status", "Devices", "Ready", "Send", "Accept", "Undo", "Refresh", "Overview", "Users", "Activity log", "Data & backup", "Invite", "Admins", "All", "Disabled", "Not set", "Stored data", "License", "Source code", "Turkey", "Pork", "Seafood", "Eggs", "Beans", "Fruit", "Vegetables", "Seeds", "Olives", "Chest", "Back", "Shoulders", "Biceps", "Triceps", "Breakfast", "Lunch", "Dinner", "Snack", "Snack 2", "Fixed", "Meal", "Storage", "Ingredients", "Links", "Skip", "Foundation", "Build", "Intensify", "Volume", "Check", "Matched", "Custom", "now", "compound", "isolation", "Dashboard", "Calendar", "Pantry", "Settings", "Cycle", "Meals", "Done", "Exercises", "Completed"]);
 const PT_PAIRS = Object.entries(PT_PHRASES)
   .filter(([from]) => !PT_EXACT_KEYS.has(from))
   .sort((a, b) => b[0].length - a[0].length);
