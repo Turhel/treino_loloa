@@ -214,7 +214,7 @@ function mailWarnings() {
   const e = mailConfig(); const out = [];
   const fd = String(e.fromEmail || '').split('@')[1] || '', ud = String(e.user || '').split('@')[1] || '';
   if (fd && ud && fd.toLowerCase() !== ud.toLowerCase())
-    out.push(`The From address is at ${fd} but the mailbox signing in is at ${ud}. Most providers treat that as unauthenticated and file it as spam. Either send as ${e.user}, or add the From address as a verified alias with your mail provider.`);
+    out.push(`O endereço do remetente é ${fd}, mas a caixa de e-mail usada no login é ${ud}. A maioria dos provedores considera isso não autenticado e pode enviar a mensagem para o spam. Envie como ${e.user} ou adicione o endereço do remetente como alias verificado no seu provedor de e-mail.`);
   if (/gmail\.com$|googlemail\.com$/i.test(ud) && fd && !/gmail\.com$|googlemail\.com$/i.test(fd))
     out.push('O Gmail só permite enviar usando seu próprio endereço ou um alias verificado em “Enviar e-mail como”.');
   const host = String(ENV.APP_URL || '').replace(/^https?:\/\//i, '').split(/[/:?#]/)[0];
@@ -361,7 +361,7 @@ route('PATCH', '/api/account', { auth: true, allowMustChange: true }, async (req
   ['firstName', 'lastName'].forEach(k => { if (b[k] != null) { const v = String(b[k]).trim().slice(0, 40); if (v !== (u[k] || '')) { u[k] = v; changes.push(k === 'firstName' ? 'nome' : 'sobrenome'); } } });
   if (b.notify && typeof b.notify === 'object') { u.notify = Object.assign({ passwordChange: true, newSignIn: false }, u.notify || {}, { passwordChange: !!b.notify.passwordChange, newSignIn: !!b.notify.newSignIn }); changes.push('notifications'); }
   if (b.email != null && normEmail(b.email) !== u.email) {
-    const e = normEmail(b.email); if (!validEmail(e)) err(400, 'Enter a valid email address.');
+    const e = normEmail(b.email); if (!validEmail(e)) err(400, 'Informe um endereço de e-mail válido.');
     if (!u.mustChange && !(await verifyPw(String(b.currentPassword || ''), u.pw))) err(403, 'Sua senha atual é necessária para alterar o e-mail — e a senha informada não corresponde.');
     if (findUser(e)) err(409, 'Outra conta já usa esse e-mail.');
     const old = u.email; u.email = e; changes.push('email');
@@ -494,7 +494,7 @@ route('POST', '/api/sync/respond', { auth: true }, async (req, res, ctx) => {
 route('DELETE', '/api/sync', { auth: true }, async (req, res, ctx) => {      // cancel a request or unsync
   const me = ctx.me.u; const s = needSync(ctx); const p = userById(partnerId(s, me.id)); const was = s.status;
   dropSync(s); audit(was === 'active' ? 'sync_ended' : 'sync_cancelled', { userId: me.id, ip: clientIp(req), detail: p ? p.email : '' });
-  if (p && was === 'active') syncMail(req, p, `${me.name} parou de sincronizar planos de refeição`, 'Sincronização de refeições encerrada', [`${me.name} parou de sincronizar planos de refeição with you. Your current meals stay as they are, and from now on your plans change independently.`]);
+  if (p && was === 'active') syncMail(req, p, `${me.name} parou de sincronizar planos de refeição`, 'Sincronização de refeições encerrada', [`${me.name} parou de sincronizar planos de refeição com você. Suas refeições atuais permanecem como estão e, daqui em diante, os planos serão alterados de forma independente.`]);
   send(res, 200, { sync: null });
 });
 route('POST', '/api/sync/slots', { auth: true }, async (req, res, ctx) => {    // propose / approve / decline a change to the shared meals
@@ -553,7 +553,7 @@ route('POST', '/api/sync/resolve', { auth: true }, async (req, res, ctx) => {   
   });
   if (done.length) {
     const lbl = c => `${c.date.slice(5).replace('-', '/')} ${c.slot.replace(/\d$/, ' $&').replace('snack 1', 'snack')}`;
-    if (b.action !== 'cancel') syncEvent(s, me.id, b.action, `${me.name} ${b.action === 'accept' ? 'accepted' : 'declined'} ${done.length === 1 ? `${lbl(done[0])} → ${done[0].name || done[0].rid}` : done.length + ' changes'}`);
+    if (b.action !== 'cancel') syncEvent(s, me.id, b.action, `${me.name} ${b.action === 'accept' ? 'aceitou' : 'recusou'} ${done.length === 1 ? `${lbl(done[0])} → ${done[0].name || done[0].rid}` : done.length + ' alterações'}`);
     bumpSync(s);
   }
   send(res, 200, { done, sync: syncView(s, me.id) });
@@ -622,7 +622,7 @@ const SUB_RE = /^[a-z_]{2,30}$/;
 const AISLE_OK = ['Meat & Seafood', 'Dairy & Eggs', 'Produce', 'Grains & Bread', 'Frozen', 'Pantry', 'Snacks', 'Beverages', 'Deli & Prepared'];
 function cleanSharedFood(b, cur) {
   const n = String(b.n || '').replace(/\s+/g, ' ').trim().slice(0, 80); if (!n) err(400, 'Dê um nome ao produto.');
-  const numv = (k, max) => { const v = +b[k]; if (!isFinite(v) || v < 0 || v > max) err(400, `Check the ${({ k: 'calories', p: 'protein', c: 'carbs', f: 'fat', g: 'item weight', pk: 'package size', srv: 'serving size' })[k] || k} value.`); return Math.round(v * 100) / 100; };
+  const numv = (k, max) => { const v = +b[k]; if (!isFinite(v) || v < 0 || v > max) err(400, `Verifique o valor de ${({ k: 'calories', p: 'proteína', c: 'carboidratos', f: 'gorduras', g: 'peso do item', pk: 'tamanho da embalagem', srv: 'tamanho da porção' })[k] || k}.`); return Math.round(v * 100) / 100; };
   const basis = ['g', 'ml', 'u'].includes(b.basis) ? b.basis : 'g';
   const out = { n, brand: String(b.brand || '').replace(/\s+/g, ' ').trim().slice(0, 60), sub: SUB_RE.test(b.sub || '') ? b.sub : 'sauces', a: AISLE_OK.includes(b.a) ? b.a : 'Pantry',
     r: ['P', 'C', 'F', 'V'].includes(b.r) ? b.r : null, k: numv('k', basis === 'u' ? 5000 : 950), p: numv('p', basis === 'u' ? 500 : 100), c: numv('c', basis === 'u' ? 500 : 100), f: numv('f', basis === 'u' ? 500 : 100),
@@ -723,7 +723,7 @@ route('GET', '/api/admin/invites', { admin: true }, async (req, res) => send(res
 route('POST', '/api/admin/invites', { admin: true }, async (req, res, ctx) => {
   const b = ctx.body; const email = normEmail(b.email), name = String(b.name || '').trim().slice(0, 80); const role = b.role === 'admin' ? 'admin' : 'user';
   if (role === 'admin' && !isOwner(ctx.me.u)) err(403, 'Somente o proprietário pode convidar um administrador.');
-  if (!validEmail(email)) err(400, 'Enter a valid email address.'); if (findUser(email)) err(409, 'Já existe uma conta com esse e-mail.');
+  if (!validEmail(email)) err(400, 'Informe um endereço de e-mail válido.'); if (findUser(email)) err(409, 'Já existe uma conta com esse e-mail.');
   let inv = db.invites.find(x => x.email === email); const again = !!inv;
   if (inv) Object.assign(inv, { name: name || inv.name, role, invitedBy: ctx.me.u.id });
   else inv = { id: uid(), email, name, role, invitedBy: ctx.me.u.id, createdAt: now(), sends: 0 };
@@ -761,7 +761,7 @@ route('PATCH', '/api/admin/users/:id', { admin: true }, async (req, res, ctx) =>
     if (was === 'pending' && b.status === 'active' && emailReady()) deliver(u.email, u.name, MAIL.simpleEmail({ title: 'Sua conta FORGE 90 está pronta', heading: 'Sua conta foi aprovada!', lines: [`Olá ${u.name.split(' ')[0]}, um administrador aprovou sua conta FORGE 90.`, 'Entre usando o e-mail e a senha cadastrados.'], buttonUrl: baseUrl(req), buttonLabel: 'Entrar', appUrl: baseUrl(req), appName: db.settings.appName })).catch(() => {});
   }
   if (b.name != null) { const n = String(b.name).trim().slice(0, 80); if (n && n !== u.name) { u.name = n; log.push('name'); } }
-  if (b.email != null && normEmail(b.email) !== u.email) { const e = normEmail(b.email); if (!validEmail(e)) err(400, 'Enter a valid email address.'); if (findUser(e)) err(409, 'Outra conta já usa esse e-mail.'); audit('email_changed', { userId: u.id, actorId: me.id, ip: clientIp(req), detail: `${u.email} → ${e}` }); u.email = e; log.push('email'); }
+  if (b.email != null && normEmail(b.email) !== u.email) { const e = normEmail(b.email); if (!validEmail(e)) err(400, 'Informe um endereço de e-mail válido.'); if (findUser(e)) err(409, 'Outra conta já usa esse e-mail.'); audit('email_changed', { userId: u.id, actorId: me.id, ip: clientIp(req), detail: `${u.email} → ${e}` }); u.email = e; log.push('email'); }
   saveDb(); send(res, 200, { user: adminUserRow(u), changed: log });
 });
 route('DELETE', '/api/admin/users/:id/avatar', { admin: true }, async (req, res, ctx) => { const u = target(ctx); ownerGuard(ctx, u); if (u.avatar) { removeAvatar(u); saveDb(); audit('avatar_changed', { userId: u.id, actorId: ctx.me.u.id, ip: clientIp(req), detail: 'removido pelo administrador' }); } send(res, 200, { user: adminUserRow(u) }); });
@@ -789,7 +789,7 @@ function adminSettingsView() {
 route('GET', '/api/admin/settings', { admin: true }, async (req, res) => send(res, 200, adminSettingsView()));
 route('PATCH', '/api/admin/settings', { admin: true }, async (req, res, ctx) => {
   const b = ctx.body, s = db.settings; const changed = [];
-  const int = (v, lo, hi, label) => { v = Math.round(+v); if (!Number.isFinite(v) || v < lo || v > hi) err(400, `${label} must be between ${lo} and ${hi}.`); return v; };
+  const int = (v, lo, hi, label) => { v = Math.round(+v); if (!Number.isFinite(v) || v < lo || v > hi) err(400, `${label} deve estar entre ${lo} e ${hi}.`); return v; };
   if (b.appName != null) { s.appName = String(b.appName).trim().slice(0, 40) || 'FORGE 90'; changed.push('nome do aplicativo'); }
   if (b.appUrl != null) { const u = String(b.appUrl).trim().replace(/\/+$/, ''); if (u && !/^https?:\/\/[^\s/]+/i.test(u)) err(400, 'O endereço do aplicativo deve começar com http:// ou https://'); s.appUrl = u; changed.push('app address'); }
   if (b.security) { const x = b.security, q = s.security;
@@ -907,7 +907,7 @@ async function cli() {
     if (existing) { existing.role = 'admin'; existing.status = 'active'; }
     else db.users.push({ id: uid(), email, name: ENV.ADMIN_NAME || 'Administrador', role: 'admin', status: 'active', pw: await hashPw(pw), mustChange: true, createdAt: now(), failed: 0, lockedUntil: null, notify: { passwordChange: true } });
     audit('admin_created', { detail: email }); saveDb(true);
-    console.log(`\n  Administrador padrão criado → ${email} / ${existing ? '(existing password)' : pw}\n  Você deverá escolher uma nova senha na primeira vez que entrar.\n`);
+    console.log(`\n  Administrador padrão criado → ${email} / ${existing ? '(senha existente)' : pw}\n  Você deverá escolher uma nova senha na primeira vez que entrar.\n`);
   }
   ensureOwner();          // brand new server, or an existing one upgrading: the longest-standing admin owns it
   setInterval(() => { const t = now(); const n1 = db.sessions.length, n2 = db.resets.length, n3 = db.invites.length;
@@ -918,7 +918,7 @@ async function cli() {
   server.listen(PORT, HOST, () => {
     console.log(`  FORGE 90 ${VERSION} is running → ${ENV.APP_URL || `http://localhost:${PORT}`}`);
     console.log(`  Pasta de dados: ${DATA}`);
-    console.log(`  Email: ${emailReady() ? `${mailConfig().host}:${mailConfig().port} as ${mailConfig().user || mailConfig().fromEmail}` : 'not configured (Admin → Email)'}\n`);
+    console.log(`  E-mail: ${emailReady() ? `${mailConfig().host}:${mailConfig().port} as ${mailConfig().user || mailConfig().fromEmail}` : 'não configurado (Admin → E-mail)'}\n`);
   });
   const stop = () => { saveDb(true); process.exit(0); };
   process.on('SIGINT', stop); process.on('SIGTERM', stop);
