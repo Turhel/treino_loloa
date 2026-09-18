@@ -444,7 +444,7 @@ async function admSave(patch, msg) { try { ADM.settings = await api('PATCH', '/a
 async function admUserAction(id, method, path, body, msg) { try { const r = await api(method, `/api/admin/users/${id}${path}`, body); if (msg) toast(typeof msg === 'function' ? msg(r) : msg); ADM.users = (await api('GET', '/api/admin/users')).users; ADM.stats = null; const rt = $('#adm-root'); if (rt) rt.innerHTML = admTabHTML(); if ($('#modal .adm-user-modal')) admUserModal(id); if (ADM.tab === 'overview') adminAfter(); return r; } catch (e) { toast(e.message); return null; } }
 function admUserModal(id) {
   const u = (ADM.users || []).find(x => x.id === id); if (!u) return closeModal(); const me = u.id === AUTH.user.id;
-  const info = [['Joined', when(u.createdAt)], ['Último acesso', u.lastLoginAt ? `${when(u.lastLoginAt)}${u.lastLoginIp ? ' · ' + esc(u.lastLoginIp) : ''}` : 'never'], ['Password changed', ago(u.pwChangedAt)], ['Signed-in devices', u.sessions], ['Plan data', u.dataBytes ? `${kb(u.dataBytes)} · saved ${ago(u.dataUpdatedAt)}` : 'none yet'], ['Falha ao entrars', u.failed]];
+  const info = [['Cadastro', when(u.createdAt)], ['Último acesso', u.lastLoginAt ? `${when(u.lastLoginAt)}${u.lastLoginIp ? ' · ' + esc(u.lastLoginIp) : ''}` : 'nunca'], ['Senha alterada', ago(u.pwChangedAt)], ['Dispositivos conectados', u.sessions], ['Dados do plano', u.dataBytes ? `${kb(u.dataBytes)} · salvo ${ago(u.dataUpdatedAt)}` : 'ainda não há dados'], ['Falhas de login', u.failed]];
   const iAmOwner = !!(AUTH.user && AUTH.user.owner);
   const locked = u.owner && !iAmOwner;                       // the owner is off limits to other admins
   const noAdminAct = !iAmOwner && u.role === 'admin';        // only the owner changes another admin's access
