@@ -1,143 +1,143 @@
 <div align="center">
 
-<img src="server/public/icon.png" width="96" alt="FORGE 90 logo">
+<img src="server/public/icon.png" width="96" alt="Logo do FORGE 90">
 
 # FORGE 90
 
-FORGE 90 is a multi-user, self-hosted, weight training and meal-planning app including a built-in barcode scanner, food pantry, and recipes (supports web links and [Mealie](https://mealie.io/) imports). It builds a 90-day Push/Pull/Legs program that continues in 13-week cycles, plans meals portioned to each person's macros, and tracks weight, body fat and lifts.
+O FORGE 90 é um aplicativo multiusuário e auto-hospedado para musculação e planejamento de refeições, com leitor de código de barras, despensa e receitas integrados, incluindo importação por links da web e pelo [Mealie](https://mealie.io/). Ele monta um programa Push/Pull/Legs de 90 dias que continua em ciclos de 13 semanas, planeja refeições ajustadas aos macros de cada pessoa e acompanha peso, gordura corporal e cargas.
 
-![Dashboard](docs/screenshots/dashboard.png)
+![Painel](docs/screenshots/dashboard.png)
 
 </div>
 
-## Contents
+## Conteúdo
 
-- [Features](#features)
-  - [Training](#training)
-  - [Logging and the calendar](#logging-and-the-calendar)
-  - [Nutrition](#nutrition)
-  - [Progress](#progress)
-  - [Recipes and foods](#recipes-and-foods)
-  - [Groceries](#groceries)
-  - [Pantry](#pantry)
-  - [Barcode scanning](#barcode-scanning)
-  - [Importing recipes](#importing-recipes)
-  - [Meal-plan sync](#meal-plan-sync)
-  - [Gym cards](#gym-cards)
-  - [Compact phone UI](#compact-phone-ui)
-  - [Accounts](#accounts)
-  - [Admin console](#admin-console)
-- [Installation](#installation)
-  - [Configuration](#configuration)
-  - [First sign-in](#first-sign-in)
-- [Backups and recovery](#backups-and-recovery)
-- [Security](#security)
-- [License](#license)
-- [Credits](#credits)
-- [Disclaimer](#disclaimer)
+- [Recursos](#recursos)
+  - [Treino](#treino)
+  - [Registro e calendário](#registro-e-calendário)
+  - [Nutrição](#nutrição)
+  - [Progresso](#progresso)
+  - [Receitas e alimentos](#receitas-e-alimentos)
+  - [Compras](#compras)
+  - [Despensa](#despensa)
+  - [Leitura de código de barras](#leitura-de-código-de-barras)
+  - [Importação de receitas](#importação-de-receitas)
+  - [Sincronização do plano alimentar](#sincronização-do-plano-alimentar)
+  - [Cartões da academia](#cartões-da-academia)
+  - [Interface compacta para celular](#interface-compacta-para-celular)
+  - [Contas](#contas)
+  - [Painel administrativo](#painel-administrativo)
+- [Instalação](#instalação)
+  - [Configuração](#configuração)
+  - [Primeiro acesso](#primeiro-acesso)
+- [Backup e recuperação](#backup-e-recuperação)
+- [Segurança](#segurança)
+- [Licença](#licença)
+- [Créditos](#créditos)
+- [Aviso](#aviso)
 
-## Features
+## Recursos
 
-### Training
+### Treino
 
-- The first 90 days run through four phases: Foundation (an upper-body focus while you adjust to the deficit), Build, Intensify, and a deload and PR-test week. After that the plan repeats in 13-week cycles, and the calendar always has the current and next cycle scheduled.
-- Sessions rotate Push, Pull and Legs across however many training days you pick.
-- Each session mixes heavy strength sets with hypertrophy work, using reps-in-reserve (RIR) targets.
-- The app tells you when to add weight so you're encouraged to get stronger.
-- The customizable workout programs include an exercise library with over 100 exercises across 11 major muscle groups, each with form steps and cues. Around half are research-backed alternatives, each with a note on why it's there. Exercises rotate weekly within their movement slot, and you can switch them on or off whenever you like.
+- Os primeiros 90 dias passam por quatro fases: Fundação, com mais foco na parte superior do corpo enquanto você se adapta ao déficit, Construção, Intensificação e uma semana de deload com teste de recordes. Depois disso, o plano se repete em ciclos de 13 semanas, e o calendário mantém sempre o ciclo atual e o seguinte programados.
+- As sessões alternam Push, Pull e Legs conforme a quantidade de dias de treino escolhida.
+- Cada sessão combina séries pesadas de força com trabalho de hipertrofia, usando metas de repetições em reserva (RIR).
+- O aplicativo indica quando aumentar a carga para estimular progressão de força.
+- Os programas de treino personalizáveis incluem uma biblioteca com mais de 100 exercícios distribuídos em 11 grandes grupos musculares, cada um com execução e dicas. Cerca de metade são alternativas apoiadas por evidências, acompanhadas de uma nota explicando por que foram incluídas. Os exercícios alternam semanalmente dentro de seus padrões de movimento e podem ser ativados ou desativados quando quiser.
 
-![Workout plan](docs/screenshots/workout-plan.png)
+![Plano de treino](docs/screenshots/workout-plan.png)
 
-### Logging and the calendar
+### Registro e calendário
 
-Sets are logged on the dashboard's Today card, in the day view or in workout mode, and each exercise shows its target, any PRs and a suggestion for next time. Workout mode takes you through the session one exercise at a time, with a suggested weight and reps. The customizable built-in rest timer automatically starts after you log a set to help you keep a proper pace.
+As séries podem ser registradas no cartão Hoje do painel, na visão detalhada do dia ou no modo treino. Cada exercício mostra a meta, possíveis recordes e uma sugestão para a próxima vez. O modo treino conduz a sessão um exercício por vez, com sugestão de carga e repetições. O cronômetro de descanso integrado e personalizável pode iniciar automaticamente após o registro de uma série para ajudar a manter um ritmo adequado.
 
-The calendar has month and week views, and workouts and meals can be dragged between days. The dashboard has quick editors for the day's workout and meals, and **Customize** rearranges its panels or hides the ones you don't use.
+O calendário tem visualizações mensal e semanal, e treinos e refeições podem ser arrastados entre os dias. O painel traz editores rápidos para o treino e as refeições do dia, e **Personalizar** permite reorganizar os painéis ou ocultar os que você não usa.
 
-![Calendar](docs/screenshots/calendar.png)
+![Calendário](docs/screenshots/calendar.png)
 
-### Nutrition
+### Nutrição
 
-Pick one of three goals: lose fat, maintain, or build muscle.
+Escolha entre três objetivos: perder gordura, manter ou ganhar massa muscular.
 
-Calorie targets use Katch–McArdle BMR, an activity multiplier and extra calories on lifting days. Protein is set between 0.5 and 1 g per pound of body weight, and carbs and fat make up the rest. Every day, recipe portions are scaled so the meals hit protein and calories, with things like eggs and tortillas rounded to whole units. A trend coach compares your 7-day weight trend with the target and can adjust calories.
+As metas calóricas usam a TMB de Katch–McArdle, um multiplicador de atividade e calorias extras nos dias de musculação. A proteína é definida entre 0,5 e 1 g por libra de peso corporal, e carboidratos e gorduras completam o restante. Todos os dias, as porções das receitas são ajustadas para que as refeições atinjam as metas de proteína e calorias, arredondando itens como ovos e tortillas para unidades inteiras. Um orientador de tendência compara a média de peso de 7 dias com a meta e pode ajustar as calorias.
 
-- **Lose fat** takes a deficit from the loss rate you set, and switches to maintenance when you reach your goal.
-- **Maintain** holds calories level, and the coach flags drift in either direction.
-- **Build muscle** adds a surplus sized from a weekly gain target set as a share of body weight, 0.25–0.5% being the range most lifters can add without the extra going on as fat. Fat drops to 25% of calories (never below 0.3 g per pound) so the surplus lands in carbohydrate, which is what fuels training volume. The surplus is capped at 500 kcal a day, and the bulk stops and holds at maintenance once you hit the body-fat ceiling, since past that more of every extra calorie is stored than used. Both limits are adjustable.
+- **Perder gordura** cria um déficit com base no ritmo de perda definido e muda para manutenção quando a meta é atingida.
+- **Manter** mantém as calorias estáveis, enquanto o orientador sinaliza desvios em qualquer direção.
+- **Ganhar massa muscular** adiciona um superávit calculado a partir de uma meta de ganho semanal como porcentagem do peso corporal. Entre 0,25% e 0,5% é a faixa em que a maioria das pessoas consegue progredir sem transformar boa parte do excedente em gordura. A gordura cai para 25% das calorias, nunca abaixo de 0,3 g por libra, para concentrar o excedente em carboidratos, que sustentam o volume de treino. O superávit é limitado a 500 kcal por dia e a fase de ganho é interrompida, passando para manutenção, quando o limite de gordura corporal é atingido. Ambos os limites podem ser ajustados.
 
-![Diet plan](docs/screenshots/diet-plan.png)
+![Plano alimentar](docs/screenshots/diet-plan.png)
 
-### Progress
+### Progresso
 
-The Progress page charts body weight against a 7-day average and the plan line, along with body fat, lean mass and an estimated one-rep max for each exercise, with PRs marked. You can look at everything since day 1 or just the last two weeks, and see how much your weight, body fat and lean mass changed in that time. It also shows whether your 7-day average is ahead of or behind the plan, when you'll reach your goal weight at the current pace, and which sessions you did or missed over the last four weeks.
+A página Progresso mostra gráficos do peso corporal comparado à média de 7 dias e à linha planejada, além de gordura corporal, massa magra e estimativa de uma repetição máxima para cada exercício, com recordes destacados. É possível visualizar tudo desde o primeiro dia ou apenas as duas últimas semanas e acompanhar quanto peso, gordura corporal e massa magra mudaram nesse período. A página também mostra se a média de 7 dias está à frente ou atrás do plano, quando você alcançará a meta de peso no ritmo atual e quais sessões foram realizadas ou perdidas nas últimas quatro semanas.
 
-![Progress](docs/screenshots/progress.png)
+![Progresso](docs/screenshots/progress.png)
 
-### Recipes and foods
+### Receitas e alimentos
 
-FORGE 90 comes with 36 high-protein meal-prep recipes, each linked to its original source, and a database of about 650 foods. Multi-serving recipes are scheduled as leftovers. Recipes can be searched by ingredient or tag, favorites come up more often in the plan, and you can edit, switch off or print any recipe, or write your own. Food preferences are a checklist by group, subgroup and individual food. Unchecking a food removes the recipes that use it and swaps it out of upcoming meals.
+O FORGE 90 vem com 36 receitas ricas em proteína pensadas para preparo antecipado, cada uma vinculada à fonte original, e uma base com cerca de 650 alimentos. Receitas com várias porções são programadas como sobras. É possível buscar receitas por ingrediente ou tag; as favoritas aparecem com mais frequência no plano; e qualquer receita pode ser editada, desativada, impressa ou criada do zero. As preferências alimentares são organizadas em uma lista por grupo, subgrupo e alimento individual. Desmarcar um alimento remove as receitas que o utilizam e substitui essas refeições futuras.
 
-![Foods and recipes](docs/screenshots/recipes.png)
+![Alimentos e receitas](docs/screenshots/recipes.png)
 
-### Groceries
+### Compras
 
-The weekly shopping list is grouped by aisle (food groups) and adds up the exact portions on the calendar, leftovers included, with a batch-cook schedule alongside. Items the pantry already covers stay on the list, ticked off with a pantry icon, so an out-of-date pantry can't make you miss something. If the pantry only covers part of an item, the list shows the full amount and notes what's at home. **Add checked to pantry** puts away everything you bought in one go. With money-saving planning on, each week's meals are ordered so recipes share fresh ingredients, which means fewer packages and less waste without changing variety or favorites.
+A lista semanal de compras é agrupada por corredor ou grupo de alimentos e soma as porções exatas do calendário, incluindo sobras, com um cronograma de preparo em lote ao lado. Itens já cobertos pela despensa continuam na lista, marcados com um ícone de despensa, para que uma despensa desatualizada não faça você esquecer nada. Se a despensa cobrir apenas parte de um item, a lista mostra a quantidade total e informa quanto já há em casa. **Adicionar marcados à despensa** guarda de uma vez tudo o que foi comprado. Com o planejamento econômico ativado, as refeições de cada semana são organizadas para compartilhar ingredientes frescos, reduzindo embalagens e desperdício sem diminuir variedade nem ignorar favoritos.
 
-![Grocery list](docs/screenshots/grocery.png)
+![Lista de compras](docs/screenshots/grocery.png)
 
-### Pantry
+### Despensa
 
-The pantry keeps track of the food you have at home, with amounts and use-by dates. Items come in from scanning, the shopping list or by hand, and each one gets a typical use-by date for that kind of food, which you can change. Anything of the same food with the same use-by date is kept as one entry rather than a pile of identical rows, and searching the pantry lists what goes off soonest first. As each planned day passes, its meals come out of the pantry automatically, soonest-expiring first. Anything within two weeks of its use-by date shows under **Expiring soon**, with a count on the Pantry menu item.
+A despensa acompanha os alimentos disponíveis em casa, incluindo quantidades e datas de validade. Os itens entram por leitura de código de barras, pela lista de compras ou manualmente, e cada um recebe uma validade típica para aquele tipo de alimento, que pode ser alterada. Itens iguais com a mesma data de validade são mantidos em uma única entrada em vez de gerar várias linhas idênticas, e a busca na despensa mostra primeiro o que vence antes. Conforme cada dia planejado passa, as refeições correspondentes são descontadas automaticamente da despensa, priorizando os itens que vencem primeiro. Tudo que estiver a até duas semanas da validade aparece em **Vencendo em breve**, com uma contagem no item Despensa do menu.
 
-![Pantry](docs/screenshots/pantry.png)
+![Despensa](docs/screenshots/pantry.png)
 
-### Barcode scanning
+### Leitura de código de barras
 
-On a phone, **Scan** reads the barcode on packaged food (EAN-13, UPC-A, EAN-8 and UPC-E) and looks the product up on [Open Food Facts](https://world.openfoodfacts.org). The first person to scan a product checks the name, nutrition and package size before it's added, and after that everyone on the server can find it by name, brand or barcode. Products that aren't on Open Food Facts can be entered from the label, and whoever added a product, or an administrator, can correct it later.
+No celular, **Escanear** lê o código de barras de alimentos embalados, incluindo EAN-13, UPC-A, EAN-8 e UPC-E, e procura o produto no [Open Food Facts](https://world.openfoodfacts.org). A primeira pessoa a escanear um produto confere nome, informação nutricional e tamanho da embalagem antes da inclusão. Depois disso, qualquer pessoa no servidor pode encontrá-lo por nome, marca ou código de barras. Produtos que não estejam no Open Food Facts podem ser cadastrados a partir do rótulo, e quem adicionou o produto, ou um administrador, pode corrigi-lo depois.
 
-Where you scan decides what happens:
+O lugar em que você faz a leitura define o que acontece:
 
-- **Dashboard, calendar, day view and Foods & recipes** (on a phone: Today and the **+** button): the product is added to the day as an extra food with one of the meals. It counts toward the day's macros, and the rest of the day's portions shrink to make room. **Add food** does the same without the camera.
-- **Pantry:** each scan adds a package straight to the pantry, so you can scan a whole bag of groceries in a row. Scanning the same product again counts it up rather than starting a new row, and the count can be nudged up or down by hand. **Review** lists everything from that session with its count and use-by date, so there's no trip to the Pantry page to fix things.
+- **Painel, calendário, visão do dia e Alimentos e receitas** (no celular: Hoje e o botão **+**): o produto é adicionado ao dia como alimento extra junto de uma das refeições. Ele entra nos macros do dia e as outras porções são reduzidas para abrir espaço. **Adicionar alimento** faz a mesma coisa sem usar a câmera.
+- **Despensa:** cada leitura adiciona uma embalagem diretamente à despensa, permitindo escanear uma sacola inteira de compras em sequência. Escanear novamente o mesmo produto aumenta a quantidade em vez de criar outra linha, e a contagem também pode ser ajustada manualmente. **Revisar** mostra tudo que foi lido naquela sessão, com quantidades e validade, sem precisar abrir a página Despensa para corrigir os dados.
 
-The live camera view needs HTTPS (or `localhost`). Over plain HTTP, Scan asks for a photo of the barcode instead. Android Chrome uses the phone's built-in barcode reader; other browsers, including Safari on iPhone, use the app's own decoder.
+A câmera ao vivo precisa de HTTPS ou `localhost`. Em HTTP comum, Escanear pede uma foto do código de barras. O Chrome no Android usa o leitor de códigos integrado ao celular; outros navegadores, incluindo Safari no iPhone, usam o decodificador do próprio aplicativo.
 
-![Adding a scanned product](docs/screenshots/barcode-product.png)
+![Adicionando um produto escaneado](docs/screenshots/barcode-product.png)
 
-### Importing recipes
+### Importação de receitas
 
-**Import recipe** on the Foods & recipes page brings in a recipe from a web link or from Mealie via its API. Link import works with any site that publishes standard recipe data, which covers most recipe sites. For Mealie, an administrator adds the server address and an API token under Settings → API connections, and then everyone can search it and import several recipes at once.
+**Importar receita**, na página Alimentos e receitas, importa uma receita por um link da web ou pelo Mealie usando a API. A importação por link funciona com qualquer site que publique dados padronizados de receita, o que inclui a maioria dos sites desse tipo. Para o Mealie, um administrador informa o endereço do servidor e um token de API em Configurações → Conexões de API. Depois disso, todos podem pesquisar e importar várias receitas de uma vez.
 
-Each ingredient is matched to a food in the database, and its amount is converted to grams, milliliters or items. Every import opens for review before it's saved. Anything that couldn't be worked out, like an ingredient with no matching food, a missing amount, the meal or the number of servings, is highlighted and has to be filled in first, and uncertain matches are marked for you to check. Your corrections are remembered for next time. If a page publishes no recipe data at all, FORGE 90 falls back to reading the page itself — it looks for an Ingredients heading and the list under it. That's guesswork, so the review screen says so and everything is worth a check. You can always paste the ingredient list instead.
+Cada ingrediente é associado a um alimento da base e sua quantidade é convertida para gramas, mililitros ou unidades. Toda importação é aberta para revisão antes de ser salva. O que não puder ser identificado, como um ingrediente sem alimento correspondente, uma quantidade ausente, o tipo de refeição ou o número de porções, fica destacado e precisa ser preenchido. Correspondências incertas também são sinalizadas para conferência. Suas correções são lembradas para a próxima vez. Se uma página não publicar nenhum dado estruturado de receita, o FORGE 90 tenta ler a própria página, procurando um título de ingredientes e a lista abaixo dele. Como isso é uma estimativa, a tela de revisão deixa isso claro e recomenda conferir tudo. Também é sempre possível colar a lista de ingredientes manualmente.
 
-![Recipe import review](docs/screenshots/recipe-import.png)
+![Revisão da importação de receita](docs/screenshots/recipe-import.png)
 
-### Meal-plan sync
+### Sincronização do plano alimentar
 
-Meal-plan sync allows two people to sync their meal plans from Account settings. One sends a request and picks which meals to share, and the other accepts. The shared meals are then re-planned together using only recipes you can both eat, with both of your favorites accounted for. Portions stay sized to each person's own targets, while the shopping list and batch-cook schedule cover you both.
+A sincronização permite que duas pessoas conectem seus planos alimentares pelas configurações da Conta. Uma envia uma solicitação e escolhe quais refeições compartilhar; a outra aceita. As refeições compartilhadas passam a ser planejadas em conjunto usando apenas receitas que ambas possam consumir, levando em conta os favoritos das duas pessoas. As porções continuam ajustadas às metas individuais, enquanto a lista de compras e o cronograma de preparo em lote passam a considerar ambas.
 
-When either of you changes a shared meal, it changes on your plan right away and goes to the other person to accept or decline. If they decline, you each keep your own meal that day. While a sync is active, a Sync button on the relevant pages shows how many changes are waiting. Either of you can change which meals are shared (the other has to approve) or unsync at any time. You can also share one pantry from the sync settings: both people's items move into it and scans and edits update it for both. If you stop sharing, you each keep a copy.
+Quando uma das pessoas altera uma refeição compartilhada, a mudança aparece imediatamente no próprio plano e é enviada à outra pessoa para aceitar ou recusar. Se ela recusar, cada uma mantém sua própria refeição naquele dia. Enquanto a sincronização estiver ativa, um botão Sincronizar nas páginas relevantes mostra quantas alterações aguardam resposta. Qualquer uma das pessoas pode alterar quais refeições são compartilhadas, com aprovação da outra, ou encerrar a sincronização a qualquer momento. Também é possível compartilhar uma única despensa pelas configurações de sincronização: os itens das duas pessoas são reunidos nela, e leituras ou edições atualizam a despensa para ambas. Ao interromper o compartilhamento, cada pessoa mantém uma cópia.
 
-![Sync panel](docs/screenshots/sync-panel.png)
+![Painel de sincronização](docs/screenshots/sync-panel.png)
 
-### Gym cards
+### Cartões da academia
 
-Add your gym membership card in Settings → Gym cards or from the dashboard, and its barcode shows on the dashboard for check-in. Scan the barcode on the card or key tag, or type the number. Code 128, Code 39, Codabar, Interleaved 2 of 5, EAN/UPC and QR codes are supported. Scanning detects the type; if you type the number, Automatic works with most gym scanners, or you can pick the type your card uses. Tapping the barcode shows it full screen and keeps the screen awake, and on a phone **Check in** at the top of Today does the same. You can keep several cards and switch between them. QR codes can only be scanned on Android, where the browser has a built-in barcode reader. iPhone browsers don't have one, so the QR code's string has to be entered manually.
+Adicione seu cartão de acesso em Configurações → Cartões da academia ou pelo painel. O código de barras aparecerá no painel para facilitar a entrada. Escaneie o código do cartão ou chaveiro, ou digite o número. São aceitos Code 128, Code 39, Codabar, Interleaved 2 of 5, EAN/UPC e QR codes. O escaneamento identifica o tipo automaticamente. Ao digitar, a opção Automático funciona com a maioria dos leitores, ou você pode selecionar o tipo do seu cartão. Tocar no código de barras abre uma versão em tela cheia e mantém a tela ativa. No celular, **Entrada** no topo da página Hoje faz o mesmo. É possível guardar vários cartões e alternar entre eles. QR codes só podem ser escaneados no Android, onde o navegador oferece um leitor integrado. Navegadores do iPhone não oferecem esse recurso, então o conteúdo do QR code precisa ser inserido manualmente.
 
-![Gym card](docs/screenshots/gym-card.png)
+![Cartão da academia](docs/screenshots/gym-card.png)
 
-### Compact phone UI
+### Interface compacta para celular
 
-Phones get a dedicated compact UI with five tabs along the bottom instead of the sidebar: Today, Plan, +, Kitchen and You.
+No celular, o FORGE 90 usa uma interface compacta própria, com cinco abas na parte inferior em vez da barra lateral: Hoje, Plano, +, Cozinha e Você.
 
-- **Today** puts the dashboard and the day view on one page. Check in at the gym, log your morning weigh-in, start the workout and see a progress summary that opens the full Progress page. Meals can be swapped from a searchable list with your favorites first, and **Customize Today** sets which panels show and in what order.
-- **Plan** has the calendar, the workout plan and the diet plan.
-- **Kitchen** has the shopping list, pantry, recipes and meal-prep schedule. The list is split into To buy, In the cart and At home, and once your shopping is done, one button puts the whole cart in the pantry. Things the pantry covers wait under At home, with a **Need it** button in case the pantry is out of date.
-- **You** has your progress, PRs, gym cards and settings.
-- **+** scans or adds food, logs your weight, shows your gym card, adds to the pantry or starts the workout from any tab.
+- **Hoje** reúne o painel e a visão do dia em uma única página. Faça a entrada na academia, registre a pesagem da manhã, inicie o treino e veja um resumo de progresso que abre a página Progresso completa. As refeições podem ser trocadas por uma lista pesquisável com os favoritos primeiro, e **Personalizar Hoje** define quais painéis aparecem e em que ordem.
+- **Plano** reúne calendário, plano de treino e plano alimentar.
+- **Cozinha** reúne lista de compras, despensa, receitas e cronograma de preparo. A lista é dividida em Comprar, No carrinho e Em casa. Quando as compras terminarem, um botão coloca todo o carrinho na despensa. Itens cobertos pela despensa aguardam em Em casa, com um botão **Preciso comprar** caso a despensa esteja desatualizada.
+- **Você** reúne progresso, recordes, cartões da academia e configurações.
+- **+** permite escanear ou adicionar alimentos, registrar peso, mostrar o cartão da academia, adicionar à despensa ou iniciar o treino a partir de qualquer aba.
 
-![FORGE 90 on a phone](docs/screenshots/phone.png)
+![FORGE 90 no celular](docs/screenshots/phone.png)
 
 ### Accounts
 
