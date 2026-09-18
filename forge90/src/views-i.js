@@ -163,10 +163,10 @@ function openScanner(mode, date, draft) {
    (cancelling a new-product form drops back here and the list has to come back with it) */
 function scanAddedHTML() {
   if (!SCN || SCN.mode !== 'pantry' || !SCN.added.length) return '';
-  const rows = SCN.added.slice(0, 12).map(e => `<div class="scan-row"><span class="sr-ok">${icon('check')}</span><div class="sr-t"><b>${esc(foodLabel(e.food))}</b><span class="tiny muted">${esc(pantryQtyText(e.food, packInfo(e.food).P * e.n))}${e.base > 0 ? ` · ${esc(pantryQtyText(e.food, e.base))} already here` : ''}</span></div>
+  const rows = SCN.added.slice(0, 12).map(e => `<div class="scan-row"><span class="sr-ok">${icon('check')}</span><div class="sr-t"><b>${esc(foodLabel(e.food))}</b><span class="tiny muted">${esc(pantryQtyText(e.food, packInfo(e.food).P * e.n))}${e.base > 0 ? ` · ${esc(pantryQtyText(e.food, e.base))} já na despensa` : ''}</span></div>
     <div class="qstep">${scanStepHTML(e, 'scan')}</div></div>`).join('');
   const n = SCN.added.reduce((a, e) => a + e.n, 0);
-  return `<div class="tiny muted">Adicionado nesta sessão</div>${rows}${SCN.added.length > 12 ? `<div class="tiny muted">…and ${SCN.added.length - 12} more</div>` : ''}
+  return `<div class="tiny muted">Adicionado nesta sessão</div>${rows}${SCN.added.length > 12 ? `<div class="tiny muted">…e mais ${SCN.added.length - 12}</div>` : ''}
     <button type="button" class="btn sm primary scan-rev" data-act="scan-review">${icon('list')}Revisar ${n} item${n === 1 ? '' : 'ns'}</button>`;
 }
 const scanStepHTML = (e, ns) => `<button type="button" class="btn icon sm" data-act="${ns}-less" data-f="${esc(e.food)}" aria-label="Diminuir um">${icon('minus')}</button><b class="qn">${e.n}</b><button type="button" class="btn icon sm" data-act="${ns}-more" data-f="${esc(e.food)}" aria-label="Adicionar um">${icon('plus')}</button>`;
