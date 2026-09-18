@@ -709,7 +709,7 @@ document.addEventListener('change', async e => {
   if (t.dataset.input === 'sr-exp' && SCN) { const e2 = SCN.added.find(x => x.food === t.dataset.f); if (e2) { pantrySet(e2.itemId, { exp: t.value || null }); if (/^#\/(pantry|grocery)/.test(location.hash)) render(); } }
   if (t.dataset.input === 'qa-unit' && QA) { QA.unit = t.value; QA.n = t.value === 'g' ? 100 : 1; renderQuickAdd(); }
   if (t.dataset.input === 'qa-slot' && QA) QA.slot = t.value;
-  if (t.dataset.input === 'pf-basis') { const u = $('#modal .pf-unit'); if (u) u.classList.toggle('hidden', t.value !== 'u'); const s = $('#modal [name="srv"]'); if (s) s.disabled = t.value === 'u'; const pu = $('#modal .pf-pku'); if (pu) pu.textContent = `(${t.value === 'u' ? 'items' : t.value})`; }
+  if (t.dataset.input === 'pf-basis') { const u = $('#modal .pf-unit'); if (u) u.classList.toggle('hidden', t.value !== 'u'); const s = $('#modal [name="srv"]'); if (s) s.disabled = t.value === 'u'; const pu = $('#modal .pf-pku'); if (pu) pu.textContent = `(${t.value === 'u' ? 'unidades' : t.value})`; }
   if (t.dataset.input === 'scan-photo') {
     const f = t.files && t.files[0]; t.value = ''; if (!f) return; scanMsg('Lendo a foto…');
     try { const bmp = await createImageBitmap(f); const W = Math.min(1600, bmp.width), H = Math.round(bmp.height * W / bmp.width); const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.drawImage(bmp, 0, 0, W, H);
