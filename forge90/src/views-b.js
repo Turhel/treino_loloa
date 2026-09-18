@@ -55,7 +55,7 @@ function viewWorkouts() {
     <div class="g-half">
       <div class="card ${collCls('how')}" data-coll="how"><div class="card-h">${collHead('how', 'Como o programa funciona')}</div><div class="coll-body">
         <div class="small" style="display:grid;gap:10px">
-          <div class="note">${icon('pull')}<span><b>Push / Pull / Legs.</b> Dias de push treinam peito, ombros e tríceps; dias de pull treinam costas, deltoides posteriores e bíceps; pernas têm seu próprio dia. As sessões seguem uma ordem contínua ao longo dos seus dias de treino, então o sistema funciona com qualquer quantidade de dias.</span></div>
+          <div class="note">${icon('pull')}<span><b>Empurrar / Puxar / Pernas.</b> Dias de push treinam peito, ombros e tríceps; dias de pull treinam costas, deltoides posteriores e bíceps; pernas têm seu próprio dia. As sessões seguem uma ordem contínua ao longo dos seus dias de treino, então o sistema funciona com qualquer quantidade de dias.</span></div>
           <div class="note">${icon('dumbbell')}<span><b>Prioridade ao isolamento.</b> Máquinas, cabos e halteres concentram a maior parte do volume. Exercícios compostos aparecem apenas na posição de “força” da sessão (em versões estáveis com máquina/halteres), reduzindo estresse articular e fadiga durante o déficit calórico.</span></div>
           <div class="note">${icon('loop')}<span><b>Rotação de variações.</b> Cada posição tem 3 exercícios que alternam semanalmente (Semana 1 → A, Semana 2 → B, Semana 3 → C, e repete). Cada variação retorna a cada 3 semanas — tente superar o que fez da última vez. A sessão B de cada par usa uma variação diferente da sessão A. Troque qualquer exercício com o ${icon('loop').replace('<svg', '<svg style="width:12px;height:12px;vertical-align:-2px"')} — apenas na sessão daquele dia ou, na tabela abaixo, para o programa inteiro.</span></div>
           <div class="note">${icon('trend')}<span><b>Progressão dupla.</b> Trabalhe dentro da faixa de repetições no RIR-alvo. Quando todas as séries atingirem o topo da faixa, aumente a carga e recomece pela parte inferior da faixa.</span></div>
@@ -148,9 +148,9 @@ function viewRecipe(rid) {
       <div class="tiny muted rec-kicker">${x.meta}</div><h1><span class="rec-emo">${esc(r.emoji)}</span>${esc(r.name)}</h1>${x.tags ? `<div class="row wrap" style="margin-top:8px">${x.tags}</div>` : ''}</div>
     <div class="row wrap">${x.blocked}${favBtnHTML(rid)}<button class="btn" data-act="recipe-print" data-rid="${rid}">${icon('print')}Imprimir</button><button class="btn" data-act="recipe-dup" data-rid="${rid}">Duplicar</button><button class="btn primary" data-act="recipe-edit" data-rid="${rid}">${icon('edit')}Editar receita</button></div></div>
     <div class="grid g4" style="gap:10px;margin-bottom:16px">${x.macros}</div>
-    <div class="grid ${r.yield > 1 ? 'g2' : ''}" style="margin-bottom:16px"><div class="card"><div class="card-h"><h2>Per standard serving</h2></div><div class="ing-list">${x.list(x.per)}</div></div>
-      ${r.yield > 1 ? `<div class="card"><div class="card-h"><h2>Full batch</h2><span class="pill">${r.yield} servings</span></div><div class="ing-list">${x.list(x.batch)}</div></div>` : ''}</div>
-    <div class="card" style="margin-bottom:16px"><div class="card-h"><h2>Method</h2></div>${x.steps}</div>
+    <div class="grid ${r.yield > 1 ? 'g2' : ''}" style="margin-bottom:16px"><div class="card"><div class="card-h"><h2>Por porção padrão</h2></div><div class="ing-list">${x.list(x.per)}</div></div>
+      ${r.yield > 1 ? `<div class="card"><div class="card-h"><h2>Receita completa</h2><span class="pill">${r.yield} porções</span></div><div class="ing-list">${x.list(x.batch)}</div></div>` : ''}</div>
+    <div class="card" style="margin-bottom:16px"><div class="card-h"><h2>Modo de preparo</h2></div>${x.steps}</div>
     <div class="card">${linksBlockHTML(r).replace('<h3 style="margin-top:16px">', '<h3 style="margin-top:0">')}${x.scaling}</div>`;
 }
 function recipePrintHTML(rid) {
@@ -159,11 +159,11 @@ function recipePrintHTML(rid) {
   const links = (r.links || []).filter(l => l && l.url);
   return `<article class="pr">
     <div class="pr-meta">${esc(x.meta)}</div><h1><span>${esc(r.emoji)}</span> ${esc(r.name)}</h1>
-    <div class="pr-mac">Per serving: <b>${fmt(m.k)}</b> kcal · <b>${fmt(m.p)} g</b> protein · <b>${fmt(m.c)} g</b> carbs · <b>${fmt(m.f)} g</b> fat</div>
-    <div class="pr-cols"><section><h2>Per serving</h2>${table(x.per)}</section>${r.yield > 1 ? `<section><h2>Full batch · ${r.yield} servings</h2>${table(x.batch)}</section>` : ''}</div>
-    ${r.steps.length ? `<section class="pr-steps"><h2>Method</h2><ol>${r.steps.map(y => `<li>${esc(y)}</li>`).join('')}</ol></section>` : ''}
+    <div class="pr-mac">Por porção: <b>${fmt(m.k)}</b> kcal · <b>${fmt(m.p)} g</b> proteína · <b>${fmt(m.c)} g</b> carboidratos · <b>${fmt(m.f)} g</b> gorduras</div>
+    <div class="pr-cols"><section><h2>Por porção</h2>${table(x.per)}</section>${r.yield > 1 ? `<section><h2>Receita completa · ${r.yield} porções</h2>${table(x.batch)}</section>` : ''}</div>
+    ${r.steps.length ? `<section class="pr-steps"><h2>Modo de preparo</h2><ol>${r.steps.map(y => `<li>${esc(y)}</li>`).join('')}</ol></section>` : ''}
     ${links.length ? `<section class="pr-links"><h2>Fonte</h2>${links.map(l => `<div>${esc(l.title || l.site || '')}${l.title ? ' — ' : ''}${esc(l.url)}</div>`).join('')}</section>` : ''}
-    <footer>${esc(appTitle())} · printed ${esc(fmtDate(todayISO(), { month: 'short', day: 'numeric', year: 'numeric' }))} · amounts are one standard serving; your daily portions are sized to your targets in the app.</footer></article>`;
+    <footer>${esc(appTitle())} · impresso em ${esc(fmtDate(todayISO(), { month: 'short', day: 'numeric', year: 'numeric' }))} · as quantidades correspondem a uma porção padrão; suas porções diárias são ajustadas às suas metas no app.</footer></article>`;
 }
 function printRecipe(rid) {
   if (!RECIPE[rid]) return;
