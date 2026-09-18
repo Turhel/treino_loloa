@@ -142,7 +142,7 @@ function barcodeSVG(code, fmt, opts = {}) {
   }
   const bits = encode1D(code, fmt); if (!bits) return ''; const q = 10, h = opts.h || Math.max(40, Math.round((bits.length + q * 2) * 0.32)); const W = bits.length + q * 2; let path = '', i = 0;
   while (i < bits.length) { if (!bits[i]) { i++; continue; } let j = i; while (j < bits.length && bits[j]) j++; path += `M${i + q} 0h${j - i}v${h}h-${j - i}z`; i = j; }
-  return `<svg xmlns="http://www.w3.org/2000/svg" class="bc-svg" viewBox="0 0 ${W} ${h}" preserveAspectRatio="none" shape-rendering="crispEdges" role="img" aria-label="${esc(fmtName(fmt))} barcode"><rect width="${W}" height="${h}" fill="#fff"/><path d="${path}" fill="#000"/></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" class="bc-svg" viewBox="0 0 ${W} ${h}" preserveAspectRatio="none" shape-rendering="crispEdges" role="img" aria-label="Código de barras ${esc(fmtName(fmt))}"><rect width="${W}" height="${h}" fill="#fff"/><path d="${path}" fill="#000"/></svg>`;
 }
 const gymHuman = c => c.fmt === 'codabar' ? c.code.replace(/^[A-D]|[A-D]$/g, '') : c.code;
 
