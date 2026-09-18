@@ -18,22 +18,22 @@ function exerciseEditor(id, group) {
   modal(`<div class="row"><h2 style="flex:1">${id ? 'Editar exercício' : 'Novo exercício'}</h2><button class="btn icon ghost" data-act="close-modal">${icon('x')}</button></div>
     <form data-form="exercise" class="xe" style="margin-top:12px">
       <div class="xe-top"><div class="xe-fields">
-        <div class="field"><label>Nome do exercício</label><input class="inp" name="name" value="${esc(e ? e.name : '')}" placeholder="ex.: Landmine Press" required></div>
+        <div class="field"><label>Nome do exercício</label><input class="inp" name="name" value="${esc(e ? e.name : '')}" placeholder="ex.: desenvolvimento landmine" required></div>
         <div class="grid g2" style="gap:10px;margin-top:10px">
-          <div class="field"><label>Muscle group</label><select class="inp" name="group" data-input="xe-group">${EX_GROUPS.map(x => `<option ${x === g ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
-          <div class="field"><label>Equipment</label><input class="inp" name="equip" value="${esc(e ? e.equip : '')}" placeholder="e.g. Barbell + landmine"></div></div>
+          <div class="field"><label>Grupo muscular</label><select class="inp" name="group" data-input="xe-group">${EX_GROUPS.map(x => `<option ${x === g ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
+          <div class="field"><label>Equipamento</label><input class="inp" name="equip" value="${esc(e ? e.equip : '')}" placeholder="ex.: barra + landmine"></div></div>
         <div class="row wrap" style="gap:14px;margin-top:10px">
-          <div class="seg"><button type="button" class="${!XE.compound ? 'on' : ''}" data-act="xe-type" data-v="0">Isolation</button><button type="button" class="${XE.compound ? 'on' : ''}" data-act="xe-type" data-v="1">Compound</button></div>
-          <label class="small"><input type="checkbox" name="bw" ${XE.bw ? 'checked' : ''}> Bodyweight (log reps only)</label></div></div>
+          <div class="seg"><button type="button" class="${!XE.compound ? 'on' : ''}" data-act="xe-type" data-v="0">Isolador</button><button type="button" class="${XE.compound ? 'on' : ''}" data-act="xe-type" data-v="1">Composto</button></div>
+          <label class="small"><input type="checkbox" name="bw" ${XE.bw ? 'checked' : ''}> Peso corporal (registrar apenas repetições)</label></div></div>
         <div class="xe-map" id="xe-map">${muscleMap([...XE.primary], [...XE.secondary])}</div></div>
-      <div class="field" style="margin-top:12px"><label>Primary muscles</label><div class="mus-row">${chips('primary')}</div></div>
-      <div class="field" style="margin-top:10px"><label>Secondary muscles</label><div class="mus-row">${chips('secondary')}</div></div>
+      <div class="field" style="margin-top:12px"><label>Músculos principais</label><div class="mus-row">${chips('primary')}</div></div>
+      <div class="field" style="margin-top:10px"><label>Músculos secundários</label><div class="mus-row">${chips('secondary')}</div></div>
       <div class="field" style="margin-top:12px"><label>Plano de treino</label><select class="inp" name="slot" id="xe-slot">${slotOptionsFor(g, XE.slot)}</select>
-        <span class="tiny muted">Added exercises join the weekly variation rotation from this week on — earlier weeks stay as they were.</span></div>
+        <span class="tiny muted">Exercícios adicionados entram na rotação semanal a partir desta semana — as semanas anteriores permanecem como estavam.</span></div>
       <div class="grid g2" style="gap:10px;margin-top:12px">
         <div class="field"><label>Como executar (uma etapa por linha)</label><textarea class="inp" name="steps" rows="5" style="height:auto;padding:8px 11px" placeholder="Posicione-se…&#10;Desça com controle…">${esc(e ? e.steps.join('\n') : '')}</textarea></div>
-        <div class="field"><label>Coaching cues (one per line)</label><textarea class="inp" name="cues" rows="5" style="height:auto;padding:8px 11px" placeholder="Elbows tucked&#10;Full stretch">${esc(e ? e.cues.join('\n') : '')}</textarea></div></div>
-      <div class="field" style="margin-top:10px"><label>Common mistake to avoid</label><input class="inp" name="mistake" value="${esc(e ? e.mistake : '')}" placeholder="e.g. Shrugging the shoulders"></div>
+        <div class="field"><label>Pontos-chave de execução (um por linha)</label><textarea class="inp" name="cues" rows="5" style="height:auto;padding:8px 11px" placeholder="Cotovelos junto ao corpo&#10;Amplitude completa">${esc(e ? e.cues.join('\n') : '')}</textarea></div></div>
+      <div class="field" style="margin-top:10px"><label>Erro comum a evitar</label><input class="inp" name="mistake" value="${esc(e ? e.mistake : '')}" placeholder="ex.: encolher os ombros"></div>
       <div class="row" style="justify-content:flex-end;margin-top:16px">
         ${id ? `<button type="button" class="btn danger" data-act="ex-del" data-id="${id}" style="margin-right:auto">${icon('trash')}Excluir</button>` : ''}
         <button type="button" class="btn" data-act="close-modal">Cancelar</button><button class="btn primary" type="submit">${id ? 'Salvar alterações' : 'Adicionar exercício'}</button></div></form>`);
