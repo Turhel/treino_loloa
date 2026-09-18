@@ -2360,7 +2360,7 @@ const PT_PHRASES = {
   "Apple cider / rice vinegar": "Vinagre de maçã / arroz",
   "Vegetable broth": "Caldo de vegetais",
   "Sugar-free pudding mix, dry": "Mistura para pudim sem açúcar, seca",
-  "Frozen yogurt": "Frozen yogurt",
+  "Frozen yogurt": "Iogurte congelado",
   "Crispy rice treat": "Doce de arroz crocante",
   "Baked cheese crisps": "Chips de queijo assados",
   "Frozen bean & cheese burrito": "Burrito congelado de feijão e queijo",
