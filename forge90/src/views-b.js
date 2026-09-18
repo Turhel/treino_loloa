@@ -261,13 +261,13 @@ function moneySaverHTML(wd) {
     <div class="note ${on && good ? 'acc' : ''}" style="margin-top:12px">${icon('info')}<span>${headline}</span></div>
     ${chips ? `<div class="row wrap" style="gap:6px;margin-top:10px"><span class="tiny muted">Compartilhados nesta semana:</span>${chips}</div>` : ''}
     <details class="formula"><summary>Como a fórmula funciona</summary>
-      <p>When meals are planned, each slot looks at the <b>next 3 recipes</b> in its rotation and picks the one with the best <b>shopping score</b> against everything already on that week’s list:</p>
-      <div class="eq">score = Σ<sub>ingredients</sub> w × ( min(a, R) ÷ P − ⌈ max(0, a − R) ÷ P ⌉ ) ÷ servings</div>
-      <ul><li><b>a</b> — how much of the ingredient the recipe needs (the whole batch for batch recipes)</li>
-        <li><b>R</b> — what’s left in packages you’re already buying that week</li>
-        <li><b>P</b> — the typical package size (edit it on any food)</li>
-        <li><b>w</b> — how fast it spoils: fresh meat, fish, greens ≈ 1 · eggs, peppers ≈ 0.5 · frozen ≈ 0.3 · rice, pasta, canned ≈ 0.05 · spices and oils 0</li></ul>
-      <p>A recipe that finishes the half-bag of spinach you already need scores high; one that needs a new pack of something perishable scores low. No recipe waits more than two turns, so variety and your ★ favorites stay the same — only the order within the week changes. Meals you placed by hand are never moved. Numbers here use standard servings; the list below uses your scaled portions.</p></details></div></div>`;
+      <p>Quando as refeições são planejadas, cada horário analisa as <b>próximas 3 receitas</b> da rotação e escolhe a que tem a melhor <b>pontuação de compras</b> em relação ao que já está na lista daquela semana:</p>
+      <div class="eq">pontuação = Σ<sub>ingredientes</sub> w × ( min(a, R) ÷ P − ⌈ max(0, a − R) ÷ P ⌉ ) ÷ porções</div>
+      <ul><li><b>a</b> — quanto do ingrediente a receita precisa (a receita inteira no caso de preparo em lote)</li>
+        <li><b>R</b> — quanto sobra nas embalagens que você já vai comprar naquela semana</li>
+        <li><b>P</b> — tamanho típico da embalagem (pode ser editado em qualquer alimento)</li>
+        <li><b>w</b> — rapidez com que estraga: carnes, peixes e folhas frescas ≈ 1 · ovos e pimentões ≈ 0,5 · congelados ≈ 0,3 · arroz, massas e enlatados ≈ 0,05 · temperos e óleos 0</li></ul>
+      <p>Uma receita que termina aquele meio pacote de espinafre que você já precisa recebe pontuação alta; outra que exige uma nova embalagem de algo perecível recebe pontuação baixa. Nenhuma receita espera mais de dois turnos, então a variedade e seus favoritos ★ permanecem iguais — só muda a ordem dentro da semana. Refeições colocadas manualmente nunca são movidas. Os números aqui usam porções padrão; a lista abaixo usa suas porções ajustadas.</p></details></div></div>`;
 }
 
 /* ---------------- PROGRESS ---------------- */
