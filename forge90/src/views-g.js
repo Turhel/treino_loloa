@@ -368,7 +368,7 @@ function renderImportModal() {
   const body = t === 'url' ? `<form class="imp-url" data-form="imp-url"><label class="small" for="imp-url-in">Link da página da receita</label>
       <div class="row" style="gap:8px"><input class="inp" id="imp-url-in" type="url" inputmode="url" placeholder="https://…" value="${esc(IMPUI.url)}" autocomplete="off" style="flex:1" required><button class="btn primary" type="submit" ${IMPUI.busy ? 'disabled' : ''}>${IMPUI.busy ? 'Importando…' : 'Importar'}</button></div></form>
       <div class="tiny muted" style="margin-top:8px">Funciona com a maioria dos sites de receitas que publicam dados em formato padrão. Você revisará a receita antes de salvá-la, e qualquer informação ausente — como quais alimentos usar — será destacada para preenchimento.</div>`
-    : !mc ? `<div class="muted small">Checking the Mealie connection…</div>`
+    : !mc ? `<div class="muted small">Verificando a conexão com o Mealie…</div>`
     : !mc.configured ? `<div class="note">${icon('info')}<span>O Mealie não está conectado. ${mc.canEdit ? `Conecte em <a href="#/settings" data-act="close-modal">Configurações → Conexões de API</a>.` : 'Peça a um administrador para conectá-lo em Configurações.'}</span></div>`
     : `<div class="row" style="gap:8px"><input class="inp" type="search" id="imp-q" placeholder="Buscar receitas no Mealie…" value="${esc(IMPUI.q)}" data-input="imp-q" autocomplete="off" style="flex:1"></div>
       <div class="imp-list" id="imp-list">${impListHTML()}</div>
