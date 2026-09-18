@@ -52,7 +52,7 @@ function fetchUrl(url, { allowPrivate = false, headers = {}, maxBytes = 4 * 1024
     const host = u.hostname.replace(/^\[|\]$/g, '');
     if (net.isIP(host) && !allowPrivate && isPrivateIp(host)) return reject(new ImportErr(400, 'Esse endereço está em uma rede privada. A importação por link só acessa sites públicos.'));
     const lib = u.protocol === 'https:' ? https : http;
-    const req = lib.request(u, { method: 'GET', lookup: lookupFor(allowPrivate), headers: Object.assign({ 'User-Agent': UA, 'Accept-Encoding': 'gzip, deflate, br', 'Accept-Language': 'en-US,en;q=0.9' }, headers) }, res => {
+    const req = lib.request(u, { method: 'GET', lookup: lookupFor(allowPrivate), headers: Object.assign({ 'User-Agent': UA, 'Accept-Encoding': 'gzip, deflate, br', 'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8' }, headers) }, res => {
       const code = res.statusCode;
       if (code >= 300 && code < 400 && res.headers.location) {
         res.resume(); clearTimeout(t);

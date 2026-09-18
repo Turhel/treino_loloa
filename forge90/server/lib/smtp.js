@@ -60,13 +60,13 @@ function sendMail(opts) {
       }
     };
     const read = () => new Promise(r => { waiter = r; });
-    const cmd = async (c, ok, label) => { if (c != null) sock.write(c + '\r\n'); const res = await read(); if (!ok.includes(res.code)) throw new Error(`SMTP ${label || (c || '').split(' ')[0]} failed: ${res.text.replace(/\s+/g, ' ').slice(0, 300)}`); return res; };
-    const attach = s => { sock = s; sock.setTimeout(timeout, () => fail(new Error('SMTP connection timed out'))); sock.on('data', onData); sock.on('error', fail); };
+    const cmd = async (c, ok, label) => { if (c != null) sock.write(c + '\r\n'); const res = await read(); if (!ok.includes(res.code)) throw new Error(`SMTP ${label || (c || '').split(' ')[0]} falhou: ${res.text.replace(/\s+/g, ' ').slice(0, 300)}`); return res; };
+    const attach = s => { sock = s; sock.setTimeout(timeout, () => fail(new Error('A conexão SMTP demorou demais para responder'))); sock.on('data', onData); sock.on('error', fail); };
     const run = async () => {
-      await cmd(null, [220], 'greeting');
+      await cmd(null, [220], 'saudação');
       let ehlo = await cmd(`EHLO ${helo}`, [250]);
       if (security === 'starttls') {
-        if (!/STARTTLS/i.test(ehlo.text)) throw new Error('Server does not offer STARTTLS');
+        if (!/STARTTLS/i.test(ehlo.text)) throw new Error('O servidor não oferece STARTTLS');
         await cmd('STARTTLS', [220]);
         sock.removeListener('data', onData);
         await new Promise((res, rej) => { const t = tls.connect({ socket: sock, servername: host, rejectUnauthorized }, res); t.once('error', rej); attach(t); });
