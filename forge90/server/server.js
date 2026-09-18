@@ -746,13 +746,13 @@ route('PATCH', '/api/admin/users/:id', { admin: true }, async (req, res, ctx) =>
   ownerGuard(ctx, u);
   const lastAdmin = u.role === 'admin' && u.status === 'active' && admins().length <= 1;
   if (b.role != null && b.role !== u.role) {
-    if (!['admin', 'user'].includes(b.role)) err(400, 'Unknown role.');
+    if (!['admin', 'user'].includes(b.role)) err(400, 'Função desconhecida.');
     if (!isOwner(me)) err(403, b.role === 'admin' ? 'Somente o proprietário pode tornar alguém administrador.' : 'Somente o proprietário pode remover o acesso de administrador.');
     if (u.id === me.id && b.role !== 'admin') err(400, 'Você não pode remover seu próprio acesso de administrador.');
     if (lastAdmin && b.role !== 'admin') err(400, 'É necessário haver pelo menos um administrador ativo.');
-    u.role = b.role; log.push('role → ' + b.role); audit('role_changed', { userId: u.id, actorId: me.id, ip: clientIp(req), detail: b.role }); }
+    u.role = b.role; log.push('função → ' + b.role); audit('role_changed', { userId: u.id, actorId: me.id, ip: clientIp(req), detail: b.role }); }
   if (b.status != null && b.status !== u.status) {
-    if (!['active', 'disabled', 'pending'].includes(b.status)) err(400, 'Unknown status.');
+    if (!['active', 'disabled', 'pending'].includes(b.status)) err(400, 'Status desconhecido.');
     if (b.status !== 'active') adminChangeGuard(ctx, u);          // disabling an admin is a demotion by another name
     if (lastAdmin && b.status !== 'active') err(400, 'É necessário haver pelo menos um administrador ativo.');
     if (u.id === me.id && b.status !== 'active') err(400, 'Você não pode desativar sua própria conta.');
