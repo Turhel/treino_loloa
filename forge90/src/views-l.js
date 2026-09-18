@@ -9,18 +9,18 @@ Object.assign(IC, { today: '<path d="M3 10h18M8 2v4M16 2v4"/><rect x="3" y="4" w
 if (PHONE_MQ && PHONE_MQ.addEventListener) PHONE_MQ.addEventListener('change', () => { if (!$('#view')) return; closeModal(); render(); });
 
 /* ---------------- bottom tabs and the Plan / Kitchen tabs ---------------- */
-const HUBS = { plan: [['calendar', 'Calendar'], ['workouts', 'Training'], ['diet', 'Nutrition']], kitchen: [['grocery', 'List'], ['pantry', 'Pantry'], ['foods', 'Recipes'], ['prep', 'Prep']] };
+const HUBS = { plan: [['calendar', 'Calendário'], ['workouts', 'Treino'], ['diet', 'Nutrição']], kitchen: [['grocery', 'Lista'], ['pantry', 'Despensa'], ['foods', 'Receitas'], ['prep', 'Preparo']] };
 function hubOf(page) { if (['calendar', 'workouts', 'diet'].includes(page)) return 'plan'; if (['grocery', 'pantry', 'foods', 'recipe', 'prep'].includes(page)) return 'kitchen'; return null; }
 function phoneTab(page) { if (!page || page === 'day') return 'today'; return hubOf(page) || 'you'; }
 function hubSegHTML(page) {
   const hub = hubOf(page); const cur = page === 'recipe' ? 'foods' : page;
-  return `<div class="hub-top"><h1>${hub === 'plan' ? 'Plan' : 'Kitchen'}</h1></div><nav class="hub-seg" aria-label="${hub === 'plan' ? 'Plan' : 'Kitchen'}">${HUBS[hub].map(([k, l]) => `<a href="#/${k}" class="${cur === k ? 'on' : ''}" ${cur === k ? 'aria-current="page"' : ''}>${l}</a>`).join('')}</nav>`;
+  return `<div class="hub-top"><h1>${hub === 'plan' ? 'Plano' : 'Cozinha'}</h1></div><nav class="hub-seg" aria-label="${hub === 'plan' ? 'Plano' : 'Cozinha'}">${HUBS[hub].map(([k, l]) => `<a href="#/${k}" class="${cur === k ? 'on' : ''}" ${cur === k ? 'aria-current="page"' : ''}>${l}</a>`).join('')}</nav>`;
 }
 function tabbarRender(page) {
   const el = $('#tabbar'); if (!el) return; const cur = phoneTab(page); const soon = S ? pantrySoon().length : 0;
   const href = k => k === 'today' ? '#/' : k === 'plan' ? '#/' + (UI.lastPlan || 'calendar') : k === 'kitchen' ? '#/' + (UI.lastKit || 'grocery') : '#/you';
-  el.innerHTML = [['today', 'Today', 'today'], ['plan', 'Plan', 'cal'], ['add'], ['kitchen', 'Kitchen', 'cart'], ['you', 'You', 'user']].map(([k, l, ic]) => k === 'add'
-    ? `<button type="button" class="tb-add" data-act="plus-sheet" aria-label="Quick add"><span>${icon('plus')}</span></button>`
+  el.innerHTML = [['today', 'Hoje', 'today'], ['plan', 'Plano', 'cal'], ['add'], ['kitchen', 'Cozinha', 'cart'], ['you', 'Você', 'user']].map(([k, l, ic]) => k === 'add'
+    ? `<button type="button" class="tb-add" data-act="plus-sheet" aria-label="Adição rápida"><span>${icon('plus')}</span></button>`
     : `<a class="tb ${cur === k ? 'on' : ''}" href="${href(k)}" ${cur === k ? 'aria-current="page"' : ''}>${icon(ic)}<span>${l}</span>${k === 'kitchen' && soon ? `<i class="tb-badge" title="${soon} item${soon === 1 ? '' : 's'} da despensa perto do vencimento">${soon}</i>` : ''}</a>`).join('');
 }
 
@@ -38,10 +38,10 @@ document.addEventListener('pointercancel', () => { if (SHD) { SHD.m.style.transi
 function plusSheet() {
   const t = todayISO(); const e = S.plan[t]; const c = gymActive();
   const b = (ic, l, attrs, cls = '') => `<button type="button" class="${cls}" ${attrs}>${icon(ic)}<span>${l}</span></button>`;
-  const woL = e && e.w ? (loggedSets(t, sessionRows(e.w)).done ? 'Resume workout' : 'Start workout') : 'Workout';
-  modal(`<div class="plus-m"><div class="row"><h2 style="flex:1">Quick add</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Close">${icon('x')}</button></div>
-    <div class="qa-grid">${canScan() ? b('scan', 'Scan food', 'data-act="scan" data-v="today"', 'hot') : ''}${b('plus', 'Add food', 'data-act="qa-pick"', canScan() ? '' : 'hot')}${b('scale', 'Log weight', 'data-act="weigh-sheet"')}
-      ${b('dumbbell', woL, `data-act="wo-open" data-d="${t}"`)}${c ? b('scan', 'Gym card', `data-act="gym-full" data-id="${c.id}"`) : b('scan', 'Add gym card', 'data-act="gym-add"')}${canScan() ? b('box', 'Scan into pantry', 'data-act="scan" data-v="pantry"') : b('box', 'Add to pantry', 'data-act="pan-add"')}</div></div>`, 'sm plus-modal', true);
+  const woL = e && e.w ? (loggedSets(t, sessionRows(e.w)).done ? 'Retomar treino' : 'Iniciar treino') : 'Treino';
+  modal(`<div class="plus-m"><div class="row"><h2 style="flex:1">Adição rápida</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
+    <div class="qa-grid">${canScan() ? b('scan', 'Escanear alimento', 'data-act="scan" data-v="today"', 'hot') : ''}${b('plus', 'Adicionar alimento', 'data-act="qa-pick"', canScan() ? '' : 'hot')}${b('scale', 'Registrar peso', 'data-act="weigh-sheet"')}
+      ${b('dumbbell', woL, `data-act="wo-open" data-d="${t}"`)}${c ? b('scan', 'Cartão da academia', `data-act="gym-full" data-id="${c.id}"`) : b('scan', 'Adicionar cartão da academia', 'data-act="gym-add"')}${canScan() ? b('box', 'Escanear para a despensa', 'data-act="scan" data-v="pantry"') : b('box', 'Adicionar à despensa', 'data-act="pan-add"')}</div></div>`, 'sm plus-modal', true);
 }
 
 /* ---------------- weigh-in sheet ---------------- */
@@ -52,12 +52,12 @@ function weighSheet(date) {
 }
 function renderWeigh() {
   const t = todayISO(); const last = sortedWeights().filter(x => x.d < WS.d).slice(-1)[0];
-  modal(`<div class="ws-m"><div class="row"><h2 style="flex:1">Log weight</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Close">${icon('x')}</button></div>
+  modal(`<div class="ws-m"><div class="row"><h2 style="flex:1">Registrar peso</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
     <div class="tiny muted" style="text-align:center">${WS.d === t ? 'Hoje pela manhã' : esc(fmtDate(WS.d))}${last ? ` · última: ${fmt(last.w, 1)} kg em ${esc(fmtDate(last.d, { weekday: 'short', month: 'short', day: 'numeric' }))}` : ''}</div>
     <div class="big-num"><button type="button" data-act="ws-step" data-v="-0.1" aria-label="Diminuir 0,1 kg">−</button><input id="ws-v" class="num" type="number" inputmode="decimal" step="0.1" min="30" max="300" value="${fmt(WS.v, 1).replace(/,/g, '')}" data-input="ws-v" aria-label="Peso em kg"><button type="button" data-act="ws-step" data-v="0.1" aria-label="Aumentar 0,1 kg">+</button></div>
     <div class="row wrap ws-chips">${[-1, -0.5, 0.5, 1].map(v => `<button type="button" class="btn sm" data-act="ws-step" data-v="${v}">${v > 0 ? '+' : '−'}${Math.abs(v)} kg</button>`).join('')}</div>
     <div class="grid g2" style="gap:10px"><div class="field"><label for="ws-bf">GC % (opcional)</label><input id="ws-bf" class="inp" type="number" inputmode="decimal" step="0.1" min="3" max="60" value="${esc(WS.bf)}" placeholder="Estimativa se ficar em branco" data-input="ws-bf"></div>
-      <div class="field"><label for="ws-d">Date</label><input id="ws-d" class="inp" type="date" value="${WS.d}" max="${t}" data-input="ws-d"></div></div>
+      <div class="field"><label for="ws-d">Data</label><input id="ws-d" class="inp" type="date" value="${WS.d}" max="${t}" data-input="ws-d"></div></div>
     <button type="button" class="btn primary block big" id="ws-save" data-act="ws-save">${icon('check')}Salvar ${fmt(WS.v, 1)} kg</button></div>`, 'sm ws-modal');
 }
 function wsSync() { const i = $('#ws-v'), b = $('#ws-save'); if (i && document.activeElement !== i) i.value = fmt(WS.v, 1).replace(/,/g, ''); if (b) b.innerHTML = `${icon('check')}Salvar ${fmt(WS.v, 1)} kg`; }
@@ -74,10 +74,10 @@ const slotCat = s => /^snack/.test(s) ? 'snack' : s;
 function mealSwap(d, slot) { if (!S.plan[d]) return; MS = { d, slot, q: '', all: false }; renderMealSwap(); }
 function renderMealSwap() {
   const cur = (S.plan[MS.d].m || {})[MS.slot]; const r = cur && RECIPE[cur]; const cat = r ? r.cat : slotCat(MS.slot);
-  modal(`<div class="ms-m"><div class="row"><h2 style="flex:1">${r ? 'Swap' : 'Pick'} ${esc(SLOT_LABEL[MS.slot].toLowerCase())}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Close">${icon('x')}</button></div>
-    <div class="tiny muted">${r ? `Now: ${esc(r.emoji)} ${esc(r.name)} · ` : ''}${esc(fmtDate(MS.d, { weekday: 'long', month: 'short', day: 'numeric' }))} · portions resize to your targets either way</div>
-    <div class="rec-search">${icon('search')}<input class="inp" type="search" id="ms-q" data-input="ms-q" value="${esc(MS.q)}" placeholder="Search recipes or ingredients…" aria-label="Search recipes" autocomplete="off"></div>
-    <div class="row" style="gap:6px"><button type="button" class="btn sm ${MS.all ? '' : 'primary'}" data-act="ms-all" data-v="0">${esc(cat[0].toUpperCase() + cat.slice(1))}</button><button type="button" class="btn sm ${MS.all ? 'primary' : ''}" data-act="ms-all" data-v="1">Everything</button></div>
+  modal(`<div class="ms-m"><div class="row"><h2 style="flex:1">${r ? 'Trocar' : 'Escolher'} ${esc(SLOT_LABEL[MS.slot].toLowerCase())}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
+    <div class="tiny muted">${r ? `Agora: ${esc(r.emoji)} ${esc(r.name)} · ` : ''}${esc(fmtDate(MS.d, { weekday: 'long', month: 'short', day: 'numeric' }))} · as porções são ajustadas às suas metas em qualquer opção</div>
+    <div class="rec-search">${icon('search')}<input class="inp" type="search" id="ms-q" data-input="ms-q" value="${esc(MS.q)}" placeholder="Buscar receitas ou ingredientes…" aria-label="Buscar receitas" autocomplete="off"></div>
+    <div class="row" style="gap:6px"><button type="button" class="btn sm ${MS.all ? '' : 'primary'}" data-act="ms-all" data-v="0">${esc(cat[0].toUpperCase() + cat.slice(1))}</button><button type="button" class="btn sm ${MS.all ? 'primary' : ''}" data-act="ms-all" data-v="1">Tudo</button></div>
     <div class="ms-list" id="ms-list">${msListHTML()}</div>
     ${r ? `<button type="button" class="btn sm ghost danger" data-act="ms-none">${icon('x')}Remove this meal</button>` : ''}</div>`, 'ms-modal', true);
 }
@@ -86,33 +86,33 @@ function msListHTML() {
   const words = String(MS.q || '').toLowerCase().split(/\s+/).filter(Boolean);
   const hay = x => [x.name, x.cat, (x.tags || []).join(' '), x.ing.map(([id]) => ING[id] ? ING[id].n : '').join(' ')].join(' ').toLowerCase();
   const list = RECIPES.filter(x => x.id !== cur && recipeAllowed(x) && (MS.all || x.cat === cat) && words.every(w => hay(x).includes(w))).sort((a, b) => (isFav(b.id) ? 1 : 0) - (isFav(a.id) ? 1 : 0) || a.name.localeCompare(b.name));
-  return list.map(x => { const m = RPS(x.id); return `<button type="button" class="ms-opt" data-act="ms-pick" data-rid="${x.id}"><span class="em">${esc(x.emoji || '🍽️')}</span><span class="t"><b>${esc(x.name)}</b><small class="num">${MS.all ? x.cat + ' · ' : ''}${fmt(m.k)} kcal · ${fmt(m.p)} g protein · ${x.time} min</small></span>${isFav(x.id) ? `<span class="ms-star" title="Favorite">${icon('star')}</span>` : ''}</button>`; }).join('')
+  return list.map(x => { const m = RPS(x.id); return `<button type="button" class="ms-opt" data-act="ms-pick" data-rid="${x.id}"><span class="em">${esc(x.emoji || '🍽️')}</span><span class="t"><b>${esc(x.name)}</b><small class="num">${MS.all ? x.cat + ' · ' : ''}${fmt(m.k)} kcal · ${fmt(m.p)} g de proteína · ${x.time} min</small></span>${isFav(x.id) ? `<span class="ms-star" title="Favorito">${icon('star')}</span>` : ''}</button>`; }).join('')
     || `<div class="muted small" style="padding:12px 4px">No recipes match${MS.all ? '' : ' — try Everything'}.</div>`;
 }
 function msSet(rid) {
-  const e = S.plan[MS.d]; if (!e) return; const slot = MS.slot; pushUndo('change meal');
+  const e = S.plan[MS.d]; if (!e) return; const slot = MS.slot; pushUndo('alteração de refeição');
   e.m[slot] = rid || null; markMealEdit(MS.d, slot); MS = null; closeModal();
-  commitPlan(rid ? `${SLOT_LABEL[slot]} → ${RECIPE[rid].name}` : `${SLOT_LABEL[slot]} removed`);
+  commitPlan(rid ? `${SLOT_LABEL[slot]} → ${RECIPE[rid].name}` : `${SLOT_LABEL[slot]} removido`);
 }
 
 /* ---------------- TODAY (phone): the dashboard and the day view in one page ---------------- */
 const TODAY_PANELS = [
-  ['workout', 'Workout', 'full', 'Today’s session and the Start workout button'],
-  ['progress', 'Progress', 'full', 'Weight, trend, body fat, distance to goal and your latest PR — tap for the full page'],
-  ['nutrition', 'Calories & macros', 'full', 'Calories, protein, carbs and fat against today’s targets'],
-  ['meals', 'Meals', 'full', 'The day’s meals — tap one for the recipe, or swap it'],
-  ['week', 'This week', 'full', 'The days around this one; tap a day to open it'],
-  ['gym', 'Gym card', 'full', 'Your membership barcode (Check in at the top shows it too)']
+  ['workout', 'Treino', 'full', 'Today’s session and the Start workout button'],
+  ['progress', 'Progresso', 'full', 'Peso, tendência, gordura corporal, distância até a meta e recorde mais recente — toque para abrir a página completa'],
+  ['nutrition', 'Calorias e macros', 'full', 'Calorias, proteínas, carboidratos e gorduras em relação às metas de hoje'],
+  ['meals', 'Refeições', 'full', 'Refeições do dia — toque em uma para ver a receita ou substituir'],
+  ['week', 'Esta semana', 'full', 'Dias próximos a este — toque em um dia para abrir'],
+  ['gym', 'Cartão da academia', 'full', 'Your membership barcode (Check in at the top shows it too)']
 ];
 const dayHref = d => d === todayISO() ? '#/' : '#/day/' + d;
-function dayWord(d) { const n = dayDiff(todayISO(), d); return n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : n === -1 ? 'Yesterday' : fmtDate(d, { weekday: 'long' }); }
+function dayWord(d) { const n = dayDiff(todayISO(), d); return n === 0 ? 'Hoje' : n === 1 ? 'Amanhã' : n === -1 ? 'Ontem' : fmtDate(d, { weekday: 'long' }); }
 function viewToday(date) {
   const t = todayISO(); date = date || t; const st = S.settings;
   if (date >= st.startDate) ensurePlanThrough(addDays(date, 3));
   const c = gymActive();
   const checkin = c ? `<button type="button" class="btn ph-checkin" data-act="gym-full" data-id="${c.id}">${icon('scan')}Check in</button>` : '';
   const idx = planIndex(date);
-  const head = `<div class="ph-head"><div class="ph-day"><a class="btn icon ghost" href="${dayHref(addDays(date, -1))}" aria-label="Previous day">${icon('left')}</a>
+  const head = `<div class="ph-head"><div class="ph-day"><a class="btn icon ghost" href="${dayHref(addDays(date, -1))}" aria-label="Dia anterior">${icon('left')}</a>
       <div class="d"><small>${esc(dayWord(date))}${idx >= 0 ? ` · Day ${idx + 1}${idx < LAUNCH_DAYS ? ' of 90' : ''}` : ''}</small><b>${esc(fmtDate(date, { weekday: 'short', month: 'short', day: 'numeric' }))}</b></div>
       <a class="btn icon ghost" href="${dayHref(addDays(date, 1))}" aria-label="Next day">${icon('right')}</a></div>${checkin}</div>`;
   const frac = idx < 0 ? 0 : Math.min(1, (idx + 1) / (idx < LAUNCH_DAYS ? LAUNCH_DAYS : 91));
@@ -172,7 +172,7 @@ function todayMealsHTML(date, day, A) {
     const m = day.meals.find(x => x.slot === slot); const b = A.batches.info[date + '|' + slot];
     const swp = `<button type="button" class="ph-swp" data-act="meal-swap" data-d="${date}" data-slot="${slot}" aria-label="Swap ${esc(SLOT_LABEL[slot].toLowerCase())}" title="Swap">${icon('loop')}</button>`;
     if (!m) return `<div class="ph-meal empty"><button type="button" class="ph-mb" data-act="meal-swap" data-d="${date}" data-slot="${slot}"><span class="em">+</span><span class="t"><span class="slot">${SLOT_LABEL[slot]}</span><b class="muted">Nothing planned — pick a meal</b></span></button></div>${extrasHTML(day, slot)}`;
-    return `<div class="ph-meal"><button type="button" class="ph-mb" data-act="recipe" data-rid="${m.r.id}"><span class="em">${esc(m.r.emoji)}</span><span class="t"><span class="slot">${SLOT_LABEL[slot]} ${batchBadge(b)}${shareBadge(date, slot)}</span><b>${esc(m.r.name)}</b><small class="num">${fmt(m.m.k)} kcal · ${fmt(m.m.p)} g protein</small></span></button>${swp}</div>${extrasHTML(day, slot)}`;
+    return `<div class="ph-meal"><button type="button" class="ph-mb" data-act="recipe" data-rid="${m.r.id}"><span class="em">${esc(m.r.emoji)}</span><span class="t"><span class="slot">${SLOT_LABEL[slot]} ${batchBadge(b)}${shareBadge(date, slot)}</span><b>${esc(m.r.name)}</b><small class="num">${fmt(m.m.k)} kcal · ${fmt(m.m.p)} g de proteína</small></span></button>${swp}</div>${extrasHTML(day, slot)}`;
   }).join('');
   return `<div class="ph-sec"><h2>Meals</h2><span class="spacer"></span>${canScan() ? `<button type="button" class="btn icon ghost" data-act="scan" data-v="today" data-d="${date}" aria-label="Scan food" title="Scan food">${icon('scan')}</button>` : ''}<button type="button" class="btn sm ghost" data-act="qa-pick" data-d="${date}">${icon('plus')}Add food</button></div>
     <div class="card pad0 ph-meals">${rows}</div><div class="tiny muted ph-hint">Tap a meal for the recipe and this day’s portions. ${icon('loop')} swaps it.</div>`;

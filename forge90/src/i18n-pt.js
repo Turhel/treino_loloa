@@ -2948,9 +2948,25 @@ const PT_PHRASES = {
   "Minestrone": "Minestrone",
   "Clam chowder": "Clam chowder",
   "Miso soup": "Sopa de missô",
+  "Log weight": "Registrar peso",
+  "Date": "Data",
+  "Pick": "Escolher",
+  "Everything": "Tudo",
+  "Calories & macros": "Calorias e macros",
+  "Next 7 days": "Próximos 7 dias",
+  "All progress": "Todo o progresso",
+  "Goal outlook": "Projeção da meta",
+  "Quick weigh-in": "Pesagem rápida",
+  "End of 90 days": "Fim dos 90 dias",
+  "End of cycle ": "Fim do ciclo ",
+  "Goal reached": "Meta atingida",
+  "Serving-size suggestions": "Sugestões de tamanho das porções",
+  "Next training day": "Próximo dia de treino",
+  "Next rest day": "Próximo dia de descanso",
+  "See scaled recipes": "Ver receitas ajustadas",
 };
 
-const PT_EXACT_KEYS = new Set(['Off', 'Rest', 'Test', 'Week', 'Progress', 'lb', 'of', 'all', 'breakfast', 'lunch', 'dinner', 'snack', '— none —', "Browser", "Decline", "Unsync", "List", "Prep", "Plan", "Kitchen", "Workout", "This week", "Upper", "Lower", "Full body", "Mixed", "Gym card", "Body stats", "Recent PRs", "Required", "You", "Food", "Name", "Plain HTTP", "Direct connection", "Account", "Administrator", "Owner", "Remove", "Security", "Scan", "Approve", "Unlock", "Swap", "Today", "Sync", "Recent", "Active", "Pending", "Expired", "Resend", "Revoke", "Accounts", "Member", "Manage", "User", "Role", "Status", "Devices", "Ready", "Send", "Accept", "Undo", "Refresh", "Overview", "Users", "Activity log", "Data & backup", "Invite", "Admins", "All", "Disabled", "Not set", "Stored data", "License", "Source code", "Turkey", "Pork", "Seafood", "Eggs", "Beans", "Fruit", "Vegetables", "Seeds", "Olives", "Chest", "Back", "Shoulders", "Biceps", "Triceps", "Breakfast", "Lunch", "Dinner", "Snack", "Snack 2", "Fixed", "Meal", "Storage", "Ingredients", "Links", "Skip", "Foundation", "Build", "Intensify", "Volume", "Check", "Matched", "Custom", "now", "compound", "isolation", "Dashboard", "Calendar", "Pantry", "Settings", "Cycle", "Meals", "Done", "Exercises", "Completed", "Provolone", "Brie", "Butter", "Ghee", "Tempeh", "Seitan", "Hummus", "Pretzels", "Clementine", "Mango", "Papaya", "Kiwi", "Cherries", "Watermelon", "Honeydew", "Grapes", "Prunes", "Guacamole", "Kale", "Arugula", "Cauliflower", "Jalapeño", "Garlic", "Beets", "Parsnips", "Radishes", "Zucchini", "Almonds", "Cashews", "Walnuts", "Pistachios", "Pecans", "Mayonnaise", "Tzatziki", "Cinnamon", "Sugar", "Halloumi", "Natto", "Muesli", "Croissant", "Guava", "Lychee", "Plantain", "Plum", "Nectarine", "Apricot", "Broccolini", "Shallots", "Leeks", "Turnips", "Jicama", "Okra", "Hazelnuts", "Tahini", "Gochujang", "Chimichurri", "Capers", "Kimchi", "Salt", "Paprika", "Brownie", "Cheesecake", "Kombucha", "Lemonade"]);
+const PT_EXACT_KEYS = new Set(['Off', 'Rest', 'Test', 'Week', 'Progress', 'lb', 'of', 'all', 'breakfast', 'lunch', 'dinner', 'snack', '— none —', "Browser", "Decline", "Unsync", "List", "Prep", "Plan", "Kitchen", "Workout", "This week", "Upper", "Lower", "Full body", "Mixed", "Gym card", "Body stats", "Recent PRs", "Required", "You", "Food", "Name", "Plain HTTP", "Direct connection", "Account", "Administrator", "Owner", "Remove", "Security", "Scan", "Approve", "Unlock", "Swap", "Today", "Sync", "Recent", "Active", "Pending", "Expired", "Resend", "Revoke", "Accounts", "Member", "Manage", "User", "Role", "Status", "Devices", "Ready", "Send", "Accept", "Undo", "Refresh", "Overview", "Users", "Activity log", "Data & backup", "Invite", "Admins", "All", "Disabled", "Not set", "Stored data", "License", "Source code", "Turkey", "Pork", "Seafood", "Eggs", "Beans", "Fruit", "Vegetables", "Seeds", "Olives", "Chest", "Back", "Shoulders", "Biceps", "Triceps", "Breakfast", "Lunch", "Dinner", "Snack", "Snack 2", "Fixed", "Meal", "Storage", "Ingredients", "Links", "Skip", "Foundation", "Build", "Intensify", "Volume", "Check", "Matched", "Custom", "now", "compound", "isolation", "Dashboard", "Calendar", "Pantry", "Settings", "Cycle", "Meals", "Done", "Exercises", "Completed", "Provolone", "Brie", "Butter", "Ghee", "Tempeh", "Seitan", "Hummus", "Pretzels", "Clementine", "Mango", "Papaya", "Kiwi", "Cherries", "Watermelon", "Honeydew", "Grapes", "Prunes", "Guacamole", "Kale", "Arugula", "Cauliflower", "Jalapeño", "Garlic", "Beets", "Parsnips", "Radishes", "Zucchini", "Almonds", "Cashews", "Walnuts", "Pistachios", "Pecans", "Mayonnaise", "Tzatziki", "Cinnamon", "Sugar", "Halloumi", "Natto", "Muesli", "Croissant", "Guava", "Lychee", "Plantain", "Plum", "Nectarine", "Apricot", "Broccolini", "Shallots", "Leeks", "Turnips", "Jicama", "Okra", "Hazelnuts", "Tahini", "Gochujang", "Chimichurri", "Capers", "Kimchi", "Salt", "Paprika", "Brownie", "Cheesecake", "Kombucha", "Lemonade", "Tomorrow", "Yesterday", "Training", "Nutrition", "Recipes", "Date", "Pick", "Everything", "Favorite"]);
 const PT_PAIRS = Object.entries(PT_PHRASES)
   .filter(([from]) => !PT_EXACT_KEYS.has(from))
   .sort((a, b) => b[0].length - a[0].length);
