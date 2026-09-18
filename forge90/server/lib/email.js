@@ -23,7 +23,7 @@ function layout({ preheader, title, bodyHtml, footerNote, appUrl, appName = 'FOR
     <tr><td bgcolor="${C.card}" style="background:${C.card};border:1px solid ${C.line};border-top:0;border-radius:0 0 16px 16px;padding:0 28px 26px;font-family:'Segoe UI',Helvetica,Arial,sans-serif;">
       <div style="border-top:1px solid ${C.line};padding-top:16px;font-size:12px;line-height:1.55;color:${C.muted};">${footerNote || ''}</div></td></tr>
     <tr><td align="center" style="padding:18px 10px 0;font-family:'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;color:${C.muted};">
-      Sent by ${esc(appName)}${appUrl ? ` · <a href="${esc(appUrl)}" style="color:${C.muted};">${esc(appUrl.replace(/^https?:\/\//, ''))}</a>` : ''}<br>${repliesTo ? `Replying to this email reaches ${esc(repliesTo)}.` : 'This is an automated message — replies aren’t monitored.'}</td></tr>
+      Sent by ${esc(appName)}${appUrl ? ` · <a href="${esc(appUrl)}" style="color:${C.muted};">${esc(appUrl.replace(/^https?:\/\//, ''))}</a>` : ''}<br>${repliesTo ? `Replying to this email reaches ${esc(repliesTo)}.` : 'Esta é uma mensagem automática — as respostas não são monitoradas.'}</td></tr>
   </table>
 </td></tr></table></body></html>`;
 }
@@ -44,7 +44,7 @@ function resetEmail({ name, link, minutes, expiresAt, reason, attempts, ip, ua, 
     : '';
   const bodyHtml = `${h1(locked ? 'Your account is locked' : 'Reset your password')}
     ${p(hello)}${why}
-    ${p(locked ? 'To get back in, choose a new password using the button below.' : 'We received a request to reset the password for your FORGE 90 account. Choose a new one using the button below.')}
+    ${p(locked ? 'Para voltar a acessar, escolha uma nova senha usando o botão abaixo.' : 'We received a request to reset the password for your FORGE 90 account. Choose a new one using the button below.')}
     ${button(link, 'Reset my password')}
     ${callout(`⏱ <b style="color:${C.ink};">This link expires in ${minutes} minutes</b> (${esc(fmtTime(expiresAt))}) and can only be used once.`)}
     <p style="margin:0 0 6px;font-size:13px;color:${C.muted};">Button not working? Copy and paste this link into your browser:</p>
@@ -57,20 +57,20 @@ function resetEmail({ name, link, minutes, expiresAt, reason, attempts, ip, ua, 
 }
 function passwordChangedEmail({ name, when, ip, appUrl, appName, via }) {
   const hello = name ? `Hi ${esc(name.split(' ')[0])},` : 'Hi,';
-  const bodyHtml = `${h1('Your password was changed')}${p(hello)}${p(`The password for your FORGE 90 account was just changed${via === 'reset' ? ' using a reset link' : via === 'admin' ? ' by an administrator' : ''}. You’ve been signed out on your other devices.`)}
+  const bodyHtml = `${h1('Your password was changed')}${p(hello)}${p(`The password for your FORGE 90 account was just changed${via === 'reset' ? ' using a reset link' : via === 'admin' ? ' por um administrador' : ''}. You’ve been signed out on your other devices.`)}
     ${callout(`<b style="color:${C.ink};">Wasn’t you?</b> Use “Forgot password” on the sign-in page right away and contact your FORGE 90 administrator.`, '#fef2f2', '#fecaca')}
-    ${appUrl ? button(appUrl, 'Open FORGE 90') : ''}`;
+    ${appUrl ? button(appUrl, 'Abrir FORGE 90') : ''}`;
   const html = layout({ preheader: 'Your FORGE 90 password was just changed.', title: 'Password changed', bodyHtml, footerNote: `${esc(fmtTime(when))}${ip ? ` · IP ${esc(ip)}` : ''}`, appUrl, appName });
   const text = `${hello}\n\nThe password for your FORGE 90 account was just changed. If this wasn't you, use "Forgot password" on the sign-in page right away and contact your administrator.\n\n${fmtTime(when)}${ip ? ` · IP ${ip}` : ''}\n— FORGE 90`;
   return { subject: 'Your FORGE 90 password was changed', html, text };
 }
 function simpleEmail({ title, heading, lines, buttonUrl, buttonLabel, appUrl, appName, preheader }) {
-  const bodyHtml = `${h1(esc(heading || title))}${lines.map(l => p(esc(l))).join('')}${buttonUrl ? button(buttonUrl, buttonLabel || 'Open FORGE 90') : ''}`;
+  const bodyHtml = `${h1(esc(heading || title))}${lines.map(l => p(esc(l))).join('')}${buttonUrl ? button(buttonUrl, buttonLabel || 'Abrir FORGE 90') : ''}`;
   return { subject: title, html: layout({ preheader: preheader || lines[0] || title, title, bodyHtml, footerNote: esc(fmtTime(new Date())), appUrl, appName }), text: `${heading || title}\n\n${lines.join('\n\n')}${buttonUrl ? `\n\n${buttonUrl}` : ''}\n— FORGE 90` };
 }
 function inviteEmail({ name, email, inviter, role, link, days, expiresAt, appUrl, appName, inviterEmail }) {
   const first = name ? name.split(' ')[0] : ''; const hello = first ? `Hi ${esc(first)},` : 'Hi,';
-  const who = inviter ? esc(inviter) : 'An administrator'; const admin = role === 'admin';
+  const who = inviter ? esc(inviter) : 'Um administrador'; const admin = role === 'admin';
   const bodyHtml = `${h1(`You’re invited to ${esc(appName || 'FORGE 90')}`)}
     ${p(hello)}
     ${p(`${who} invited you to join ${esc(appName || 'FORGE 90')}${admin ? ' as an <b style="color:' + C.ink + ';">administrator</b>' : ''}. It keeps your training plan, meals, grocery list and progress in one place.`)}
@@ -80,9 +80,9 @@ function inviteEmail({ name, email, inviter, role, link, days, expiresAt, appUrl
     <p style="margin:0 0 6px;font-size:13px;color:${C.muted};">Button not working? Copy and paste this link into your browser:</p>
     <p style="margin:0 0 18px;font-size:13px;word-break:break-all;"><a href="${esc(link)}" style="color:#4d7c0f;">${esc(link)}</a></p>
     ${p('Didn’t expect this? You can ignore this email — no account is created unless you accept.')}`;
-  const footerNote = `Invited by ${who} · ${esc(fmtTime(new Date()))}`;
-  const html = layout({ preheader: `${inviter || 'An administrator'} invited you to ${appName || 'FORGE 90'}. The invite expires in ${days} days.`, title: `You’re invited to ${appName || 'FORGE 90'}`, bodyHtml, footerNote, appUrl, appName, repliesTo: inviterEmail || '' });
-  const text = `${first ? `Hi ${first},` : 'Hi,'}\n\n${inviter || 'An administrator'} invited you to join ${appName || 'FORGE 90'}${admin ? ' as an administrator' : ''}.\n\nAccept the invite and choose your password here:\n${link}\n\nThis invite expires in ${days} days (${fmtTime(expiresAt)}) and can only be used once. You'll sign in with ${email}.\n\nDidn't expect this? You can ignore this email — no account is created unless you accept.\n— ${appName || 'FORGE 90'}`;
-  return { subject: `${inviter || 'An administrator'} invited you to ${appName || 'FORGE 90'}`, html, text };
+  const footerNote = `Convidado por ${who} · ${esc(fmtTime(new Date()))}`;
+  const html = layout({ preheader: `${inviter || 'Um administrador'} invited you to ${appName || 'FORGE 90'}. The invite expires in ${days} days.`, title: `You’re invited to ${appName || 'FORGE 90'}`, bodyHtml, footerNote, appUrl, appName, repliesTo: inviterEmail || '' });
+  const text = `${first ? `Hi ${first},` : 'Hi,'}\n\n${inviter || 'Um administrador'} invited you to join ${appName || 'FORGE 90'}${admin ? ' as an administrator' : ''}.\n\nAccept the invite and choose your password here:\n${link}\n\nThis invite expires in ${days} days (${fmtTime(expiresAt)}) and can only be used once. You'll sign in with ${email}.\n\nDidn't expect this? You can ignore this email — no account is created unless you accept.\n— ${appName || 'FORGE 90'}`;
+  return { subject: `${inviter || 'Um administrador'} invited you to ${appName || 'FORGE 90'}`, html, text };
 }
 module.exports = { resetEmail, passwordChangedEmail, simpleEmail, inviteEmail };

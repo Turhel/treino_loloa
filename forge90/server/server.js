@@ -92,8 +92,8 @@ const COMMON = new Set(['password', 'password1', 'password123', '123456789', '12
 function pwProblem(pw, email) {
   const s = db.settings.security; pw = String(pw || '');
   if (pw.length < s.pwMinLength) return `Use at least ${s.pwMinLength} characters.`;
-  if (pw.length > 200) return 'That password is too long (200 characters max).';
-  if (s.pwRequireMix && !(/[A-Za-z]/.test(pw) && /[^A-Za-z]/.test(pw))) return 'Mix letters with numbers or symbols.';
+  if (pw.length > 200) return 'Essa senha é longa demais (máximo de 200 caracteres).';
+  if (s.pwRequireMix && !(/[A-Za-z]/.test(pw) && /[^A-Za-z]/.test(pw))) return 'Misture letras com números ou símbolos.';
   if (COMMON.has(pw.toLowerCase()) || (email && pw.toLowerCase().includes(normEmail(email).split('@')[0]) && normEmail(email).split('@')[0].length > 3)) return 'That password is too easy to guess.';
   return null;
 }
@@ -114,8 +114,8 @@ function ensureOwner() {                       // upgrading an existing server: 
   audit('owner_set', { userId: cand.id, detail: 'owner (longest-standing administrator)' });
 }
 // guards used by the admin user routes
-function ownerGuard(ctx, u) { if (isOwner(u) && !isOwner(ctx.me.u)) err(403, 'That’s the owner account. Only the owner can change it.'); }
-function adminChangeGuard(ctx, u) { if (u.role === 'admin' && !isOwner(ctx.me.u)) err(403, 'Only the owner can change another administrator’s access.'); }
+function ownerGuard(ctx, u) { if (isOwner(u) && !isOwner(ctx.me.u)) err(403, 'Essa é a conta do proprietário. Somente o proprietário pode alterá-la.'); }
+function adminChangeGuard(ctx, u) { if (u.role === 'admin' && !isOwner(ctx.me.u)) err(403, 'Somente o proprietário pode alterar o acesso de outro administrador.'); }
 const isLocked = u => !!(u.lockedUntil && u.lockedUntil > now());
 const avatarUrl = u => u && u.avatar ? `/api/avatar/${u.id}?v=${encodeURIComponent(u.avatarV || '1')}` : null;
 function pubUser(u) { return u && { id: u.id, email: u.email, name: u.name, owner: isOwner(u), firstName: u.firstName || '', lastName: u.lastName || '', avatarUrl: avatarUrl(u), role: u.role, status: u.status, mustChange: !!u.mustChange, createdAt: u.createdAt, lastLoginAt: u.lastLoginAt || null, notify: Object.assign({ passwordChange: true, newSignIn: false }, u.notify || {}) }; }
@@ -252,7 +252,7 @@ const err = (code, msg, extra) => { throw new HttpErr(code, msg, extra); };
 function readBody(req, limit) {
   return new Promise((resolve, reject) => {
     let size = 0; const chunks = [];
-    req.on('data', c => { size += c.length; if (size > limit) { reject(new HttpErr(413, 'That request is too large.')); req.destroy(); } else chunks.push(c); });
+    req.on('data', c => { size += c.length; if (size > limit) { reject(new HttpErr(413, 'Essa solicitação é grande demais.')); req.destroy(); } else chunks.push(c); });
     req.on('end', () => { if (!chunks.length) return resolve({}); try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))); } catch (e) { reject(new HttpErr(400, 'Invalid JSON')); } });
     req.on('error', reject);
   });
@@ -297,7 +297,7 @@ route('POST', '/api/invite/accept', { limit: 'auth' }, async (req, res, ctx) => 
 route('POST', '/api/login', { limit: 'auth' }, async (req, res, ctx) => {
   const b = ctx.body; const ip = clientIp(req); const sec = db.settings.security;
   const u = findUser(b.email);
-  if (!u) { await verifyPw(String(b.password || ''), DUMMY_HASH); audit('login_fail', { ip, detail: 'unknown ' + normEmail(b.email).slice(0, 80) }); err(401, 'That email and password don’t match.'); }
+  if (!u) { await verifyPw(String(b.password || ''), DUMMY_HASH); audit('login_fail', { ip, detail: 'unknown ' + normEmail(b.email).slice(0, 80) }); err(401, 'O e-mail e a senha não correspondem.'); }
   if (isLocked(u)) { const m = Math.max(1, Math.ceil((u.lockedUntil - now()) / 60000)); err(423, `This account is locked after too many sign-in attempts. Try again in ${m} minute${m === 1 ? '' : 's'}, or reset your password${sec.autoResetOnLock ? ' with the link we emailed' : ''}.`, { locked: true, until: u.lockedUntil }); }
   const ok = await verifyPw(String(b.password || ''), u.pw);
   if (!ok) {
@@ -308,10 +308,10 @@ route('POST', '/api/login', { limit: 'auth' }, async (req, res, ctx) => {
       err(423, `Too many attempts — this account is locked for ${sec.lockMinutes} minutes.${sent ? ' We emailed a password-reset link to the account’s address.' : ''}`, { locked: true, until: u.lockedUntil, resetSent: sent });
     }
     saveDb(); const left = sec.lockThreshold - u.failed;
-    err(401, `That email and password don’t match.${left <= 2 ? ` ${left} attempt${left === 1 ? '' : 's'} left before the account is locked.` : ''}`);
+    err(401, `O e-mail e a senha não correspondem.${left <= 2 ? ` ${left} attempt${left === 1 ? '' : 's'} left before the account is locked.` : ''}`);
   }
   if (u.status === 'pending') err(403, 'Your account is waiting for an administrator to approve it.');
-  if (u.status === 'disabled') err(403, 'This account has been disabled. Contact your FORGE 90 administrator.');
+  if (u.status === 'disabled') err(403, 'Esta conta foi desativada. Entre em contato com o administrador do FORGE 90.');
   u.failed = 0; u.lockedUntil = null; u.lastLoginAt = now(); u.lastLoginIp = ip;
   createSession(req, res, u, !!b.remember); audit('login_ok', { userId: u.id, ip }); send(res, 200, { user: pubUser(u) });
 });
@@ -319,7 +319,7 @@ route('POST', '/api/login', { limit: 'auth' }, async (req, res, ctx) => {
 route('POST', '/api/logout', async (req, res, ctx) => { if (ctx.me) { db.sessions = db.sessions.filter(s => s !== ctx.me.s); saveDb(); audit('logout', { userId: ctx.me.u.id, ip: clientIp(req) }); } setCookie(res, req, '', 0); send(res, 200, { ok: true }); });
 
 route('POST', '/api/forgot', { limit: 'auth' }, async (req, res, ctx) => {
-  const email = normEmail(ctx.body.email); if (!validEmail(email)) err(400, 'Enter the email address you signed up with.');
+  const email = normEmail(ctx.body.email); if (!validEmail(email)) err(400, 'Informe o endereço de e-mail usado no cadastro.');
   const u = findUser(email); audit('reset_requested', { userId: u ? u.id : null, ip: clientIp(req), detail: u ? '' : 'unknown ' + email.slice(0, 80) });
   if (u && u.status !== 'disabled' && !limited('forgot:' + u.id, 3, 3600000)) {
     const recent = db.resets.find(r => r.userId === u.id && now() - r.createdAt < 60000);
@@ -357,16 +357,16 @@ route('GET', '/api/account', { auth: true, allowMustChange: true }, async (req, 
 });
 route('PATCH', '/api/account', { auth: true, allowMustChange: true }, async (req, res, ctx) => {
   const u = ctx.me.u, b = ctx.body; const changes = [];
-  if (b.name != null) { const n = String(b.name).trim().slice(0, 80); if (!n) err(400, 'Display name can’t be empty.'); if (n !== u.name) { u.name = n; changes.push('display name'); } }
-  ['firstName', 'lastName'].forEach(k => { if (b[k] != null) { const v = String(b[k]).trim().slice(0, 40); if (v !== (u[k] || '')) { u[k] = v; changes.push(k === 'firstName' ? 'first name' : 'last name'); } } });
+  if (b.name != null) { const n = String(b.name).trim().slice(0, 80); if (!n) err(400, 'O nome de exibição não pode ficar vazio.'); if (n !== u.name) { u.name = n; changes.push('nome de exibição'); } }
+  ['firstName', 'lastName'].forEach(k => { if (b[k] != null) { const v = String(b[k]).trim().slice(0, 40); if (v !== (u[k] || '')) { u[k] = v; changes.push(k === 'firstName' ? 'nome' : 'sobrenome'); } } });
   if (b.notify && typeof b.notify === 'object') { u.notify = Object.assign({ passwordChange: true, newSignIn: false }, u.notify || {}, { passwordChange: !!b.notify.passwordChange, newSignIn: !!b.notify.newSignIn }); changes.push('notifications'); }
   if (b.email != null && normEmail(b.email) !== u.email) {
     const e = normEmail(b.email); if (!validEmail(e)) err(400, 'Enter a valid email address.');
     if (!u.mustChange && !(await verifyPw(String(b.currentPassword || ''), u.pw))) err(403, 'Your current password is needed to change your email — and it didn’t match.');
-    if (findUser(e)) err(409, 'Another account already uses that email.');
+    if (findUser(e)) err(409, 'Outra conta já usa esse e-mail.');
     const old = u.email; u.email = e; changes.push('email');
     audit('email_changed', { userId: u.id, ip: clientIp(req), detail: `${old} → ${e}` });
-    if (emailReady() && !u.mustChange) deliver(old, u.name, MAIL.simpleEmail({ title: 'Your FORGE 90 email address was changed', heading: 'Your sign-in email was changed', lines: [`Your FORGE 90 account now signs in with ${e}.`, 'If you didn’t make this change, contact your administrator right away.'], appUrl: baseUrl(req), appName: db.settings.appName })).catch(() => {});
+    if (emailReady() && !u.mustChange) deliver(old, u.name, MAIL.simpleEmail({ title: 'Your FORGE 90 email address was changed', heading: 'Your sign-in email was changed', lines: [`Your FORGE 90 account now signs in with ${e}.`, 'Se você não fez essa alteração, entre em contato com o administrador imediatamente.'], appUrl: baseUrl(req), appName: db.settings.appName })).catch(() => {});
   }
   saveDb(); if (changes.length) audit('profile_updated', { userId: u.id, ip: clientIp(req), detail: changes.join(', ') });
   send(res, 200, { user: pubUser(u) });
@@ -386,8 +386,8 @@ function imageExt(buf) {
 route('PUT', '/api/account/avatar', { auth: true, maxBody: 1024 * 1024 }, async (req, res, ctx) => {
   const u = ctx.me.u; if (limited('avatar:' + u.id, 30, 60 * 60000)) err(429, 'Too many picture changes. Try again later.');
   const m = String(ctx.body.data || '').match(/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/); if (!m) err(400, 'Upload a JPEG, PNG or WebP image.');
-  const buf = Buffer.from(m[2], 'base64'); if (!buf.length) err(400, 'That image is empty.'); if (buf.length > AVATAR_MAX) err(413, 'That picture is too large (512 KB max).');
-  const ext = imageExt(buf); if (!ext) err(400, 'That file isn’t a JPEG, PNG or WebP image.');
+  const buf = Buffer.from(m[2], 'base64'); if (!buf.length) err(400, 'A imagem está vazia.'); if (buf.length > AVATAR_MAX) err(413, 'A imagem é grande demais (máximo de 512 KB).');
+  const ext = imageExt(buf); if (!ext) err(400, 'O arquivo não é uma imagem JPEG, PNG ou WebP.');
   const v = Date.now().toString(36); const name = `${u.id.replace(/[^A-Za-z0-9_-]/g, '')}-${v}.${ext}`;
   writeAtomic(path.join(AVATAR_DIR, name), buf);
   const had = !!u.avatar; removeAvatar(u);                 // the old picture is deleted, not kept
@@ -410,7 +410,7 @@ route('POST', '/api/account/password', { auth: true, allowMustChange: true, limi
   const u = ctx.me.u, b = ctx.body;
   if (!(await verifyPw(String(b.current || ''), u.pw))) err(403, 'Your current password didn’t match.');
   const pp = pwProblem(b.next, u.email); if (pp) err(400, pp);
-  if (await verifyPw(String(b.next), u.pw)) err(400, 'Choose a password you haven’t just used.');
+  if (await verifyPw(String(b.next), u.pw)) err(400, 'Escolha uma senha que você não tenha acabado de usar.');
   u.pw = await hashPw(b.next); u.mustChange = false; u.pwChangedAt = now();
   const n = revokeSessions(u.id, ctx.me.s.id); audit('password_changed', { userId: u.id, ip: clientIp(req), detail: n ? `${n} other session(s) signed out` : '' });
   notifyPasswordChanged(u, req, 'user'); send(res, 200, { user: pubUser(u), signedOut: n });
@@ -440,7 +440,7 @@ const isoDate = d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d);
 const ridOk = r => r === null || (typeof r === 'string' && /^[A-Za-z0-9_.:-]{1,80}$/.test(r));
 const syncOf = userId => db.syncs.find(s => s.a === userId || s.b === userId);
 const partnerId = (s, me) => s.a === me ? s.b : s.a;
-function cleanSlots(o) { const out = {}; SYNC_SLOTS.forEach(k => { out[k] = !!(o && o[k]); }); if (!SYNC_SLOTS.some(k => out[k])) err(400, 'Share at least one meal.'); return out; }
+function cleanSlots(o) { const out = {}; SYNC_SLOTS.forEach(k => { out[k] = !!(o && o[k]); }); if (!SYNC_SLOTS.some(k => out[k])) err(400, 'Compartilhe pelo menos uma refeição.'); return out; }
 function syncEvent(s, by, type, text) { s.events.push({ id: uid(), t: now(), by, type, text: String(text).slice(0, 300) }); if (s.events.length > 40) s.events.splice(0, s.events.length - 40); }
 function bumpSync(s) { s.rev = (s.rev || 0) + 1; saveDb(); }
 function dropSync(s) { db.syncs = db.syncs.filter(x => x !== s); [s.a, s.b].forEach(u => { try { fs.unlinkSync(snapFile(s.id, u)); } catch (e) { /* none */ } }); saveDb(); }
@@ -457,9 +457,9 @@ function syncView(s, me) {
 }
 function syncMail(req, to, subject, heading, lines, label) {
   if (!to || !emailReady()) return;
-  deliver(to.email, to.name, MAIL.simpleEmail({ title: subject, heading, lines, buttonUrl: baseUrl(req) + '/#/account', buttonLabel: label || 'Open FORGE 90', appUrl: baseUrl(req), appName: db.settings.appName })).catch(e => audit('email_failed', { userId: to.id, detail: 'sync notice: ' + e.message }));
+  deliver(to.email, to.name, MAIL.simpleEmail({ title: subject, heading, lines, buttonUrl: baseUrl(req) + '/#/account', buttonLabel: label || 'Abrir FORGE 90', appUrl: baseUrl(req), appName: db.settings.appName })).catch(e => audit('email_failed', { userId: to.id, detail: 'sync notice: ' + e.message }));
 }
-const needSync = (ctx, status) => { const s = syncOf(ctx.me.u.id); if (!s || (status && s.status !== status)) err(409, status === 'active' ? 'Meal sync isn’t active.' : 'No meal sync request found.'); return s; };
+const needSync = (ctx, status) => { const s = syncOf(ctx.me.u.id); if (!s || (status && s.status !== status)) err(409, status === 'active' ? 'A sincronização de refeições não está ativa.' : 'Nenhuma solicitação de sincronização de refeições foi encontrada.'); return s; };
 route('GET', '/api/sync', { auth: true }, async (req, res, ctx) => {
   const s = syncOf(ctx.me.u.id); if (!s) return send(res, 200, { sync: null });
   if (pruneSync(s)) bumpSync(s);
@@ -469,22 +469,22 @@ route('GET', '/api/sync', { auth: true }, async (req, res, ctx) => {
 route('POST', '/api/sync/request', { auth: true, limit: 'auth' }, async (req, res, ctx) => {
   const me = ctx.me.u; const email = normEmail(ctx.body.email);
   if (syncOf(me.id)) err(409, 'You already have a meal sync (or a pending request). End it first.');
-  if (!validEmail(email)) err(400, 'Enter your partner’s email address.');
+  if (!validEmail(email)) err(400, 'Informe o e-mail da pessoa com quem deseja sincronizar.');
   const p = findUser(email); if (!p || p.status !== 'active') err(404, 'No active FORGE 90 account uses that email. Ask an administrator to invite them first.');
-  if (p.id === me.id) err(400, 'That’s your own email.');
+  if (p.id === me.id) err(400, 'Esse é o seu próprio e-mail.');
   if (syncOf(p.id)) err(409, `${p.name} is already syncing meal plans with someone else.`);
   const s = { id: uid(), a: me.id, b: p.id, by: me.id, status: 'pending', slots: cleanSlots(ctx.body.slots || { breakfast: 1, lunch: 1, dinner: 1, snack1: 1, snack2: 1 }), slotReq: null, createdAt: now(), activeAt: null,
     since: null, agreed: {}, through: null, div: {}, baseRev: 0, rev: 1, changes: [], events: [], grocery: {} };
   db.syncs.push(s); syncEvent(s, me.id, 'request', `${me.name} asked to sync meal plans`); saveDb();
   audit('sync_requested', { userId: me.id, ip: clientIp(req), detail: 'with ' + p.email });
-  syncMail(req, p, `${me.name} wants to sync meal plans with you`, 'Sync meal plans?', [`${me.name} (${me.email}) wants to sync FORGE 90 meal plans with you.`, 'You’d share the meals you both agree on, get one combined shopping list, and approve each other’s changes. Accept or decline it in Account settings.'], 'Review the request');
+  syncMail(req, p, `${me.name} wants to sync meal plans with you`, 'Sincronizar planos de refeição?', [`${me.name} (${me.email}) wants to sync FORGE 90 meal plans with you.`, 'You’d share the meals you both agree on, get one combined shopping list, and approve each other’s changes. Accept or decline it in Account settings.'], 'Revisar solicitação');
   send(res, 201, { sync: syncView(s, me.id) });
 });
 route('POST', '/api/sync/respond', { auth: true }, async (req, res, ctx) => {
   const me = ctx.me.u; const s = needSync(ctx, 'pending'); if (s.by === me.id) err(403, 'Waiting for your partner to answer.');
   const p = userById(s.by);
-  if (!ctx.body.accept) { dropSync(s); audit('sync_declined', { userId: me.id, ip: clientIp(req), detail: p ? p.email : '' }); if (p) syncMail(req, p, `${me.name} declined meal-plan sync`, 'Sync request declined', [`${me.name} declined your request to sync meal plans.`]); return send(res, 200, { sync: null }); }
-  if (!isoDate(ctx.body.since)) err(400, 'Missing start date.');
+  if (!ctx.body.accept) { dropSync(s); audit('sync_declined', { userId: me.id, ip: clientIp(req), detail: p ? p.email : '' }); if (p) syncMail(req, p, `${me.name} declined meal-plan sync`, 'Solicitação de sincronização recusada', [`${me.name} declined your request to sync meal plans.`]); return send(res, 200, { sync: null }); }
+  if (!isoDate(ctx.body.since)) err(400, 'Falta a data inicial.');
   Object.assign(s, { status: 'active', activeAt: now(), since: ctx.body.since }); if (ctx.body.slots) s.slots = cleanSlots(ctx.body.slots);
   syncEvent(s, me.id, 'active', `${me.name} accepted — meal plans are synced`); bumpSync(s);
   audit('sync_started', { userId: me.id, ip: clientIp(req), detail: p ? 'with ' + p.email : '' });
@@ -562,7 +562,7 @@ route('PUT', '/api/sync/grocery', { auth: true }, async (req, res, ctx) => {    
   // { week, id, got } for one tick, or { week, set: { id: 1 | 0 | null } } for many (0 = unticked on purpose, for items the pantry covers)
   const s = needSync(ctx, 'active'); const b = ctx.body;
   const changes = b.set && typeof b.set === 'object' && !Array.isArray(b.set) ? Object.entries(b.set).slice(0, 500) : Array.isArray(b.ids) ? b.ids.slice(0, 500).map(id => [id, b.got ? 1 : null]) : [[b.id, b.got ? 1 : null]];
-  if (!isoDate(b.week) || !changes.length || changes.some(([id, v]) => typeof id !== 'string' || !/^[A-Za-z0-9_.:-]{1,80}$/.test(id) || /^(__proto__|constructor|prototype)$/.test(id) || ![1, 0, null, true, false].includes(v))) err(400, 'Bad item');
+  if (!isoDate(b.week) || !changes.length || changes.some(([id, v]) => typeof id !== 'string' || !/^[A-Za-z0-9_.:-]{1,80}$/.test(id) || /^(__proto__|constructor|prototype)$/.test(id) || ![1, 0, null, true, false].includes(v))) err(400, 'Item inválido');
   const w = s.grocery[b.week] = s.grocery[b.week] || {}; changes.forEach(([id, v]) => { if (v === null || v === false) delete w[id]; else w[id] = v ? 1 : 0; });
   const weeks = Object.keys(s.grocery).sort(); while (weeks.length > 20) delete s.grocery[weeks.shift()];
   bumpSync(s); send(res, 200, { ok: true, rev: s.rev });
@@ -571,9 +571,9 @@ route('PUT', '/api/sync/grocery', { auth: true }, async (req, res, ctx) => {    
 /* shared household pantry (optional, either synced user can switch it on or off) */
 const PANTRY_MAX = 600;
 function cleanPantryItem(it) {
-  if (!it || typeof it !== 'object') err(400, 'Bad pantry item');
+  if (!it || typeof it !== 'object') err(400, 'Item de despensa inválido');
   const id = String(it.id || ''); const food = String(it.food || '');
-  if (!/^[A-Za-z0-9_.:-]{1,60}$/.test(id) || !/^[A-Za-z0-9_.:-]{1,80}$/.test(food) || /^(__proto__|constructor|prototype)$/.test(food)) err(400, 'Bad pantry item');
+  if (!/^[A-Za-z0-9_.:-]{1,60}$/.test(id) || !/^[A-Za-z0-9_.:-]{1,80}$/.test(food) || /^(__proto__|constructor|prototype)$/.test(food)) err(400, 'Item de despensa inválido');
   const qty = Math.max(0, Math.min(1e6, +it.qty || 0)); const exp = it.exp && isoDate(it.exp) ? it.exp : null; const added = isoDate(it.added) ? it.added : new Date().toISOString().slice(0, 10);
   return { id, food, qty: Math.round(qty * 100) / 100, exp, added, by: null };
 }
@@ -588,7 +588,7 @@ route('POST', '/api/sync/pantry/share', { auth: true }, async (req, res, ctx) =>
   send(res, 200, { pantry: { on: s.pantry.on, items: s.pantry.items, rev: s.pantry.rev }, previous: on ? [] : prev });
 });
 route('POST', '/api/sync/pantry', { auth: true, limit: 'state' }, async (req, res, ctx) => {
-  const s = needSync(ctx, 'active'); if (!s.pantry || !s.pantry.on) err(409, 'The pantry isn’t shared.');
+  const s = needSync(ctx, 'active'); if (!s.pantry || !s.pantry.on) err(409, 'A despensa não está compartilhada.');
   const P = s.pantry; const me = ctx.me.u.id; const ops = Array.isArray(ctx.body.ops) ? ctx.body.ops.slice(0, 400) : [];
   ops.forEach(o => {
     if (!o || typeof o !== 'object') return;
@@ -621,7 +621,7 @@ let foodsT = null; const saveFoods = () => { clearTimeout(foodsT); foodsT = setT
 const SUB_RE = /^[a-z_]{2,30}$/;
 const AISLE_OK = ['Meat & Seafood', 'Dairy & Eggs', 'Produce', 'Grains & Bread', 'Frozen', 'Pantry', 'Snacks', 'Beverages', 'Deli & Prepared'];
 function cleanSharedFood(b, cur) {
-  const n = String(b.n || '').replace(/\s+/g, ' ').trim().slice(0, 80); if (!n) err(400, 'Give the product a name.');
+  const n = String(b.n || '').replace(/\s+/g, ' ').trim().slice(0, 80); if (!n) err(400, 'Dê um nome ao produto.');
   const numv = (k, max) => { const v = +b[k]; if (!isFinite(v) || v < 0 || v > max) err(400, `Check the ${({ k: 'calories', p: 'protein', c: 'carbs', f: 'fat', g: 'item weight', pk: 'package size', srv: 'serving size' })[k] || k} value.`); return Math.round(v * 100) / 100; };
   const basis = ['g', 'ml', 'u'].includes(b.basis) ? b.basis : 'g';
   const out = { n, brand: String(b.brand || '').replace(/\s+/g, ' ').trim().slice(0, 60), sub: SUB_RE.test(b.sub || '') ? b.sub : 'sauces', a: AISLE_OK.includes(b.a) ? b.a : 'Pantry',
@@ -634,7 +634,7 @@ function cleanSharedFood(b, cur) {
 route('GET', '/api/foods/shared', { auth: true }, async (req, res) => send(res, 200, sharedFoods));
 route('GET', '/api/barcode/:code', { auth: true }, async (req, res, ctx) => {
   if (limited('barcode:' + ctx.me.u.id, 150, 10 * 60000)) err(429, 'Too many lookups. Wait a few minutes.');
-  const code = PROD.normGtin(ctx.params.code); if (!code) err(400, 'That isn’t a valid barcode number.');
+  const code = PROD.normGtin(ctx.params.code); if (!code) err(400, 'Esse não é um número de código de barras válido.');
   const hit = Object.values(sharedFoods.foods).find(f => f.gtin === code);
   if (hit) return send(res, 200, { gtin: code, food: hit });
   let off = null; let offError = null;
@@ -642,10 +642,10 @@ route('GET', '/api/barcode/:code', { auth: true }, async (req, res, ctx) => {
   send(res, 200, { gtin: code, suggest: off, error: offError });
 });
 route('POST', '/api/foods/shared', { auth: true }, async (req, res, ctx) => {
-  if (limited('foodadd:' + ctx.me.u.id, 60, 60 * 60000)) err(429, 'Too many new products in an hour.');
-  const b = ctx.body; const gtin = b.gtin ? PROD.normGtin(b.gtin) : null; if (b.gtin && !gtin) err(400, 'That isn’t a valid barcode number.');
+  if (limited('foodadd:' + ctx.me.u.id, 60, 60 * 60000)) err(429, 'Produtos novos demais em uma hora.');
+  const b = ctx.body; const gtin = b.gtin ? PROD.normGtin(b.gtin) : null; if (b.gtin && !gtin) err(400, 'Esse não é um número de código de barras válido.');
   if (gtin) { const hit = Object.values(sharedFoods.foods).find(f => f.gtin === gtin); if (hit) return send(res, 200, { food: hit, existed: true, rev: sharedFoods.rev }); }
-  if (Object.keys(sharedFoods.foods).length >= 20000) err(400, 'The product list is full.');
+  if (Object.keys(sharedFoods.foods).length >= 20000) err(400, 'A lista de produtos está cheia.');
   const food = Object.assign(cleanSharedFood(b), { id: gtin ? 'bc_' + gtin : 'sf_' + uid().replace(/[^A-Za-z0-9]/g, ''), gtin, by: ctx.me.u.id, byName: ctx.me.u.name, at: now() });
   sharedFoods.foods[food.id] = food; sharedFoods.rev++; saveFoods();
   audit('product_added', { userId: ctx.me.u.id, ip: clientIp(req), detail: `${food.n}${gtin ? ' · ' + gtin : ''}` });
@@ -679,7 +679,7 @@ function mealieInput(body) {
   if (!/^https?:\/\/[^\s/]+/i.test(url) || url.length > 300) err(400, 'Enter the address you open Mealie at, e.g. http://192.168.1.10:9925');
   const token = body.token ? String(body.token).trim() : cur.token;
   if (!token) err(400, 'Paste a Mealie API token.');
-  if (token.length > 4000 || /\s/.test(token)) err(400, 'That API token doesn’t look right.');
+  if (token.length > 4000 || /\s/.test(token)) err(400, 'Esse token de API não parece válido.');
   return { url, token };
 }
 route('GET', '/api/integrations', { auth: true }, async (req, res, ctx) => send(res, 200, { mealie: mealieView(ctx.me.u) }));
@@ -706,7 +706,7 @@ function adminUserRow(u) {
   const st = (() => { try { return fs.statSync(stateFile(u.id)); } catch (e) { return null; } })();
   return Object.assign(pubUser(u), { locked: isLocked(u), lockedUntil: isLocked(u) ? u.lockedUntil : null, failed: u.failed || 0, lastLoginIp: u.lastLoginIp || null, sessions: db.sessions.filter(s => s.userId === u.id && s.expiresAt > now()).length, dataBytes: st ? st.size : 0, dataUpdatedAt: st ? st.mtimeMs : null, pwChangedAt: u.pwChangedAt || u.createdAt });
 }
-const target = ctx => { const u = userById(ctx.params.id); if (!u) err(404, 'User not found.'); return u; };
+const target = ctx => { const u = userById(ctx.params.id); if (!u) err(404, 'Usuário não encontrado.'); return u; };
 route('GET', '/api/admin/users', { admin: true }, async (req, res) => send(res, 200, { users: db.users.map(adminUserRow) }));
 function inviteRow(i) { return { id: i.id, email: i.email, name: i.name || '', role: i.role, createdAt: i.createdAt, sentAt: i.sentAt, expiresAt: i.expiresAt, sends: i.sends || 0, expired: i.expiresAt <= now(), invitedBy: (userById(i.invitedBy) || {}).name || null }; }
 async function sendInvite(inv, req, actor) {
@@ -717,13 +717,13 @@ async function sendInvite(inv, req, actor) {
   const msg = MAIL.inviteEmail({ name: inv.name, email: inv.email, inviter: actor.name, role: inv.role, link, days: INVITE_DAYS, expiresAt: new Date(inv.expiresAt), appUrl: baseUrl(req), appName: db.settings.appName, inviterEmail: actor.email });
   if (actor.email && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(actor.email)) msg.replyTo = actor.email;   // a real person to reply to reads far less like bulk mail
   try { await deliver(inv.email, inv.name, msg); inv.sends = (inv.sends || 0) + 1; saveDb(); }
-  catch (e) { Object.assign(inv, prev); audit('invite_failed', { actorId: actor.id, ip: clientIp(req), detail: `${inv.email}: ${e.message}`.slice(0, 300) }); err(502, 'The invite email couldn’t be sent: ' + e.message); }
+  catch (e) { Object.assign(inv, prev); audit('invite_failed', { actorId: actor.id, ip: clientIp(req), detail: `${inv.email}: ${e.message}`.slice(0, 300) }); err(502, 'Não foi possível enviar o e-mail de convite: ' + e.message); }
 }
 route('GET', '/api/admin/invites', { admin: true }, async (req, res) => send(res, 200, { invites: db.invites.slice().sort((a, b) => b.sentAt - a.sentAt).map(inviteRow), days: INVITE_DAYS }));
 route('POST', '/api/admin/invites', { admin: true }, async (req, res, ctx) => {
   const b = ctx.body; const email = normEmail(b.email), name = String(b.name || '').trim().slice(0, 80); const role = b.role === 'admin' ? 'admin' : 'user';
-  if (role === 'admin' && !isOwner(ctx.me.u)) err(403, 'Only the owner can invite an administrator.');
-  if (!validEmail(email)) err(400, 'Enter a valid email address.'); if (findUser(email)) err(409, 'An account with this email already exists.');
+  if (role === 'admin' && !isOwner(ctx.me.u)) err(403, 'Somente o proprietário pode convidar um administrador.');
+  if (!validEmail(email)) err(400, 'Enter a valid email address.'); if (findUser(email)) err(409, 'Já existe uma conta com esse e-mail.');
   let inv = db.invites.find(x => x.email === email); const again = !!inv;
   if (inv) Object.assign(inv, { name: name || inv.name, role, invitedBy: ctx.me.u.id });
   else inv = { id: uid(), email, name, role, invitedBy: ctx.me.u.id, createdAt: now(), sends: 0 };
@@ -733,12 +733,12 @@ route('POST', '/api/admin/invites', { admin: true }, async (req, res, ctx) => {
   send(res, 201, { invite: inviteRow(inv), resent: again });
 });
 route('POST', '/api/admin/invites/:id/resend', { admin: true }, async (req, res, ctx) => {
-  const inv = db.invites.find(x => x.id === ctx.params.id); if (!inv) err(404, 'That invite no longer exists.');
-  if (findUser(inv.email)) { db.invites = db.invites.filter(x => x !== inv); saveDb(); err(409, 'That person already has an account.'); }
+  const inv = db.invites.find(x => x.id === ctx.params.id); if (!inv) err(404, 'Esse convite não existe mais.');
+  if (findUser(inv.email)) { db.invites = db.invites.filter(x => x !== inv); saveDb(); err(409, 'Essa pessoa já tem uma conta.'); }
   await sendInvite(inv, req, ctx.me.u); audit('invite_resent', { actorId: ctx.me.u.id, ip: clientIp(req), detail: inv.email }); send(res, 200, { invite: inviteRow(inv) });
 });
 route('DELETE', '/api/admin/invites/:id', { admin: true }, async (req, res, ctx) => {
-  const inv = db.invites.find(x => x.id === ctx.params.id); if (!inv) err(404, 'That invite no longer exists.');
+  const inv = db.invites.find(x => x.id === ctx.params.id); if (!inv) err(404, 'Esse convite não existe mais.');
   db.invites = db.invites.filter(x => x !== inv); saveDb(); audit('invite_revoked', { actorId: ctx.me.u.id, ip: clientIp(req), detail: inv.email }); send(res, 200, { ok: true });
 });
 route('PATCH', '/api/admin/users/:id', { admin: true }, async (req, res, ctx) => {
@@ -747,7 +747,7 @@ route('PATCH', '/api/admin/users/:id', { admin: true }, async (req, res, ctx) =>
   const lastAdmin = u.role === 'admin' && u.status === 'active' && admins().length <= 1;
   if (b.role != null && b.role !== u.role) {
     if (!['admin', 'user'].includes(b.role)) err(400, 'Unknown role.');
-    if (!isOwner(me)) err(403, b.role === 'admin' ? 'Only the owner can make someone an administrator.' : 'Only the owner can remove administrator access.');
+    if (!isOwner(me)) err(403, b.role === 'admin' ? 'Somente o proprietário pode tornar alguém administrador.' : 'Somente o proprietário pode remover o acesso de administrador.');
     if (u.id === me.id && b.role !== 'admin') err(400, 'You can’t remove your own administrator access.');
     if (lastAdmin && b.role !== 'admin') err(400, 'There has to be at least one active administrator.');
     u.role = b.role; log.push('role → ' + b.role); audit('role_changed', { userId: u.id, actorId: me.id, ip: clientIp(req), detail: b.role }); }
@@ -761,12 +761,12 @@ route('PATCH', '/api/admin/users/:id', { admin: true }, async (req, res, ctx) =>
     if (was === 'pending' && b.status === 'active' && emailReady()) deliver(u.email, u.name, MAIL.simpleEmail({ title: 'Your FORGE 90 account is ready', heading: 'You’re approved!', lines: [`Hi ${u.name.split(' ')[0]}, an administrator approved your FORGE 90 account.`, 'Sign in with the email and password you signed up with.'], buttonUrl: baseUrl(req), buttonLabel: 'Sign in', appUrl: baseUrl(req), appName: db.settings.appName })).catch(() => {});
   }
   if (b.name != null) { const n = String(b.name).trim().slice(0, 80); if (n && n !== u.name) { u.name = n; log.push('name'); } }
-  if (b.email != null && normEmail(b.email) !== u.email) { const e = normEmail(b.email); if (!validEmail(e)) err(400, 'Enter a valid email address.'); if (findUser(e)) err(409, 'Another account already uses that email.'); audit('email_changed', { userId: u.id, actorId: me.id, ip: clientIp(req), detail: `${u.email} → ${e}` }); u.email = e; log.push('email'); }
+  if (b.email != null && normEmail(b.email) !== u.email) { const e = normEmail(b.email); if (!validEmail(e)) err(400, 'Enter a valid email address.'); if (findUser(e)) err(409, 'Outra conta já usa esse e-mail.'); audit('email_changed', { userId: u.id, actorId: me.id, ip: clientIp(req), detail: `${u.email} → ${e}` }); u.email = e; log.push('email'); }
   saveDb(); send(res, 200, { user: adminUserRow(u), changed: log });
 });
-route('DELETE', '/api/admin/users/:id/avatar', { admin: true }, async (req, res, ctx) => { const u = target(ctx); ownerGuard(ctx, u); if (u.avatar) { removeAvatar(u); saveDb(); audit('avatar_changed', { userId: u.id, actorId: ctx.me.u.id, ip: clientIp(req), detail: 'removed by admin' }); } send(res, 200, { user: adminUserRow(u) }); });
+route('DELETE', '/api/admin/users/:id/avatar', { admin: true }, async (req, res, ctx) => { const u = target(ctx); ownerGuard(ctx, u); if (u.avatar) { removeAvatar(u); saveDb(); audit('avatar_changed', { userId: u.id, actorId: ctx.me.u.id, ip: clientIp(req), detail: 'removido pelo administrador' }); } send(res, 200, { user: adminUserRow(u) }); });
 route('POST', '/api/admin/users/:id/unlock', { admin: true }, async (req, res, ctx) => { const u = target(ctx); ownerGuard(ctx, u); u.failed = 0; u.lockedUntil = null; saveDb(); audit('unlocked', { userId: u.id, actorId: ctx.me.u.id, ip: clientIp(req) }); send(res, 200, { user: adminUserRow(u) }); });
-route('POST', '/api/admin/users/:id/send-reset', { admin: true }, async (req, res, ctx) => { const u = target(ctx); ownerGuard(ctx, u); if (u.status === 'disabled') err(400, 'Enable the account first.'); const r = await sendReset(u, 'admin', req, { actorId: ctx.me.u.id }); if (!r.sent) err(502, 'The reset email couldn’t be sent: ' + r.error); send(res, 200, { ok: true, minutes: RESET_MINUTES }); });
+route('POST', '/api/admin/users/:id/send-reset', { admin: true }, async (req, res, ctx) => { const u = target(ctx); ownerGuard(ctx, u); if (u.status === 'disabled') err(400, 'Ative a conta primeiro.'); const r = await sendReset(u, 'admin', req, { actorId: ctx.me.u.id }); if (!r.sent) err(502, 'Não foi possível enviar o e-mail de redefinição: ' + r.error); send(res, 200, { ok: true, minutes: RESET_MINUTES }); });
 route('POST', '/api/admin/users/:id/temp-password', { admin: true }, async (req, res, ctx) => {
   const u = target(ctx); ownerGuard(ctx, u); adminChangeGuard(ctx, u); const pw = String(ctx.body.password || ''); const pp = pwProblem(pw, u.email); if (pp) err(400, pp);
   u.pw = await hashPw(pw); u.mustChange = true; u.failed = 0; u.lockedUntil = null; u.pwChangedAt = now(); const n = revokeSessions(u.id, u.id === ctx.me.u.id ? ctx.me.s.id : null);
@@ -790,12 +790,12 @@ route('GET', '/api/admin/settings', { admin: true }, async (req, res) => send(re
 route('PATCH', '/api/admin/settings', { admin: true }, async (req, res, ctx) => {
   const b = ctx.body, s = db.settings; const changed = [];
   const int = (v, lo, hi, label) => { v = Math.round(+v); if (!Number.isFinite(v) || v < lo || v > hi) err(400, `${label} must be between ${lo} and ${hi}.`); return v; };
-  if (b.appName != null) { s.appName = String(b.appName).trim().slice(0, 40) || 'FORGE 90'; changed.push('app name'); }
+  if (b.appName != null) { s.appName = String(b.appName).trim().slice(0, 40) || 'FORGE 90'; changed.push('nome do aplicativo'); }
   if (b.appUrl != null) { const u = String(b.appUrl).trim().replace(/\/+$/, ''); if (u && !/^https?:\/\/[^\s/]+/i.test(u)) err(400, 'App address must start with http:// or https://'); s.appUrl = u; changed.push('app address'); }
   if (b.security) { const x = b.security, q = s.security;
-    if (x.pwMinLength != null) q.pwMinLength = int(x.pwMinLength, 8, 64, 'Minimum password length');
+    if (x.pwMinLength != null) q.pwMinLength = int(x.pwMinLength, 8, 64, 'Tamanho mínimo da senha');
     if (x.pwRequireMix != null) q.pwRequireMix = !!x.pwRequireMix;
-    if (x.lockThreshold != null) q.lockThreshold = int(x.lockThreshold, 3, 20, 'Failed attempts before lockout');
+    if (x.lockThreshold != null) q.lockThreshold = int(x.lockThreshold, 3, 20, 'Tentativas com falha antes do bloqueio');
     if (x.lockMinutes != null) q.lockMinutes = int(x.lockMinutes, 1, 1440, 'Lockout duration');
     if (x.autoResetOnLock != null) q.autoResetOnLock = !!x.autoResetOnLock;
     if (x.sessionHours != null) q.sessionHours = int(x.sessionHours, 1, 168, 'Session length');
@@ -807,18 +807,18 @@ route('PATCH', '/api/admin/settings', { admin: true }, async (req, res, ctx) => 
     const put = (k, v) => { if (String(v) === String(d[k])) delete q[k]; else q[k] = v; };   // only store what differs from the environment
     ['host', 'user', 'fromName', 'fromEmail'].forEach(k => { if (x[k] != null) put(k, String(x[k]).trim().slice(0, 200)); });
     if (x.port != null) put('port', int(x.port, 1, 65535, 'Port'));
-    if (x.security != null) { if (!['tls', 'starttls', 'none'].includes(x.security)) err(400, 'Unknown connection security.'); put('security', x.security); }
+    if (x.security != null) { if (!['tls', 'starttls', 'none'].includes(x.security)) err(400, 'Segurança da conexão desconhecida.'); put('security', x.security); }
     if (x.pass) q.pass = String(x.pass).replace(/\s+/g, '');          // Google shows app passwords with spaces
     if (x.clearPass) delete q.pass;
     if (x.useEnv) EMAIL_KEYS.concat('pass').forEach(k => delete q[k]);
-    const fe = mailConfig().fromEmail; if (fe && !validEmail(normEmail(fe))) err(400, 'From address isn’t a valid email.');
+    const fe = mailConfig().fromEmail; if (fe && !validEmail(normEmail(fe))) err(400, 'O endereço do remetente não é um e-mail válido.');
     changed.push('email'); }
   if (b.defaults && b.defaults.theme) { if (['dark', 'light', 'system'].includes(b.defaults.theme)) s.defaults.theme = b.defaults.theme; changed.push('defaults'); }
   saveDb(); audit('settings_changed', { actorId: ctx.me.u.id, ip: clientIp(req), detail: changed.join(', ') }); send(res, 200, adminSettingsView());
 });
 route('POST', '/api/admin/email/test', { admin: true }, async (req, res, ctx) => {
   const to = normEmail(ctx.body.to || ctx.me.u.email); if (!validEmail(to)) err(400, 'Enter a valid address to send the test to.');
-  try { await deliver(to, '', MAIL.simpleEmail({ title: 'FORGE 90 test email', heading: 'Email is working ✔', lines: ['This is a test from FORGE 90 → Admin → Email.', 'Password-reset emails will be sent from this account.'], buttonUrl: baseUrl(req), buttonLabel: 'Open FORGE 90', appUrl: baseUrl(req), appName: db.settings.appName }));
+  try { await deliver(to, '', MAIL.simpleEmail({ title: 'E-mail de teste do FORGE 90', heading: 'Email is working ✔', lines: ['This is a test from FORGE 90 → Admin → Email.', 'Password-reset emails will be sent from this account.'], buttonUrl: baseUrl(req), buttonLabel: 'Abrir FORGE 90', appUrl: baseUrl(req), appName: db.settings.appName }));
     audit('email_test', { actorId: ctx.me.u.id, ip: clientIp(req), detail: 'sent to ' + to }); send(res, 200, { ok: true, to }); }
   catch (e) { audit('email_test', { actorId: ctx.me.u.id, ip: clientIp(req), detail: 'FAILED: ' + e.message.slice(0, 200) }); err(502, e.message); }
 });
@@ -860,7 +860,7 @@ async function handle(req, res) {
     // Only redirect visits that came in on a different address; if the https hostname itself arrives as plain HTTP the proxy isn't
     // passing X-Forwarded-Proto (or TRUST_PROXY is off) — redirecting would loop, so serve it and flag it in Admin → Server & proxy.
     if (String(req.headers.host || '').toLowerCase() !== hostOf(target)) {
-      if (pathname.startsWith('/api/')) return send(res, 403, { error: `Use the secure address: ${target}`, httpsUrl: target });
+      if (pathname.startsWith('/api/')) return send(res, 403, { error: `Use o endereço seguro: ${target}`, httpsUrl: target });
       res.writeHead(302, Object.assign({ Location: target + url.pathname + url.search, 'Cache-Control': 'no-store' }, SEC_HEADERS)); return res.end();
     }
   }
@@ -871,29 +871,29 @@ async function handle(req, res) {
   const ip = clientIp(req);
   try {
     if (req.method !== 'GET') {
-      if (req.headers['x-f90'] !== '1' || !/application\/json/i.test(req.headers['content-type'] || '')) err(403, 'Blocked request');
-      const origin = req.headers.origin; if (origin) { let oh = ''; try { oh = new URL(origin).host; } catch (e) { /* bad origin */ } if (oh !== req.headers.host) err(403, 'Blocked cross-site request'); }
+      if (req.headers['x-f90'] !== '1' || !/application\/json/i.test(req.headers['content-type'] || '')) err(403, 'Solicitação bloqueada');
+      const origin = req.headers.origin; if (origin) { let oh = ''; try { oh = new URL(origin).host; } catch (e) { /* bad origin */ } if (oh !== req.headers.host) err(403, 'Solicitação entre sites bloqueada'); }
     }
     if (r.opts.limit === 'auth' && limited('auth:' + ip, 40, 15 * 60000)) err(429, 'Too many attempts from this network. Wait a few minutes and try again.');
     const me = getSession(req);
     if ((r.opts.auth || r.opts.admin) && !me) err(401, 'Please sign in again.');
-    if (me && me.u.mustChange && (r.opts.auth || r.opts.admin) && !r.opts.allowMustChange) err(403, 'Set a new password first.', { mustChange: true });
-    if (r.opts.admin && me.u.role !== 'admin') err(403, 'Administrators only.');
+    if (me && me.u.mustChange && (r.opts.auth || r.opts.admin) && !r.opts.allowMustChange) err(403, 'Defina uma nova senha primeiro.', { mustChange: true });
+    if (r.opts.admin && me.u.role !== 'admin') err(403, 'Somente administradores.');
     const body = req.method === 'GET' || req.method === 'HEAD' ? {} : await readBody(req, r.opts.limit === 'state' ? MAX_STATE_BYTES : r.opts.maxBody || 256 * 1024);
     await r.fn(req, res, { me, body, params: pathname.match(r.re).groups || {}, query: Object.fromEntries(url.searchParams) });
   } catch (e) {
     if (e instanceof HttpErr) return send(res, e.code, Object.assign({ error: e.message }, e.extra || {}));
-    console.error(e); send(res, 500, { error: 'Something went wrong on the server.' });
+    console.error(e); send(res, 500, { error: 'Algo deu errado no servidor.' });
   }
 }
 
 /* ---------- command-line recovery:  node server.js --set-password <email> <password>  |  --make-admin <email>  |  --make-owner <email> ---------- */
 async function cli() {
   const a = process.argv.slice(2); if (!a.length || !/^--/.test(a[0])) return false;
-  const u = findUser(a[1] || ''); if (!u) { console.error('No account with email', a[1]); process.exit(1); }
-  if (a[0] === '--set-password') { const pp = pwProblem(a[2], u.email); if (!a[2] || pp) { console.error(pp || 'Give the new password as the third argument.'); process.exit(1); } u.pw = await hashPw(a[2]); u.mustChange = false; u.failed = 0; u.lockedUntil = null; u.pwChangedAt = now(); revokeSessions(u.id); audit('password_changed', { userId: u.id, detail: 'set from the server command line' }); }
+  const u = findUser(a[1] || ''); if (!u) { console.error('Nenhuma conta com o e-mail', a[1]); process.exit(1); }
+  if (a[0] === '--set-password') { const pp = pwProblem(a[2], u.email); if (!a[2] || pp) { console.error(pp || 'Informe a nova senha como terceiro argumento.'); process.exit(1); } u.pw = await hashPw(a[2]); u.mustChange = false; u.failed = 0; u.lockedUntil = null; u.pwChangedAt = now(); revokeSessions(u.id); audit('password_changed', { userId: u.id, detail: 'set from the server command line' }); }
   else if (a[0] === '--make-admin') { u.role = 'admin'; u.status = 'active'; u.failed = 0; u.lockedUntil = null; audit('role_changed', { userId: u.id, detail: 'admin (server command line)' }); }
-  else if (a[0] === '--make-owner') { u.role = 'admin'; u.status = 'active'; u.failed = 0; u.lockedUntil = null; db.settings.ownerId = u.id; audit('owner_set', { userId: u.id, detail: 'owner (server command line)' }); console.log(u.email, 'is now the owner.'); }
+  else if (a[0] === '--make-owner') { u.role = 'admin'; u.status = 'active'; u.failed = 0; u.lockedUntil = null; db.settings.ownerId = u.id; audit('owner_set', { userId: u.id, detail: 'owner (server command line)' }); console.log(u.email, 'agora é o proprietário.'); }
   else { console.error('Unknown option', a[0]); process.exit(1); }
   saveDb(true); console.log('Done:', a[0], u.email); process.exit(0);
 }
@@ -913,11 +913,11 @@ async function cli() {
   setInterval(() => { const t = now(); const n1 = db.sessions.length, n2 = db.resets.length, n3 = db.invites.length;
     db.sessions = db.sessions.filter(s => s.expiresAt > t); db.resets = db.resets.filter(r => t - r.createdAt < 86400000); db.invites = db.invites.filter(i => t - i.expiresAt < 30 * 86400000);
     if (n1 !== db.sessions.length || n2 !== db.resets.length || n3 !== db.invites.length) saveDb(); }, 10 * 60000).unref();
-  const server = http.createServer((req, res) => { handle(req, res).catch(e => { console.error(e); try { send(res, 500, { error: 'Server error' }); } catch (x) { /* ignore */ } }); });
+  const server = http.createServer((req, res) => { handle(req, res).catch(e => { console.error(e); try { send(res, 500, { error: 'Erro do servidor' }); } catch (x) { /* ignore */ } }); });
   server.headersTimeout = 20000; server.requestTimeout = 60000;
   server.listen(PORT, HOST, () => {
     console.log(`  FORGE 90 ${VERSION} is running → ${ENV.APP_URL || `http://localhost:${PORT}`}`);
-    console.log(`  Data folder: ${DATA}`);
+    console.log(`  Pasta de dados: ${DATA}`);
     console.log(`  Email: ${emailReady() ? `${mailConfig().host}:${mailConfig().port} as ${mailConfig().user || mailConfig().fromEmail}` : 'not configured (Admin → Email)'}\n`);
   });
   const stop = () => { saveDb(true); process.exit(0); };

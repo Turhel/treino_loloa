@@ -124,14 +124,14 @@ document.addEventListener('input', e => {
   const form = t.closest('form'); obRead(form); if (OB.error) { OB.error = null; const m = form.querySelector('.auth-msg'); if (m) m.remove(); }
   if (t.name === 'bf' || t.name === 'w' || t.name === 'hCm' || t.name === 'age') {
     const box = $('#ob-est'); if (box) { box.classList.toggle('hidden', !obEstimated()); const n = box.querySelector('.note span'); const bf = obBF();
-      if (n) n.innerHTML = n.innerHTML.replace(/^Estimated body fat: <b>[^<]*<\/b>\. /, '').replace(/^/, bf ? `Estimated body fat: <b>${fmt(bf, 1)}%</b>. ` : ''); } }
+      if (n) n.innerHTML = n.innerHTML.replace(/^Gordura corporal estimada: <b>[^<]*<\/b>\. /, '').replace(/^/, bf ? `Gordura corporal estimada: <b>${fmt(bf, 1)}%</b>. ` : ''); } }
   if (t.name === 'rate') { const v = $('#ob-rate-v'); if (v) v.textContent = fmt(+t.value, 2) + ' kg / semana'; const i = $('#ob-rate-info'); if (i) i.innerHTML = obRateInfo(); }
   if (t.name === 'bulkPct') { const v = $('#ob-rate-v'); if (v) v.textContent = fmt(+t.value, 2) + ' % of body weight'; const i = $('#ob-rate-info'); if (i) i.innerHTML = obRateInfo(); }
   if (t.name === 'goal') { const i = $('#ob-rate-info'); if (i) i.innerHTML = obRateInfo(); }
 });
 document.addEventListener('change', e => {
   const t = e.target; if (!OB || !t.closest || !t.closest('form[data-form="onb"]')) return; obRead(t.closest('form'));
-  if (t.name === 'sex') { const box = $('#ob-est'); const n = box && box.querySelector('.note span'); const bf = obBF(); if (n) n.innerHTML = n.innerHTML.replace(/^Estimated body fat: <b>[^<]*<\/b>\. /, '').replace(/^/, bf ? `Estimated body fat: <b>${fmt(bf, 1)}%</b>. ` : ''); }
+  if (t.name === 'sex') { const box = $('#ob-est'); const n = box && box.querySelector('.note span'); const bf = obBF(); if (n) n.innerHTML = n.innerHTML.replace(/^Gordura corporal estimada: <b>[^<]*<\/b>\. /, '').replace(/^/, bf ? `Gordura corporal estimada: <b>${fmt(bf, 1)}%</b>. ` : ''); }
   if (t.name === 'activity') { const i = $('#ob-rate-info'); if (i) i.innerHTML = obRateInfo(); }
   if (t.name === 'share') { const l = t.closest('.onb-share'); l.classList.toggle('on', t.checked); l.querySelector('.switch').classList.toggle('on', t.checked); const s = $('#ob-sum'); if (s) s.innerHTML = obSummaryHTML(); }
 });
@@ -148,7 +148,7 @@ function bfEstimateNote() {
    ================================================================ */
 const SY = { data: null, rev: 0, snap: null, snapAt: null, pollT: null, diffT: null, snapT: null, busy: false, started: false };
 const syncActive = () => AUTH.mode === 'server' && !!AUTH.user && !!SY.data && SY.data.status === 'active';
-const syncName = () => (SY.data && SY.data.partner && SY.data.partner.name) || 'your partner';
+const syncName = () => (SY.data && SY.data.partner && SY.data.partner.name) || 'seu parceiro';
 function syncSlotOn(slot) { return syncActive() && !!SY.data.slots[slot]; }
 function syncKeyOn(date, slot) { return syncSlotOn(slot) && !!SY.data.since && date >= SY.data.since; }
 function partnerMeal(date, slot) { const d = SY.snap && SY.snap.days && SY.snap.days[date]; return (d && d.m && d.m[slot]) || null; }
@@ -349,8 +349,8 @@ function syncCardHTML() {
     body = `<div class="row" style="gap:12px">${avatarHTML(Object.assign({}, (SY.data && SY.data.partner) || {}, { name: syncName() }))}<div style="flex:1;min-width:0"><b>Synced with ${esc(syncName())}</b><div class="tiny muted">${esc(sy.partner ? sy.partner.email : '')} · since ${fmtDate(sy.since, { month: 'short', day: 'numeric', year: 'numeric' })}</div></div>${syncBtnHTML('sm')}</div>
     ${theirReq ? `<div class="note warn" style="margin-top:12px">${icon('users')}<span style="flex:1"><b>${esc(syncName())}</b> wants to share: ${MEAL_SLOTS.filter(k => sy.slotReq.slots[k]).map(k => SLOT_LABEL[k]).join(', ')}.</span><button class="btn sm primary" data-act="sync-slots-ok" data-v="1">Approve</button><button class="btn sm ghost" data-act="sync-slots-ok" data-v="0">Keep as is</button></div>` : ''}
     <form data-form="sync-slots" style="margin-top:12px"><div class="field"><label>Shared meals ${mineReq ? `<span class="pill warn-pill">Waiting for ${esc(syncName())} to approve</span>` : ''}</label>${slotBoxes(mineReq ? sy.slotReq.slots : sy.slots, theirReq)}</div>
-      <div class="row wrap" style="margin-top:10px"><button class="btn" type="submit" ${theirReq ? 'disabled' : ''}>${mineReq ? 'Update request' : 'Ask to change shared meals'}</button>${n ? `<span class="small">${n} change${n === 1 ? '' : 's'} waiting on you</span>` : ''}</div></form>
-    <hr class="sep"><div class="danger-zone sync-pantry"><div><b>${icon('box')}Share the pantry ${sy.pantry && sy.pantry.on ? '<span class="pill acc">On</span>' : ''}</b><div class="tiny muted">${sy.pantry && sy.pantry.on ? `You and ${esc(syncName())} use one pantry — scans, edits and meals eaten update it for both of you. If it’s turned off, you each keep a copy.` : `One pantry for both of you instead of one each. Your pantry items move into it, and ${esc(syncName())}’s do too.`}</div></div><button class="btn ${sy.pantry && sy.pantry.on ? '' : 'primary'}" data-act="pan-share" data-v="${sy.pantry && sy.pantry.on ? 0 : 1}">${sy.pantry && sy.pantry.on ? 'Stop sharing' : 'Share pantry'}</button></div>
+      <div class="row wrap" style="margin-top:10px"><button class="btn" type="submit" ${theirReq ? 'disabled' : ''}>${mineReq ? 'Atualizar solicitação' : 'Ask to change shared meals'}</button>${n ? `<span class="small">${n} change${n === 1 ? '' : 's'} waiting on you</span>` : ''}</div></form>
+    <hr class="sep"><div class="danger-zone sync-pantry"><div><b>${icon('box')}Share the pantry ${sy.pantry && sy.pantry.on ? '<span class="pill acc">On</span>' : ''}</b><div class="tiny muted">${sy.pantry && sy.pantry.on ? `You and ${esc(syncName())} use one pantry — scans, edits and meals eaten update it for both of you. If it’s turned off, you each keep a copy.` : `One pantry for both of you instead of one each. Your pantry items move into it, and ${esc(syncName())}’s do too.`}</div></div><button class="btn ${sy.pantry && sy.pantry.on ? '' : 'primary'}" data-act="pan-share" data-v="${sy.pantry && sy.pantry.on ? 0 : 1}">${sy.pantry && sy.pantry.on ? 'Stop sharing' : 'Compartilhar despensa'}</button></div>
     <hr class="sep"><div class="danger-zone"><div><b>Unsync meal plans</b><div class="tiny muted">You both keep your current meals; from then on your plans change independently.</div></div><button class="btn danger" data-act="sync-end">Unsync</button></div>`; }
   return `<div class="card-h"><h2>${icon('users')}Meal-plan sync</h2>${sy && sy.status === 'active' ? '<span class="pill acc">Active</span>' : sy ? '<span class="pill warn-pill">Pending</span>' : ''}</div>${body}`;
 }
@@ -373,7 +373,7 @@ Object.assign(ACT, {
     try { const r = await api('POST', '/api/sync/slots', { approve: ok }); SY.data = r.sync; SY.rev = r.sync.rev;
       if (ok) { const added = {}; MEAL_SLOTS.forEach(k => { if (SY.data.slots[k] && !old[k]) added[k] = 1; });
         if (Object.keys(added).length) { const from = maxISO(SY.data.since, addDays(todayISO(), 1)); const end = SY.data.through || [planEnd(), SY.snap && SY.snap.planEnd].filter(Boolean).sort()[0]; await syncPostBaseline(jointMeals(from, end, added), end); } }
-      toast(ok ? 'Shared meals updated' : 'Kept the shared meals as they were'); refreshSyncUI(); render(); } catch (e) { toast(e.message); } }
+      toast(ok ? 'Shared meals updated' : 'Refeições compartilhadas mantidas como estavam'); refreshSyncUI(); render(); } catch (e) { toast(e.message); } }
 });
 document.addEventListener('submit', async e => {
   const f = e.target; const k = f.dataset && f.dataset.form; if (k !== 'sync-request' && k !== 'sync-slots') return; e.preventDefault();
@@ -381,7 +381,7 @@ document.addEventListener('submit', async e => {
   const b = f.querySelector('button[type=submit]'); b.disabled = true;
   try {
     if (k === 'sync-request') { const r = await api('POST', '/api/sync/request', { email: f.elements.email.value.trim(), slots }); syncTake(r.sync); await syncPublish(); toast(`Request sent to ${syncName()}. Syncing starts when they accept.`); }
-    else { const r = await api('POST', '/api/sync/slots', { slots }); SY.data = r.sync; SY.rev = r.sync.rev; refreshSyncUI(); toast(r.sync.slotReq ? `Asked ${syncName()} to approve the new shared meals` : 'No change'); }
+    else { const r = await api('POST', '/api/sync/slots', { slots }); SY.data = r.sync; SY.rev = r.sync.rev; refreshSyncUI(); toast(r.sync.slotReq ? `Asked ${syncName()} to approve the new shared meals` : 'Sem alteração'); }
   } catch (x) { toast(x.message); b.disabled = false; }
 });
 document.addEventListener('change', e => { const t = e.target; if (t.name === 'slot' && t.closest('.sync-slots')) t.closest('.chk-pill').classList.toggle('on', t.checked); });
