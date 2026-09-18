@@ -9,9 +9,9 @@ const AUTH = { mode: 'local', user: null, config: null, rev: 0, syncT: null, pen
 async function api(method, url, body) {
   let r;
   try { r = await fetch(url, { method, credentials: 'same-origin', headers: body !== undefined || method !== 'GET' ? { 'Content-Type': 'application/json', 'X-F90': '1' } : {}, body: body !== undefined ? JSON.stringify(body) : (method !== 'GET' ? '{}' : undefined) }); }
-  catch (e) { const x = new Error('Can’t reach the FORGE 90 server. Check your connection.'); x.status = 0; throw x; }
+  catch (e) { const x = new Error('Não foi possível acessar o servidor FORGE 90. Verifique sua conexão.'); x.status = 0; throw x; }
   let j = null; try { j = await r.json(); } catch (e) { /* not JSON */ }
-  if (!r.ok) { const x = new Error((j && j.error) || `Request failed (${r.status})`); x.status = r.status; x.data = j; throw x; }
+  if (!r.ok) { const x = new Error((j && j.error) || `A solicitação falhou (${r.status})`); x.status = r.status; x.data = j; throw x; }
   return j;
 }
 const isAdmin = () => AUTH.mode === 'server' && AUTH.user && AUTH.user.role === 'admin';
@@ -21,11 +21,11 @@ const initials = n => String(n || '?').trim().split(/\s+/).slice(0, 2).map(w => 
 function avatarHTML(u, cls = '') { const n = esc(initials(u && u.name)); return `<span class="avatar ${cls}" aria-hidden="true">${n}${u && u.avatarUrl ? `<img src="${esc(u.avatarUrl)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>`; }
 function userChipHTML() {
   if (AUTH.mode !== 'server' || !AUTH.user) return '';
-  const u = AUTH.user; const sy = { ok: 'Saved', saving: 'Saving…', offline: 'Offline — retrying', conflict: 'Updated' }[AUTH.sync] || '';
-  return `<div class="user-chip"><a class="uc-main" href="#/account" title="Account settings">${avatarHTML(u)}<span class="uc-t"><b>${esc(u.name)}</b><small>${u.role === 'admin' ? 'Administrator' : esc(u.email)}</small></span></a>
-    <button class="btn icon ghost uc-out" data-act="logout" title="Sign out" aria-label="Sign out">${icon('logout')}</button><span class="sync-dot ${AUTH.sync}" title="${sy}" aria-label="${sy}"></span></div>`;
+  const u = AUTH.user; const sy = { ok: 'Salvo', saving: 'Salvando…', offline: 'Offline — tentando novamente', conflict: 'Atualizado' }[AUTH.sync] || '';
+  return `<div class="user-chip"><a class="uc-main" href="#/account" title="Configurações da conta">${avatarHTML(u)}<span class="uc-t"><b>${esc(u.name)}</b><small>${u.role === 'admin' ? 'Administrador' : esc(u.email)}</small></span></a>
+    <button class="btn icon ghost uc-out" data-act="logout" title="Sair" aria-label="Sair">${icon('logout')}</button><span class="sync-dot ${AUTH.sync}" title="${sy}" aria-label="${sy}"></span></div>`;
 }
-function setSync(st) { AUTH.sync = st; const d = $('.sync-dot'); if (d) { d.className = 'sync-dot ' + st; const t = { ok: 'Saved', saving: 'Saving…', offline: 'Offline — retrying', conflict: 'Updated' }[st]; d.title = t; d.setAttribute('aria-label', t); } }
+function setSync(st) { AUTH.sync = st; const d = $('.sync-dot'); if (d) { d.className = 'sync-dot ' + st; const t = { ok: 'Salvo', saving: 'Salvando…', offline: 'Offline — tentando novamente', conflict: 'Atualizado' }[st]; d.title = t; d.setAttribute('aria-label', t); } }
 
 /* ---------- saving to the server ---------- */
 function onStateSaved() { if (AUTH.mode !== 'server' || !AUTH.user || AUTH.booting) return; if (typeof syncOnSave === 'function') syncOnSave(); AUTH.pending = true; setSync('saving'); clearTimeout(AUTH.syncT); AUTH.syncT = setTimeout(pushState, 700); }
@@ -35,8 +35,8 @@ async function pushState() {
   AUTH.inflight = true; AUTH.pending = false;
   try { const r = await api('PUT', '/api/state', { baseRev: AUTH.rev, state: S }); AUTH.rev = r.rev; AUTH.savedAt = r.updatedAt; if (!AUTH.pending) setSync('ok'); }
   catch (e) {
-    if (e.status === 409 && e.data) { AUTH.rev = e.data.rev; AUTH.booting = true; loadState(e.data.state); AUTH.booting = false; applyTheme(); render(); setSync('ok'); toast('Your plan was changed on another device — showing the latest version.'); }
-    else if (e.status === 401) { AUTH.user = null; showAuth('login', { info: 'Your session ended. Sign in again — your latest changes are kept on this device until you do.' }); }
+    if (e.status === 409 && e.data) { AUTH.rev = e.data.rev; AUTH.booting = true; loadState(e.data.state); AUTH.booting = false; applyTheme(); render(); setSync('ok'); toast('Seu plano foi alterado em outro dispositivo — exibindo a versão mais recente.'); }
+    else if (e.status === 401) { AUTH.user = null; showAuth('login', { info: 'Sua sessão terminou. Entre novamente — suas alterações mais recentes ficam salvas neste dispositivo até lá.' }); }
     else { AUTH.pending = true; setSync('offline'); clearTimeout(AUTH.syncT); AUTH.syncT = setTimeout(pushState, 5000); }
   } finally { AUTH.inflight = false; }
 }
@@ -68,7 +68,7 @@ async function startApp() {
     showOnboarding(() => enterApp());
     if (legacy && !(UI.legacyAsked || {})[AUTH.user.id]) {
       UI.legacyAsked = Object.assign({}, UI.legacyAsked, { [AUTH.user.id]: true }); saveUI();
-      confirmBox('Use the plan saved in this browser?', 'This browser has a FORGE 90 plan from before accounts were added. Copy it into your new account instead of starting fresh? (Your weigh-ins, logs, custom foods and recipes come with it.)', 'Use it', () => { try { loadState(JSON.parse(legacy)); S.onboarded = true; saveState(); OB = null; applyTheme(); enterApp(); toast('Plan copied into your account'); } catch (e) { toast('That saved plan couldn’t be read'); } });
+      confirmBox('Usar o plano salvo neste navegador?', 'Este navegador tem um plano do FORGE 90 de antes da criação das contas. Copiar esse plano para sua nova conta em vez de começar do zero? (Pesagens, registros, alimentos e receitas personalizados serão incluídos.)', 'Usar este plano', () => { try { loadState(JSON.parse(legacy)); S.onboarded = true; saveState(); OB = null; applyTheme(); enterApp(); toast('Plano copiado para sua conta'); } catch (e) { toast('Não foi possível ler o plano salvo'); } });
     }
     return;
   }
@@ -77,13 +77,13 @@ async function startApp() {
 function enterApp() { shell(); render(); setSync('ok'); afterStart(); if (typeof syncStart === 'function') syncStart(); if (typeof loadSharedFoods === 'function') loadSharedFoods().then(() => pantryCatchUp()); }
 function afterStart() {
   if (AUTH.mode !== 'server' && typeof pantryCatchUp === 'function') pantryCatchUp();
-  if (S._sharingIntro) { delete S._sharingIntro; saveState(); setTimeout(() => toast(`New: meals from ${fmtDate(nextPlanWeekStart())} on were re-planned to share ingredients (fewer packages to buy). This week and hand-picked meals weren’t touched — see Grocery & prep → Money saver.`), 600); }
+  if (S._sharingIntro) { delete S._sharingIntro; saveState(); setTimeout(() => toast(`Novidade: as refeições a partir de ${fmtDate(nextPlanWeekStart())} foram replanejadas para compartilhar ingredientes e reduzir a quantidade de embalagens. Esta semana e as refeições escolhidas manualmente não foram alteradas — veja Compras e preparo → Economia.`), 600); }
 }
 async function logout() {
   if (AUTH.pending || AUTH.inflight) { clearTimeout(AUTH.syncT); await pushState().catch(() => {}); }
   try { await api('POST', '/api/logout'); } catch (e) { /* ignore */ }
   try { localStorage.removeItem(STORE_KEY); } catch (e) { /* ignore */ }
-  AUTH.user = null; S = null; undoStack.length = 0; STORE_KEY = 'forge90.v1'; showAuth('login', { info: 'You’re signed out.' });
+  AUTH.user = null; S = null; undoStack.length = 0; STORE_KEY = 'forge90.v1'; showAuth('login', { info: 'Você saiu da conta.' });
 }
 
 /* ---------- sign-in, invite, forgot, reset, first sign-in ---------- */
@@ -95,18 +95,18 @@ function pwMeter(pw) {
   const c = AUTH.config || { pwMinLength: 10, pwRequireMix: true }; pw = pw || '';
   let sc = 0; if (pw.length >= c.pwMinLength) sc++; if (pw.length >= c.pwMinLength + 4) sc++; if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) sc++; if (/\d/.test(pw) && /[^A-Za-z0-9]/.test(pw)) sc++;
   if (pw.length < c.pwMinLength) sc = Math.min(sc, 1);
-  const lbl = ['Too short', 'Weak', 'OK', 'Good', 'Strong'][sc];
-  const rules = [[pw.length >= c.pwMinLength, `${c.pwMinLength}+ characters`]].concat(c.pwRequireMix ? [[/[A-Za-z]/.test(pw) && /[^A-Za-z]/.test(pw), 'letters + a number or symbol']] : []);
+  const lbl = ['Muito curta', 'Fraca', 'OK', 'Boa', 'Forte'][sc];
+  const rules = [[pw.length >= c.pwMinLength, `${c.pwMinLength}+ caracteres`]].concat(c.pwRequireMix ? [[/[A-Za-z]/.test(pw) && /[^A-Za-z]/.test(pw), 'letras + um número ou símbolo']] : []);
   return `<div class="pw-meter s${sc}" aria-live="polite"><i></i><i></i><i></i><i></i><span>${pw ? lbl : ''}</span></div><div class="pw-rules">${rules.map(([ok, t]) => `<span class="${ok ? 'ok' : ''}">${icon(ok ? 'check' : 'x')}${t}</span>`).join('')}</div>`;
 }
-const pwField = (name, label, auto, extra = '') => `<div class="field"><label for="af-${name}">${label}</label><div class="pw-wrap"><input class="inp" id="af-${name}" name="${name}" type="password" autocomplete="${auto}" required ${extra}><button type="button" class="pw-eye" data-act="pw-eye" aria-label="Show password" tabindex="-1">${icon('eye')}</button></div></div>`;
+const pwField = (name, label, auto, extra = '') => `<div class="field"><label for="af-${name}">${label}</label><div class="pw-wrap"><input class="inp" id="af-${name}" name="${name}" type="password" autocomplete="${auto}" required ${extra}><button type="button" class="pw-eye" data-act="pw-eye" aria-label="Mostrar senha" tabindex="-1">${icon('eye')}</button></div></div>`;
 function showAuth(screen, opts = {}) {
   AS = Object.assign({ screen }, opts); closeModal();
   if (!$('#auth')) {
     document.body.className = 'auth-page'; bgCurrent = null;
-    document.body.innerHTML = `<div class="auth-split"><section class="auth-hero" aria-label="A personal trainer coaching a man through a push-up"><div class="auth-photo" style="background-image:url('${AUTH_PHOTO.url}'), ${AUTH_PHOTO.fallback}"></div>
-        <div class="auth-hero-copy"><div class="auth-brand">${LOGO}<b class="wm">FORGE<em>90</em></b></div><p>Your training plan, meals, groceries and progress — in one place.</p></div>
-        <a class="auth-credit" href="${AUTH_PHOTO.page}" target="_blank" rel="noopener noreferrer">Photo · ${AUTH_PHOTO.who} / Unsplash</a></section>
+    document.body.innerHTML = `<div class="auth-split"><section class="auth-hero" aria-label="Um personal trainer orientando um homem durante uma flexão"><div class="auth-photo" style="background-image:url('${AUTH_PHOTO.url}'), ${AUTH_PHOTO.fallback}"></div>
+        <div class="auth-hero-copy"><div class="auth-brand">${LOGO}<b class="wm">FORGE<em>90</em></b></div><p>Seu treino, refeições, compras e progresso — tudo em um só lugar.</p></div>
+        <a class="auth-credit" href="${AUTH_PHOTO.page}" target="_blank" rel="noopener noreferrer">Foto · ${AUTH_PHOTO.who} / Unsplash</a></section>
       <main id="auth" class="auth-wrap"></main></div><div id="tip"></div><div id="toast"></div>`;
   }
   document.body.dataset.sec = 'auth'; applyTheme();
@@ -116,32 +116,32 @@ function showAuth(screen, opts = {}) {
 function renderAuth() {
   const c = AUTH.config || {}; const s = AS; const msg = s.error ? `<div class="auth-msg err" role="alert">${icon('info')}<span>${esc(s.error)}</span></div>` : s.info ? `<div class="auth-msg" role="status">${icon('info')}<span>${esc(s.info)}</span></div>` : '';
   let body = '';
-  if (s.screen === 'login') body = `<h1>Welcome back</h1><p class="sub">Sign in to your plan.</p>${msg}
+  if (s.screen === 'login') body = `<h1>Bem-vindo de volta</h1><p class="sub">Entre para acessar seu plano.</p>${msg}
     <form data-form="auth-login" class="auth-form" novalidate>
-      <div class="field"><label for="af-email">Email</label><input class="inp" id="af-email" name="email" type="email" autocomplete="username" required value="${esc(s.email || '')}"></div>
-      ${pwField('password', 'Password', 'current-password')}
-      <div class="row" style="justify-content:space-between;gap:10px"><label class="small chk"><input type="checkbox" name="remember" ${s.remember !== false ? 'checked' : ''}> Keep me signed in for ${c.rememberDays || 30} days</label><a href="#" data-act="auth-go" data-v="forgot" class="small">Forgot password?</a></div>
-      ${s.locked ? `<button type="button" class="btn" data-act="auth-go" data-v="forgot">${icon('mail')}Email me a reset link</button>` : ''}
-      <button class="btn primary big" type="submit">Sign in</button></form>
-    <div class="auth-foot">New here? FORGE 90 accounts are by invitation — ask your administrator to send you an invite.</div>`;
-  else if (s.screen === 'invite') body = s.checking ? `<h1>Checking your invite…</h1><div class="auth-spin"></div>` : s.expired
+      <div class="field"><label for="af-email">E-mail</label><input class="inp" id="af-email" name="email" type="email" autocomplete="username" required value="${esc(s.email || '')}"></div>
+      ${pwField('password', 'Senha', 'current-password')}
+      <div class="row" style="justify-content:space-between;gap:10px"><label class="small chk"><input type="checkbox" name="remember" ${s.remember !== false ? 'checked' : ''}> Manter conectado por ${c.rememberDays || 30} dias</label><a href="#" data-act="auth-go" data-v="forgot" class="small">Esqueceu a senha?</a></div>
+      ${s.locked ? `<button type="button" class="btn" data-act="auth-go" data-v="forgot">${icon('mail')}Enviar link de redefinição por e-mail</button>` : ''}
+      <button class="btn primary big" type="submit">Entrar</button></form>
+    <div class="auth-foot">Primeira vez aqui? As contas do FORGE 90 são criadas por convite — peça ao administrador para enviar um convite.</div>`;
+  else if (s.screen === 'invite') body = s.checking ? `<h1>Verificando seu convite…</h1><div class="auth-spin"></div>` : s.expired
     ? `<div class="auth-ic warn">${icon('clock')}</div><h1>Este convite expirou</h1><p class="sub">Os convites funcionam por ${c.inviteDays || 7} dias e apenas uma vez. Peça ao administrador do FORGE 90 para enviar um novo.</p>${msg}<div class="auth-foot"><a href="#" data-act="auth-go" data-v="login">${icon('left')}Voltar para o login</a></div>`
     : `<div class="auth-ic">${icon('mail')}</div><h1>Entrar no FORGE 90</h1><p class="sub"><b>${esc(s.invitedBy || 'Um administrador')}</b> convidou você${s.role === 'admin' ? ' como <b>administrador</b>' : ''}. Escolha uma senha e responda algumas perguntas rápidas para configurar seu plano.</p>${msg}
       <form data-form="auth-invite" class="auth-form" novalidate>
-      <div class="field"><label for="af-email">Email</label><input class="inp" id="af-email" name="email" type="email" autocomplete="username" value="${esc(s.inviteEmail || '')}" readonly><span class="tiny muted">Você entrará usando este endereço.</span></div>
-      ${pwField('password', 'Password', 'new-password', 'data-meter="1"')}<div id="af-meter">${pwMeter('')}</div>
+      <div class="field"><label for="af-email">E-mail</label><input class="inp" id="af-email" name="email" type="email" autocomplete="username" value="${esc(s.inviteEmail || '')}" readonly><span class="tiny muted">Você entrará usando este endereço.</span></div>
+      ${pwField('password', 'Senha', 'new-password', 'data-meter="1"')}<div id="af-meter">${pwMeter('')}</div>
       ${pwField('confirm', 'Confirmar senha', 'new-password')}
-      <label class="small chk"><input type="checkbox" name="remember" checked> Keep me signed in for ${c.rememberDays || 30} days</label>
-      <button class="btn primary big" type="submit">Create my account</button></form>
-      <div class="auth-foot">Invite expires ${s.expiresAt ? esc(new Date(s.expiresAt).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) : 'in ' + (c.inviteDays || 7) + ' dias'}. Already have an account? <a href="#" data-act="auth-go" data-v="login">Sign in</a></div>`;
-  else if (s.screen === 'forgot') body = `<h1>Reset your password</h1><p class="sub">Enter the email you sign in with and we’ll send you a link to choose a new password. The link works for ${c.resetMinutes || 30} minutes.</p>${msg}
-    <form data-form="auth-forgot" class="auth-form" novalidate><div class="field"><label for="af-email">Email</label><input class="inp" id="af-email" name="email" type="email" autocomplete="username" required value="${esc(s.email || '')}"></div>
-      <button class="btn primary big" type="submit">${icon('mail')}Send reset link</button></form>
+      <label class="small chk"><input type="checkbox" name="remember" checked> Manter conectado por ${c.rememberDays || 30} dias</label>
+      <button class="btn primary big" type="submit">Criar minha conta</button></form>
+      <div class="auth-foot">O convite expira ${s.expiresAt ? esc(new Date(s.expiresAt).toLocaleString('pt-BR', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) : 'em ' + (c.inviteDays || 7) + ' dias'}. Já tem uma conta? <a href="#" data-act="auth-go" data-v="login">Entrar</a></div>`;
+  else if (s.screen === 'forgot') body = `<h1>Redefinir sua senha</h1><p class="sub">Informe o e-mail usado para entrar e enviaremos um link para escolher uma nova senha. O link funciona por ${c.resetMinutes || 30} minutos.</p>${msg}
+    <form data-form="auth-forgot" class="auth-form" novalidate><div class="field"><label for="af-email">E-mail</label><input class="inp" id="af-email" name="email" type="email" autocomplete="username" required value="${esc(s.email || '')}"></div>
+      <button class="btn primary big" type="submit">${icon('mail')}Enviar link de redefinição</button></form>
     <div class="auth-foot"><a href="#" data-act="auth-go" data-v="login">${icon('left')}Voltar para o login</a></div>`;
   else if (s.screen === 'sent') body = `<div class="auth-ic">${icon('mail')}</div><h1>Verifique seu e-mail</h1><p class="sub">Se existir uma conta para <b>${esc(s.email)}</b>, um link de redefinição está a caminho. Ele expira em <b>${c.resetMinutes || 30} minutos</b> e funciona uma vez.</p>
     <div class="auth-msg">${icon('info')}<span>Nada depois de alguns minutos? Verifique o spam ou peça ao administrador para enviar pelo menu Admin → Usuários.</span></div>
     <div class="auth-foot"><a href="#" data-act="auth-go" data-v="login">${icon('left')}Voltar para o login</a></div>`;
-  else if (s.screen === 'reset') body = s.checking ? `<h1>Checking your link…</h1><div class="auth-spin"></div>` : s.expired
+  else if (s.screen === 'reset') body = s.checking ? `<h1>Verificando seu link…</h1><div class="auth-spin"></div>` : s.expired
     ? `<div class="auth-ic warn">${icon('clock')}</div><h1>Este link expirou</h1><p class="sub">Os links de redefinição funcionam por ${c.resetMinutes || 30} minutos e apenas uma vez. Solicite um novo abaixo.</p>${msg}<button class="btn primary big" data-act="auth-go" data-v="forgot" style="width:100%">Enviar novo link</button><div class="auth-foot"><a href="#" data-act="auth-go" data-v="login">Voltar para o login</a></div>`
     : `<h1>Escolha uma nova senha</h1><p class="sub">Para <b>${esc(s.maskedEmail || '')}</b>. <span class="reset-timer" data-exp="${s.expiresAt || 0}"></span></p>${msg}
       <form data-form="auth-reset" class="auth-form" novalidate>${pwField('password', 'Nova senha', 'new-password', 'data-meter="1"')}<div id="af-meter">${pwMeter('')}</div>${pwField('confirm', 'Confirmar nova senha', 'new-password')}
@@ -149,7 +149,7 @@ function renderAuth() {
   else if (s.screen === 'first') { const u = AUTH.user || {}; const adminDefault = /@forge90\.local$/.test(u.email || '');
     body = `<div class="auth-ic">${icon('key')}</div><h1>${u.role === 'admin' && adminDefault ? 'Configurar a conta de administrador' : 'Escolha uma nova senha'}</h1><p class="sub">${u.role === 'admin' && adminDefault ? 'Você entrou com a senha padrão de administrador. Escolha uma senha própria e use um e-mail válido para receber mensagens de redefinição de senha.' : 'Um administrador definiu uma senha temporária para você. Escolha uma senha própria para continuar.'}</p>${msg}
     <form data-form="auth-first" class="auth-form" novalidate>
-      ${adminDefault ? `<div class="field"><label for="af-email">Email</label><input class="inp" id="af-email" name="email" type="email" required value="${esc(u.email || '')}"><span class="tiny muted">Used for sign-in and password resets.</span></div>` : ''}
+      ${adminDefault ? `<div class="field"><label for="af-email">E-mail</label><input class="inp" id="af-email" name="email" type="email" required value="${esc(u.email || '')}"><span class="tiny muted">Usado para login e redefinição de senha.</span></div>` : ''}
       ${AUTH.lastPw ? '' : pwField('current', 'Senha atual (temporária)', 'current-password')}
       ${pwField('password', 'Nova senha', 'new-password', 'data-meter="1"')}<div id="af-meter">${pwMeter('')}</div>${pwField('confirm', 'Confirmar nova senha', 'new-password')}
       <button class="btn primary big" type="submit">Salvar e continuar</button></form><div class="auth-foot"><a href="#" data-act="logout">Sair</a></div>`; }
@@ -163,7 +163,7 @@ function renderAuth() {
 function resetTimer() {
   clearInterval(resetTimer.t); const el = $('.reset-timer'); if (!el) return;
   if (!+el.dataset.exp) return;
-  const tick = () => { const ms = +el.dataset.exp - Date.now(); if (ms <= 0) { clearInterval(resetTimer.t); AS.expired = true; AS.error = null; renderAuth(); return; } const m = Math.floor(ms / 60000), s = Math.floor(ms / 1000) % 60; el.textContent = `Link expires in ${m}:${String(s).padStart(2, '0')}.`; };
+  const tick = () => { const ms = +el.dataset.exp - Date.now(); if (ms <= 0) { clearInterval(resetTimer.t); AS.expired = true; AS.error = null; renderAuth(); return; } const m = Math.floor(ms / 60000), s = Math.floor(ms / 1000) % 60; el.textContent = `O link expira em ${m}:${String(s).padStart(2, '0')}.`; };
   tick(); resetTimer.t = setInterval(tick, 1000);
 }
 async function checkResetToken() {
@@ -174,7 +174,7 @@ async function checkResetToken() {
 }
 async function checkInvite() {
   try { const r = await api('GET', '/api/invite/' + encodeURIComponent(AS.token)); Object.assign(AS, { checking: false, expired: false, inviteEmail: r.email, name: AS.name || r.name, role: r.role, invitedBy: r.invitedBy, expiresAt: r.expiresAt });
-    if (r.exists) Object.assign(AS, { error: 'An account already exists for this email. Sign in instead, or use “Forgot password”.' }); }
+    if (r.exists) Object.assign(AS, { error: 'Já existe uma conta com este e-mail. Entre na conta ou use “Esqueceu a senha?”.' }); }
   catch (e) { Object.assign(AS, { checking: false, expired: true, error: e.status === 410 ? null : e.message }); }
   renderAuth();
 }
@@ -182,17 +182,17 @@ function authBusy(form, on) { const b = form.querySelector('button[type=submit]'
 async function authSubmit(form) {
   const fd = Object.fromEntries(new FormData(form)); const kind = form.dataset.form.slice(5);
   const bad = m => { AS.error = m; AS.info = null; AS.noFocus = true; Object.assign(AS, { email: fd.email || AS.email, name: fd.name || AS.name }); renderAuth(); AS.noFocus = false; };
-  if ((kind === 'invite' || kind === 'reset' || kind === 'first') && fd.password !== fd.confirm) return bad('The two passwords don’t match.');
-  if ((kind === 'login' || kind === 'forgot') && !/^\S+@\S+\.\S+$/.test(fd.email || '')) return bad('Enter a valid email address.');
+  if ((kind === 'invite' || kind === 'reset' || kind === 'first') && fd.password !== fd.confirm) return bad('As duas senhas não coincidem.');
+  if ((kind === 'login' || kind === 'forgot') && !/^\S+@\S+\.\S+$/.test(fd.email || '')) return bad('Informe um endereço de e-mail válido.');
   authBusy(form, true);
   try {
     if (kind === 'login') { const r = await api('POST', '/api/login', { email: fd.email, password: fd.password, remember: !!fd.remember }); AUTH.user = r.user; AUTH.lastPw = r.user.mustChange ? fd.password : null; if (r.user.mustChange) return showAuth('first'); return startApp(); }
     if (kind === 'invite') { const r = await api('POST', '/api/invite/accept', { token: AS.token, password: fd.password, remember: !!fd.remember }); history.replaceState(null, '', '/'); AUTH.user = r.user; return startApp(); }
     if (kind === 'forgot') { await api('POST', '/api/forgot', { email: fd.email }); return showAuth('sent', { email: fd.email }); }
-    if (kind === 'reset') { const r = await api('POST', '/api/reset', { token: AS.token, password: fd.password }); history.replaceState(null, '', '/'); if (r.user) { AUTH.user = r.user; toast('Password saved — you’re signed in'); return startApp(); } return showAuth('login', { info: 'Password saved. Sign in with your new password.' }); }
+    if (kind === 'reset') { const r = await api('POST', '/api/reset', { token: AS.token, password: fd.password }); history.replaceState(null, '', '/'); if (r.user) { AUTH.user = r.user; toast('Senha salva — você entrou na conta'); return startApp(); } return showAuth('login', { info: 'Senha salva. Entre usando sua nova senha.' }); }
     if (kind === 'first') {
       if (fd.email != null) { const r = await api('PATCH', '/api/account', { email: fd.email }); AUTH.user = r.user; }
-      const r = await api('POST', '/api/account/password', { current: AUTH.lastPw || fd.current, next: fd.password }); AUTH.user = r.user; AUTH.lastPw = null; toast('Password saved'); return startApp();
+      const r = await api('POST', '/api/account/password', { current: AUTH.lastPw || fd.current, next: fd.password }); AUTH.user = r.user; AUTH.lastPw = null; toast('Senha salva'); return startApp();
     }
   } catch (e) {
     authBusy(form, false);
@@ -206,7 +206,7 @@ document.addEventListener('input', e => { const t = e.target; if (t.dataset && t
 Object.assign(ACT, {
   'auth-go': el => { const v = el.dataset.v; const em = ($('#auth input[name="email"]') || {}).value; if (location.pathname !== '/') history.replaceState(null, '', '/'); showAuth(v, { email: em || AS.email || AS.inviteEmail }); },
   'auth-retry': () => { location.reload(); },
-  'pw-eye': el => { const i = el.parentElement.querySelector('input'); const show = i.type === 'password'; i.type = show ? 'text' : 'password'; el.innerHTML = icon(show ? 'eyeOff' : 'eye'); el.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); },
+  'pw-eye': el => { const i = el.parentElement.querySelector('input'); const show = i.type === 'password'; i.type = show ? 'text' : 'password'; el.innerHTML = icon(show ? 'eyeOff' : 'eye'); el.setAttribute('aria-label', show ? 'Ocultar senha' : 'Mostrar senha'); },
   logout: () => logout()
 });
 
@@ -235,7 +235,7 @@ function accountHTML(d) {
       <button class="btn sm ${s.current ? 'ghost' : ''}" data-act="acc-revoke" data-id="${s.id}" data-self="${s.current ? 1 : 0}">${s.current ? 'Sign out' : 'Sign out device'}</button></div>`).join('');
   const events = d.events.map(e => `<div class="ev-row"><span class="ev-dot ${EV_BAD.test(e.type) ? 'bad' : ''}"></span><div style="flex:1;min-width:0"><b>${esc(EV[e.type] || e.type)}</b>${e.detail ? `<span class="tiny muted"> · ${esc(e.detail)}</span>` : ''}<div class="tiny muted">${when(e.t)}${e.ip ? ' · IP ' + esc(e.ip) : ''}</div></div></div>`).join('') || '<div class="muted small">No activity yet.</div>';
   return `<div class="grid g2">
-    <div class="card"><div class="card-h"><h2>${icon('user')}Profile</h2>${u.owner ? '<span class="pill own">Owner</span>' : ''}<span class="pill ${u.role === 'admin' ? 'acc' : ''}">${u.role === 'admin' ? 'Administrator' : 'Member'}</span></div>
+    <div class="card"><div class="card-h"><h2>${icon('user')}Profile</h2>${u.owner ? '<span class="pill own">Owner</span>' : ''}<span class="pill ${u.role === 'admin' ? 'acc' : ''}">${u.role === 'admin' ? 'Administrador' : 'Member'}</span></div>
       <div class="acc-id"><div class="acc-pic">${avatarHTML(u, 'xl')}<div class="acc-pic-acts"><label class="btn sm">${icon('upload')}${u.avatarUrl ? 'Change photo' : 'Enviar foto'}<input type="file" accept="image/*" data-input="avatar" hidden></label>${u.avatarUrl ? `<button type="button" class="btn sm ghost" data-act="avatar-rm">Remove</button>` : ''}</div></div><div><b>${esc(u.name)}</b>${u.firstName || u.lastName ? `<div class="small">${esc([u.firstName, u.lastName].filter(Boolean).join(' '))}</div>` : ''}<div class="small muted">${esc(u.email)}</div><div class="tiny muted">Member since ${new Date(u.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</div></div></div>
       <form data-form="acc-profile" class="grid" style="gap:12px;margin-top:14px">
         <div class="grid g2" style="gap:12px"><div class="field"><label>First name</label><input class="inp" name="firstName" value="${esc(u.firstName || '')}" maxlength="40" autocomplete="given-name"></div><div class="field"><label>Last name</label><input class="inp" name="lastName" value="${esc(u.lastName || '')}" maxlength="40" autocomplete="family-name"></div></div>
@@ -268,21 +268,21 @@ async function accSubmit(form) {
   const fd = Object.fromEntries(new FormData(form)); const b = form.querySelector('button[type=submit]'); b.disabled = true;
   try {
     if (form.dataset.form === 'acc-profile') { const r = await api('PATCH', '/api/account', { name: fd.name, firstName: fd.firstName, lastName: fd.lastName, email: fd.email, currentPassword: fd.currentPassword }); AUTH.user = r.user; toast('Perfil salvo'); sideFoot(); }
-    else { if (fd.password !== fd.confirm) throw new Error('The two new passwords don’t match.'); const r = await api('POST', '/api/account/password', { current: fd.current, next: fd.password }); AUTH.user = r.user; toast(`Password changed${r.signedOut ? ` — ${r.signedOut} other device${r.signedOut === 1 ? '' : 's'} signed out` : ''}`); }
+    else { if (fd.password !== fd.confirm) throw new Error('As duas novas senhas não coincidem.'); const r = await api('POST', '/api/account/password', { current: fd.current, next: fd.password }); AUTH.user = r.user; toast(`Senha alterada${r.signedOut ? ` — ${r.signedOut} other device${r.signedOut === 1 ? '' : 's'} signed out` : ''}`); }
     await accountAfter();
   } catch (e) { toast(e.message); b.disabled = false; }
 }
 document.addEventListener('submit', e => { const f = e.target; if (f.dataset && /^acc-/.test(f.dataset.form || '')) { e.preventDefault(); accSubmit(f); } });
 document.addEventListener('input', e => { const t = e.target; if (t.dataset && t.dataset.input === 'acc-email') { const c = $('#acc-cur'); if (c) c.classList.toggle('hidden', t.value.trim().toLowerCase() === (AUTH.user.email || '')); } });
-document.addEventListener('change', async e => { const t = e.target; if (t.dataset && t.dataset.input === 'acc-notify') { try { const r = await api('PATCH', '/api/account', { notify: { passwordChange: t.checked } }); AUTH.user = r.user; toast(t.checked ? 'You’ll get an email when your password changes' : 'Password-change emails turned off'); } catch (x) { toast(x.message); t.checked = !t.checked; } } });
+document.addEventListener('change', async e => { const t = e.target; if (t.dataset && t.dataset.input === 'acc-notify') { try { const r = await api('PATCH', '/api/account', { notify: { passwordChange: t.checked } }); AUTH.user = r.user; toast(t.checked ? 'Você receberá um e-mail quando sua senha for alterada' : 'E-mails sobre alteração de senha desativados'); } catch (x) { toast(x.message); t.checked = !t.checked; } } });
 Object.assign(ACT, {
-  'acc-revoke': async el => { const self = el.dataset.self === '1'; const go = async () => { try { await api('DELETE', '/api/account/sessions/' + el.dataset.id); if (self) { AUTH.user = null; return showAuth('login', { info: 'You’re signed out.' }); } toast('Device signed out'); accountAfter(); } catch (e) { toast(e.message); } }; if (self) logout(); else go(); },
-  'acc-revoke-others': () => confirmBox('Sign out other devices?', 'Every other browser signed in to your account will need to sign in again.', 'Sign them out', async () => { try { const r = await api('POST', '/api/account/sessions/revoke-others'); toast(`${r.revoked} dispositivo${r.revoked === 1 ? '' : 's'} desconectado${r.revoked === 1 ? '' : 's'}`); accountAfter(); } catch (e) { toast(e.message); } }),
+  'acc-revoke': async el => { const self = el.dataset.self === '1'; const go = async () => { try { await api('DELETE', '/api/account/sessions/' + el.dataset.id); if (self) { AUTH.user = null; return showAuth('login', { info: 'Você saiu da conta.' }); } toast('Dispositivo desconectado'); accountAfter(); } catch (e) { toast(e.message); } }; if (self) logout(); else go(); },
+  'acc-revoke-others': () => confirmBox('Desconectar outros dispositivos?', 'Todos os outros navegadores conectados à sua conta precisarão entrar novamente.', 'Desconectar', async () => { try { const r = await api('POST', '/api/account/sessions/revoke-others'); toast(`${r.revoked} dispositivo${r.revoked === 1 ? '' : 's'} desconectado${r.revoked === 1 ? '' : 's'}`); accountAfter(); } catch (e) { toast(e.message); } }),
   'acc-delete': () => { modal(`<h2>Delete your account?</h2><p class="sub small">This permanently deletes <b>${esc(AUTH.user.email)}</b> with its plan, weigh-ins, logs, custom foods and recipes. Export a backup first if you want to keep anything.</p>
-      <form data-form="acc-del" style="margin-top:12px">${pwField('password', 'Your password', 'current-password')}<div class="row" style="justify-content:flex-end;margin-top:14px"><button type="button" class="btn" data-act="close-modal">Cancel</button><button class="btn danger" type="submit">${icon('trash')}Delete forever</button></div></form>`, 'sm'); }
+      <form data-form="acc-del" style="margin-top:12px">${pwField('password', 'Sua senha', 'current-password')}<div class="row" style="justify-content:flex-end;margin-top:14px"><button type="button" class="btn" data-act="close-modal">Cancel</button><button class="btn danger" type="submit">${icon('trash')}Delete forever</button></div></form>`, 'sm'); }
 });
 document.addEventListener('submit', async e => { const f = e.target; if (!f.dataset || f.dataset.form !== 'acc-del') return; e.preventDefault();
-  try { await api('DELETE', '/api/account', { password: new FormData(f).get('password') }); try { localStorage.removeItem(STORE_KEY); } catch (x) { /* ignore */ } AUTH.user = null; S = null; showAuth('login', { info: 'Your account was deleted.' }); } catch (x) { toast(x.message); } });
+  try { await api('DELETE', '/api/account', { password: new FormData(f).get('password') }); try { localStorage.removeItem(STORE_KEY); } catch (x) { /* ignore */ } AUTH.user = null; S = null; showAuth('login', { info: 'Sua conta foi excluída.' }); } catch (x) { toast(x.message); } });
 
 /* ---------- admin console (#/admin) ---------- */
 const ADM = { tab: 'overview', users: null, invites: null, settings: null, stats: null, audit: null, q: '', filter: 'all', evType: '', evUser: '' };
@@ -450,7 +450,7 @@ function admUserModal(id) {
   const noAdminAct = !iAmOwner && u.role === 'admin';        // only the owner changes another admin's access
   const why = locked ? ' disabled title="Somente o proprietário pode alterar a conta do proprietário"' : '';
   const whyAdm = noAdminAct ? ' disabled title="Somente o proprietário pode alterar o acesso de um administrador"' : '';
-  modal(`<div class="adm-user-modal"><div class="row" style="align-items:flex-start">${avatarHTML(u, 'lg')}<div style="flex:1;min-width:0"><h2>${esc(u.name)}${me ? ' <span class="pill">You</span>' : ''}</h2><div class="small muted">${esc(u.email)}</div><div class="row wrap" style="gap:6px;margin-top:6px">${u.owner ? '<span class="pill own">Owner</span>' : ''}<span class="pill ${u.role === 'admin' ? 'acc' : ''}">${u.role === 'admin' ? 'Administrator' : 'Member'}</span>${statusPill(u)}</div></div><button class="btn icon ghost" data-act="close-modal">${icon('x')}</button></div>
+  modal(`<div class="adm-user-modal"><div class="row" style="align-items:flex-start">${avatarHTML(u, 'lg')}<div style="flex:1;min-width:0"><h2>${esc(u.name)}${me ? ' <span class="pill">You</span>' : ''}</h2><div class="small muted">${esc(u.email)}</div><div class="row wrap" style="gap:6px;margin-top:6px">${u.owner ? '<span class="pill own">Owner</span>' : ''}<span class="pill ${u.role === 'admin' ? 'acc' : ''}">${u.role === 'admin' ? 'Administrador' : 'Member'}</span>${statusPill(u)}</div></div><button class="btn icon ghost" data-act="close-modal">${icon('x')}</button></div>
     <div class="grid g3 adm-info">${info.map(([k, v]) => `<div><span class="tiny muted">${k}</span><b class="small">${v}</b></div>`).join('')}</div>
     ${locked ? `<div class="note" style="margin-top:12px">${icon('shield')}<span>This is the owner account — the person who set the server up. Only they can change it.</span></div>` : ''}
     <h3>Access</h3><div class="adm-acts">

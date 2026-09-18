@@ -4,7 +4,7 @@
    First-run questionnaire (#onb) — shown once, the first time someone opens their plan
    ================================================================ */
 const ACTIVITY_LEVELS = [[1.3, 'Sedentário', 'Trabalho sentado, menos de 5 mil passos por dia'], [1.4, 'Levemente ativo', 'Trabalho sentado e 5–8 mil passos'], [1.5, 'Moderadamente ativo', '8–12 mil passos ou trabalho com alguma caminhada'], [1.6, 'Muito ativo', 'Em pé a maior parte do dia, mais de 12 mil passos']];
-const OB_STEPS = ['About you', 'Your body', 'Your goal', 'Meal planning'];
+const OB_STEPS = ['Sobre você', 'Seu corpo', 'Seu objetivo', 'Planejamento de refeições'];
 let OB = null;
 const kg = (value, digits = 1) => fmt(value, digits);
 // Deurenberg (1991): body fat % from BMI, age and sex (1 = male, 0 = female)
@@ -24,10 +24,10 @@ function showOnboarding(done) {
     w: '', bf: '', hCm: '', sex: '', age: '', goal: '', rate: 0.5, mode: 'cut', bulkPct: 0.35, activity: 1.4, share: true };
   document.body.className = 'auth-page onb-page'; bgCurrent = null; document.body.dataset.sec = 'auth';
   document.body.innerHTML = `<div class="auth-split"><section class="auth-hero" aria-hidden="true"><div class="auth-photo" style="background-image:url('${AUTH_PHOTO.url}'), ${AUTH_PHOTO.fallback}"></div>
-      <div class="auth-hero-copy"><div class="auth-brand">${LOGO}<b class="wm">FORGE<em>90</em></b></div><p>A few questions and your training plan, calorie targets and meals are built around you.</p></div>
-      <a class="auth-credit" href="${AUTH_PHOTO.page}" target="_blank" rel="noopener noreferrer">Photo · ${AUTH_PHOTO.who} / Unsplash</a></section>
+      <div class="auth-hero-copy"><div class="auth-brand">${LOGO}<b class="wm">FORGE<em>90</em></b></div><p>Algumas perguntas e seu treino, metas de calorias e refeições serão montados para você.</p></div>
+      <a class="auth-credit" href="${AUTH_PHOTO.page}" target="_blank" rel="noopener noreferrer">Foto · ${AUTH_PHOTO.who} / Unsplash</a></section>
     <main id="onb" class="auth-wrap"></main></div><div id="tip"></div><div id="toast"></div>`;
-  applyTheme(); document.title = appTitle() + ' · Welcome'; renderOnboarding();
+  applyTheme(); document.title = appTitle() + ' · Bem-vindo'; renderOnboarding();
 }
 function obApplyDraft() {           // live preview uses the real engine, so push the answers into settings (saved only on finish)
   const st = S.settings; const w = obNum(OB.w), bf = obBF(), g = obNum(OB.goal);
@@ -46,12 +46,12 @@ function obSummaryHTML() {
 function renderOnboarding() {
   const s = OB; const el = $('#onb'); if (!el) return;
   const msg = s.error ? `<div class="auth-msg err" role="alert">${icon('info')}<span>${esc(s.error)}</span></div>` : '';
-  const dots = `<div class="onb-steps" aria-label="Step ${s.step + 1} of ${OB_STEPS.length}">${OB_STEPS.map((l, i) => `<span class="${i < s.step ? 'done' : i === s.step ? 'on' : ''}"><i>${i < s.step ? icon('check') : i + 1}</i><em>${l}</em></span>`).join('')}</div>`;
+  const dots = `<div class="onb-steps" aria-label="Etapa ${s.step + 1} de ${OB_STEPS.length}">${OB_STEPS.map((l, i) => `<span class="${i < s.step ? 'done' : i === s.step ? 'on' : ''}"><i>${i < s.step ? icon('check') : i + 1}</i><em>${l}</em></span>`).join('')}</div>`;
   const fld = (label, name, val, attrs = '', hint = '') => `<div class="field"><label for="ob-${name}">${label}</label><input class="inp" id="ob-${name}" name="${name}" value="${esc(val)}" ${attrs}>${hint ? `<span class="tiny muted">${hint}</span>` : ''}</div>`;
   let body = '';
-  if (s.step === 0) body = `<h1>Welcome${s.first ? ', ' + esc(s.first) : ''}!</h1><p class="sub">Let’s set up your plan. It takes about a minute, and you can change any of this later in Settings.</p>${msg}
-    <div class="grid g2" style="gap:12px">${fld('First name', 'first', s.first, 'autocomplete="given-name" maxlength="40" required')}${fld('Last name', 'last', s.last, 'autocomplete="family-name" maxlength="40" required')}</div>
-    ${fld('Nickname', 'nick', s.nick, 'autocomplete="nickname" maxlength="40" required', 'Your display name — shown in the app and to anyone you sync meal plans with.')}`;
+  if (s.step === 0) body = `<h1>Bem-vindo${s.first ? ', ' + esc(s.first) : ''}!</h1><p class="sub">Vamos configurar seu plano. Leva cerca de um minuto, e você pode alterar tudo depois em Configurações.</p>${msg}
+    <div class="grid g2" style="gap:12px">${fld('Nome', 'first', s.first, 'autocomplete="given-name" maxlength="40" required')}${fld('Sobrenome', 'last', s.last, 'autocomplete="family-name" maxlength="40" required')}</div>
+    ${fld('Apelido', 'nick', s.nick, 'autocomplete="nickname" maxlength="40" required', 'Seu nome de exibição — mostrado no aplicativo e para quem sincronizar planos de refeição com você.')}`;
   if (s.step === 1) { const est = obEstimated(); const bf = obBF();
     body = `<h1>Seu corpo hoje</h1><p class="sub">Suas metas de calorias e proteína são calculadas a partir do seu peso e massa magra.</p>${msg}
     <div class="grid g2" style="gap:12px">${fld('Peso atual (kg)', 'w', s.w, 'type="number" inputmode="decimal" step="0.1" min="30" max="320" required')}
@@ -67,8 +67,8 @@ function renderOnboarding() {
       : gk === 'maintain' ? 'O FORGE 90 mantém suas calorias de manutenção enquanto você treina.'
       : 'O FORGE 90 planeja um déficit constante, com proteína suficiente para preservar sua massa muscular.';
     const rateCtl = gk === 'maintain' ? ''
-      : gk === 'bulk' ? `<div class="field" style="margin-top:12px"><label>Weekly gain: <b id="ob-rate-v">${fmt(+s.bulkPct, 2)} % of body weight</b></label><input type="range" name="bulkPct" min="0.15" max="0.6" step="0.05" value="${s.bulkPct}" aria-label="Weekly gain, percent of body weight">
-        <div class="row" style="justify-content:space-between"><span class="tiny muted">0.15</span><span class="tiny muted">0.35</span><span class="tiny muted">0.6 %/wk</span></div></div>`
+      : gk === 'bulk' ? `<div class="field" style="margin-top:12px"><label>Ganho semanal: <b id="ob-rate-v">${fmt(+s.bulkPct, 2)}% do peso corporal</b></label><input type="range" name="bulkPct" min="0.15" max="0.6" step="0.05" value="${s.bulkPct}" aria-label="Ganho semanal em porcentagem do peso corporal">
+        <div class="row" style="justify-content:space-between"><span class="tiny muted">0.15</span><span class="tiny muted">0.35</span><span class="tiny muted">0,6%/sem.</span></div></div>`
       : `<div class="field" style="margin-top:12px"><label>Ritmo de perda: <b id="ob-rate-v">${fmt(+s.rate, 2)} kg / semana</b></label><input type="range" name="rate" min="0.1" max="1" step="0.05" value="${s.rate}" aria-label="Ritmo de perda semanal em quilogramas">
         <div class="row" style="justify-content:space-between"><span class="tiny muted">0,10</span><span class="tiny muted">0,50</span><span class="tiny muted">1,00 kg/sem.</span></div></div>`;
     body = `<h1>Seu objetivo</h1><p class="sub">${sub}</p>${msg}
@@ -81,9 +81,9 @@ function renderOnboarding() {
     <label class="onb-share ${s.share ? 'on' : ''}"><input type="checkbox" name="share" ${s.share ? 'checked' : ''}><i class="switch ${s.share ? 'on' : ''}" aria-hidden="true"><i></i></i>
       <span><b>Planejamento para economizar</b><span class="small sub">Organiza cada semana para que suas receitas <b>compartilhem ingredientes frescos</b> — o restante de um pacote de espinafre ou frango entra em outra refeição antes de estragar. Você compra menos embalagens e desperdiça menos. Sua variedade e seus favoritos ★ permanecem iguais; apenas a ordem das refeições da semana muda, e refeições escolhidas por você nunca são movidas.</span></span></label>
     <h3 style="margin:18px 0 8px">Suas metas iniciais</h3><div id="ob-sum">${obSummaryHTML()}</div>
-    <div class="tiny muted" style="margin-top:8px">Your plan starts ${fmtDate(S.settings.startDate, { weekday: 'long', month: 'long', day: 'numeric' })} with 3 training days a week — change the start date and training days any time in Settings.</div>`;
+    <div class="tiny muted" style="margin-top:8px">Seu plano começa em ${fmtDate(S.settings.startDate, { weekday: 'long', month: 'long', day: 'numeric' })} com 3 dias de treino por semana — altere a data inicial e os dias de treino quando quiser em Configurações.</div>`;
   el.innerHTML = `<form class="auth-card onb-card" data-form="onb" novalidate><div class="auth-brand">${LOGO}<b class="wm">FORGE<em>90</em></b></div>${dots}${body}
-    <div class="onb-nav">${s.step ? `<button type="button" class="btn ghost" data-act="onb-back">${icon('left')}Voltar</button>` : '<span></span>'}<button class="btn primary big" type="submit">${s.step < OB_STEPS.length - 1 ? `Continue ${icon('right')}` : `${icon('check')}Start my plan`}</button></div></form>`;
+    <div class="onb-nav">${s.step ? `<button type="button" class="btn ghost" data-act="onb-back">${icon('left')}Voltar</button>` : '<span></span>'}<button class="btn primary big" type="submit">${s.step < OB_STEPS.length - 1 ? `Continuar ${icon('right')}` : `${icon('check')}Iniciar meu plano`}</button></div></form>`;
   const f = el.querySelector('input:not([type=checkbox]):not([type=range]), select'); if (f && !s.noFocus) setTimeout(() => { const e = el.querySelector('input:invalid, input[value=""]:not([type=range]):not([name=bf])') || f; e.focus(); }, 30);
   s.noFocus = false;
 }
@@ -96,7 +96,7 @@ function obRead(form) {
 }
 function obValidate() {
   const s = OB;
-  if (s.step === 0) { if (!s.first || !s.last) return 'Enter your first and last name.'; if (!s.nick) return 'Choose a nickname — it’s how you’ll show up in the app.'; }
+  if (s.step === 0) { if (!s.first || !s.last) return 'Informe seu nome e sobrenome.'; if (!s.nick) return 'Escolha um apelido — é assim que você aparecerá no aplicativo.'; }
   if (s.step === 1) { const w = obNum(s.w); if (!w || w < 30 || w > 320) return 'Informe seu peso atual em quilogramas.';
     if (!obEstimated()) { const b = obNum(s.bf); if (!b || b < 3 || b > 70) return 'A gordura corporal deve ficar entre 3 e 70% — ou deixe em branco.'; }
     else { const h = obNum(s.hCm); if (!h || h < 120 || h > 240) return 'Informe sua altura em centímetros para estimarmos a gordura corporal.';
@@ -115,7 +115,7 @@ async function obSubmit(form) {
   S.plan = {}; S.planEnd = null; ensureHorizon();                         // meals depend on the money-saver choice
   if (AUTH.mode === 'server' && AUTH.user) { try { const r = await api('PATCH', '/api/account', { firstName: OB.first, lastName: OB.last, name: OB.nick }); AUTH.user = r.user; } catch (e) { btn.disabled = false; btn.classList.remove('loading'); OB.error = e.message; renderOnboarding(); return; } }
   saveState(); const done = OB.done; OB = null;
-  toast(`You’re all set, ${S.profile.nick}! Your plan is ready. 💪`);
+  toast(`Tudo pronto, ${S.profile.nick}! Seu plano está pronto. 💪`);
   if (done) done();
 }
 document.addEventListener('submit', e => { const f = e.target; if (f.dataset && f.dataset.form === 'onb') { e.preventDefault(); obSubmit(f); } });
@@ -126,7 +126,7 @@ document.addEventListener('input', e => {
     const box = $('#ob-est'); if (box) { box.classList.toggle('hidden', !obEstimated()); const n = box.querySelector('.note span'); const bf = obBF();
       if (n) n.innerHTML = n.innerHTML.replace(/^Gordura corporal estimada: <b>[^<]*<\/b>\. /, '').replace(/^/, bf ? `Gordura corporal estimada: <b>${fmt(bf, 1)}%</b>. ` : ''); } }
   if (t.name === 'rate') { const v = $('#ob-rate-v'); if (v) v.textContent = fmt(+t.value, 2) + ' kg / semana'; const i = $('#ob-rate-info'); if (i) i.innerHTML = obRateInfo(); }
-  if (t.name === 'bulkPct') { const v = $('#ob-rate-v'); if (v) v.textContent = fmt(+t.value, 2) + ' % of body weight'; const i = $('#ob-rate-info'); if (i) i.innerHTML = obRateInfo(); }
+  if (t.name === 'bulkPct') { const v = $('#ob-rate-v'); if (v) v.textContent = fmt(+t.value, 2) + '% do peso corporal'; const i = $('#ob-rate-info'); if (i) i.innerHTML = obRateInfo(); }
   if (t.name === 'goal') { const i = $('#ob-rate-info'); if (i) i.innerHTML = obRateInfo(); }
 });
 document.addEventListener('change', e => {
