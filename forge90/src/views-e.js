@@ -124,11 +124,11 @@ function renderAuth() {
       ${s.locked ? `<button type="button" class="btn" data-act="auth-go" data-v="forgot">${icon('mail')}Email me a reset link</button>` : ''}
       <button class="btn primary big" type="submit">Sign in</button></form>
     <div class="auth-foot">New here? FORGE 90 accounts are by invitation — ask your administrator to send you an invite.</div>`;
-  else if (s.screen === 'invite') body = s.checking ? `<h1>Checking your invite…</h1><div class="auth-spin"></div>` : s.expirado
-    ? `<div class="auth-ic warn">${icon('clock')}</div><h1>This invite has expirado</h1><p class="sub">Invites work for ${c.inviteDays || 7} days and only once. Ask your FORGE 90 administrator to send you a new one.</p>${msg}<div class="auth-foot"><a href="#" data-act="auth-go" data-v="login">${icon('left')}Back to sign in</a></div>`
-    : `<div class="auth-ic">${icon('mail')}</div><h1>Join FORGE 90</h1><p class="sub"><b>${esc(s.invitedBy || 'Um administrador')}</b> invited you${s.role === 'admin' ? ' como <b>administrador</b>' : ''}. Choose a password, then answer a few quick questions to set up your plan.</p>${msg}
+  else if (s.screen === 'invite') body = s.checking ? `<h1>Checking your invite…</h1><div class="auth-spin"></div>` : s.expired
+    ? `<div class="auth-ic warn">${icon('clock')}</div><h1>Este convite expirou</h1><p class="sub">Os convites funcionam por ${c.inviteDays || 7} dias e apenas uma vez. Peça ao administrador do FORGE 90 para enviar um novo.</p>${msg}<div class="auth-foot"><a href="#" data-act="auth-go" data-v="login">${icon('left')}Voltar para o login</a></div>`
+    : `<div class="auth-ic">${icon('mail')}</div><h1>Entrar no FORGE 90</h1><p class="sub"><b>${esc(s.invitedBy || 'Um administrador')}</b> convidou você${s.role === 'admin' ? ' como <b>administrador</b>' : ''}. Escolha uma senha e responda algumas perguntas rápidas para configurar seu plano.</p>${msg}
       <form data-form="auth-invite" class="auth-form" novalidate>
-      <div class="field"><label for="af-email">Email</label><input class="inp" id="af-email" name="email" type="email" autocomplete="username" value="${esc(s.inviteEmail || '')}" readonly><span class="tiny muted">You’ll sign in with this address.</span></div>
+      <div class="field"><label for="af-email">Email</label><input class="inp" id="af-email" name="email" type="email" autocomplete="username" value="${esc(s.inviteEmail || '')}" readonly><span class="tiny muted">Você entrará usando este endereço.</span></div>
       ${pwField('password', 'Password', 'new-password', 'data-meter="1"')}<div id="af-meter">${pwMeter('')}</div>
       ${pwField('confirm', 'Confirmar senha', 'new-password')}
       <label class="small chk"><input type="checkbox" name="remember" checked> Keep me signed in for ${c.rememberDays || 30} days</label>
@@ -137,24 +137,24 @@ function renderAuth() {
   else if (s.screen === 'forgot') body = `<h1>Reset your password</h1><p class="sub">Enter the email you sign in with and we’ll send you a link to choose a new password. The link works for ${c.resetMinutes || 30} minutes.</p>${msg}
     <form data-form="auth-forgot" class="auth-form" novalidate><div class="field"><label for="af-email">Email</label><input class="inp" id="af-email" name="email" type="email" autocomplete="username" required value="${esc(s.email || '')}"></div>
       <button class="btn primary big" type="submit">${icon('mail')}Send reset link</button></form>
-    <div class="auth-foot"><a href="#" data-act="auth-go" data-v="login">${icon('left')}Back to sign in</a></div>`;
-  else if (s.screen === 'sent') body = `<div class="auth-ic">${icon('mail')}</div><h1>Check your email</h1><p class="sub">If an account exists for <b>${esc(s.email)}</b>, a reset link is on its way. It expires in <b>${c.resetMinutes || 30} minutes</b> and works once.</p>
-    <div class="auth-msg">${icon('info')}<span>Nothing after a few minutes? Check spam, or ask your administrator to send it from Admin → Users.</span></div>
-    <div class="auth-foot"><a href="#" data-act="auth-go" data-v="login">${icon('left')}Back to sign in</a></div>`;
-  else if (s.screen === 'reset') body = s.checking ? `<h1>Checking your link…</h1><div class="auth-spin"></div>` : s.expirado
-    ? `<div class="auth-ic warn">${icon('clock')}</div><h1>This link has expirado</h1><p class="sub">Reset links work for ${c.resetMinutes || 30} minutes and only once. Request a new one below.</p>${msg}<button class="btn primary big" data-act="auth-go" data-v="forgot" style="width:100%">Send a new link</button><div class="auth-foot"><a href="#" data-act="auth-go" data-v="login">Back to sign in</a></div>`
-    : `<h1>Choose a new password</h1><p class="sub">For <b>${esc(s.maskedEmail || '')}</b>. <span class="reset-timer" data-exp="${s.expiresAt || 0}"></span></p>${msg}
+    <div class="auth-foot"><a href="#" data-act="auth-go" data-v="login">${icon('left')}Voltar para o login</a></div>`;
+  else if (s.screen === 'sent') body = `<div class="auth-ic">${icon('mail')}</div><h1>Verifique seu e-mail</h1><p class="sub">Se existir uma conta para <b>${esc(s.email)}</b>, um link de redefinição está a caminho. Ele expira em <b>${c.resetMinutes || 30} minutos</b> e funciona uma vez.</p>
+    <div class="auth-msg">${icon('info')}<span>Nada depois de alguns minutos? Verifique o spam ou peça ao administrador para enviar pelo menu Admin → Usuários.</span></div>
+    <div class="auth-foot"><a href="#" data-act="auth-go" data-v="login">${icon('left')}Voltar para o login</a></div>`;
+  else if (s.screen === 'reset') body = s.checking ? `<h1>Checking your link…</h1><div class="auth-spin"></div>` : s.expired
+    ? `<div class="auth-ic warn">${icon('clock')}</div><h1>Este link expirou</h1><p class="sub">Os links de redefinição funcionam por ${c.resetMinutes || 30} minutos e apenas uma vez. Solicite um novo abaixo.</p>${msg}<button class="btn primary big" data-act="auth-go" data-v="forgot" style="width:100%">Enviar novo link</button><div class="auth-foot"><a href="#" data-act="auth-go" data-v="login">Voltar para o login</a></div>`
+    : `<h1>Escolha uma nova senha</h1><p class="sub">For <b>${esc(s.maskedEmail || '')}</b>. <span class="reset-timer" data-exp="${s.expiresAt || 0}"></span></p>${msg}
       <form data-form="auth-reset" class="auth-form" novalidate>${pwField('password', 'Nova senha', 'new-password', 'data-meter="1"')}<div id="af-meter">${pwMeter('')}</div>${pwField('confirm', 'Confirmar nova senha', 'new-password')}
-      <button class="btn primary big" type="submit">Save password & sign in</button></form><div class="auth-foot">Signing in elsewhere will stop — for your security every other session is signed out.</div>`;
+      <button class="btn primary big" type="submit">Salvar senha e entrar</button></form><div class="auth-foot">Os acessos em outros dispositivos serão encerrados — por segurança, todas as outras sessões serão desconectadas.</div>`;
   else if (s.screen === 'first') { const u = AUTH.user || {}; const adminDefault = /@forge90\.local$/.test(u.email || '');
-    body = `<div class="auth-ic">${icon('key')}</div><h1>${u.role === 'admin' && adminDefault ? 'Set up the administrator account' : 'Choose a new password'}</h1><p class="sub">${u.role === 'admin' && adminDefault ? 'You signed in with the default administrator password. Choose your own, and use a real email address so password-reset emails can reach you.' : 'Um administrador set a temporary password for you. Choose your own to continue.'}</p>${msg}
+    body = `<div class="auth-ic">${icon('key')}</div><h1>${u.role === 'admin' && adminDefault ? 'Set up the administrator account' : 'Escolha uma nova senha'}</h1><p class="sub">${u.role === 'admin' && adminDefault ? 'You signed in with the default administrator password. Choose your own, and use a real email address so password-reset emails can reach you.' : 'Um administrador set a temporary password for you. Choose your own to continue.'}</p>${msg}
     <form data-form="auth-first" class="auth-form" novalidate>
       ${adminDefault ? `<div class="field"><label for="af-email">Email</label><input class="inp" id="af-email" name="email" type="email" required value="${esc(u.email || '')}"><span class="tiny muted">Used for sign-in and password resets.</span></div>` : ''}
       ${AUTH.lastPw ? '' : pwField('current', 'Senha atual (temporária)', 'current-password')}
       ${pwField('password', 'Nova senha', 'new-password', 'data-meter="1"')}<div id="af-meter">${pwMeter('')}</div>${pwField('confirm', 'Confirmar nova senha', 'new-password')}
       <button class="btn primary big" type="submit">Save and continue</button></form><div class="auth-foot"><a href="#" data-act="logout">Sign out</a></div>`; }
   else if (s.screen === 'down') body = `<div class="auth-ic warn">${icon('info')}</div><h1>Can’t reach the server</h1><p class="sub">FORGE 90 couldn’t connect to its server. Make sure it’s running, then try again.</p><button class="btn primary big" data-act="auth-retry" style="width:100%">Try again</button>`;
-  document.title = appTitle() + ({ login: ' · Sign in', invite: ' · Join', forgot: ' · Reset password', sent: ' · Check your email', reset: ' · Reset password', first: ' · Set up' }[s.screen] || '');
+  document.title = appTitle() + ({ login: ' · Sign in', invite: ' · Join', forgot: ' · Reset password', sent: ' · Verifique seu e-mail', reset: ' · Reset password', first: ' · Set up' }[s.screen] || '');
   $('#auth').innerHTML = `<div class="auth-card"><div class="auth-brand">${LOGO}<b class="wm">FORGE<em>90</em></b></div>${body}</div>
     ${c.appName && c.appName !== 'FORGE 90' ? `<div class="auth-legal">${esc(c.appName)}</div>` : ''}`;
   const f = $('#auth form input:not([type=checkbox])'); if (f && !s.noFocus) setTimeout(() => { const e = $('#auth input[name="email"]'); (s.screen === 'login' && e && e.value ? $('#auth input[name="password"]') : s.screen === 'invite' ? $('#auth input[name="password"]') : f).focus(); }, 30);
@@ -163,19 +163,19 @@ function renderAuth() {
 function resetTimer() {
   clearInterval(resetTimer.t); const el = $('.reset-timer'); if (!el) return;
   if (!+el.dataset.exp) return;
-  const tick = () => { const ms = +el.dataset.exp - Date.now(); if (ms <= 0) { clearInterval(resetTimer.t); AS.expirado = true; AS.error = null; renderAuth(); return; } const m = Math.floor(ms / 60000), s = Math.floor(ms / 1000) % 60; el.textContent = `Link expires in ${m}:${String(s).padStart(2, '0')}.`; };
+  const tick = () => { const ms = +el.dataset.exp - Date.now(); if (ms <= 0) { clearInterval(resetTimer.t); AS.expired = true; AS.error = null; renderAuth(); return; } const m = Math.floor(ms / 60000), s = Math.floor(ms / 1000) % 60; el.textContent = `Link expires in ${m}:${String(s).padStart(2, '0')}.`; };
   tick(); resetTimer.t = setInterval(tick, 1000);
 }
 async function checkResetToken() {
   AS.checking = true; renderAuth();
-  try { const r = await api('GET', '/api/reset/' + encodeURIComponent(AS.token)); Object.assign(AS, { checking: false, expirado: false, maskedEmail: r.email, expiresAt: r.expiresAt }); }
-  catch (e) { Object.assign(AS, { checking: false, expirado: true, error: e.status === 410 ? null : e.message }); }
+  try { const r = await api('GET', '/api/reset/' + encodeURIComponent(AS.token)); Object.assign(AS, { checking: false, expired: false, maskedEmail: r.email, expiresAt: r.expiresAt }); }
+  catch (e) { Object.assign(AS, { checking: false, expired: true, error: e.status === 410 ? null : e.message }); }
   renderAuth();
 }
 async function checkInvite() {
-  try { const r = await api('GET', '/api/invite/' + encodeURIComponent(AS.token)); Object.assign(AS, { checking: false, expirado: false, inviteEmail: r.email, name: AS.name || r.name, role: r.role, invitedBy: r.invitedBy, expiresAt: r.expiresAt });
+  try { const r = await api('GET', '/api/invite/' + encodeURIComponent(AS.token)); Object.assign(AS, { checking: false, expired: false, inviteEmail: r.email, name: AS.name || r.name, role: r.role, invitedBy: r.invitedBy, expiresAt: r.expiresAt });
     if (r.exists) Object.assign(AS, { error: 'An account already exists for this email. Sign in instead, or use “Forgot password”.' }); }
-  catch (e) { Object.assign(AS, { checking: false, expirado: true, error: e.status === 410 ? null : e.message }); }
+  catch (e) { Object.assign(AS, { checking: false, expired: true, error: e.status === 410 ? null : e.message }); }
   renderAuth();
 }
 function authBusy(form, on) { const b = form.querySelector('button[type=submit]'); if (b) { b.disabled = on; b.classList.toggle('loading', on); } }
@@ -197,7 +197,7 @@ async function authSubmit(form) {
   } catch (e) {
     authBusy(form, false);
     if (kind === 'login' && e.data && e.data.locked) { AS.locked = true; return bad(e.message); }
-    if ((kind === 'reset' || kind === 'invite') && e.status === 410) { AS.expirado = true; return bad(null); }
+    if ((kind === 'reset' || kind === 'invite') && e.status === 410) { AS.expired = true; return bad(null); }
     return bad(e.message);
   }
 }
@@ -311,7 +311,7 @@ async function adminAfter(force) {
 }
 const spin = '<div class="card"><div class="auth-spin"></div></div>';
 const statusPill = u => u.status === 'pending' ? '<span class="pill warn-pill">Aguardando aprovação</span>' : u.status === 'disabled' ? '<span class="pill">Desativado</span>' : u.locked ? `<span class="pill warn-pill" title="Bloqueado até ${when(u.lockedUntil)}">${icon('lock')}Bloqueado</span>` : '<span class="pill acc">Ativo</span>';
-function invDue(i) { const ms = i.expiresAt - Date.now(); if (i.expirado || ms <= 0) return '<span class="pill warn-pill">Expirado</span>'; const h = Math.round(ms / 3600000); return `<span class="small">em ${h < 24 ? h + ' h' : Math.round(h / 24) + ' dia' + (Math.round(h / 24) === 1 ? '' : 's')}</span>`; }
+function invDue(i) { const ms = i.expiresAt - Date.now(); if (i.expired || ms <= 0) return '<span class="pill warn-pill">Expirado</span>'; const h = Math.round(ms / 3600000); return `<span class="small">em ${h < 24 ? h + ' h' : Math.round(h / 24) + ' dia' + (Math.round(h / 24) === 1 ? '' : 's')}</span>`; }
 const invActs = i => `<button class="btn sm" data-act="adm-inv-resend" data-id="${i.id}" title="Send a fresh link that lasts another ${(ADM.settings && ADM.settings.inviteDays) || 7} days">${icon('mail')}Resend</button><button class="btn sm ghost danger" data-act="adm-inv-revoke" data-id="${i.id}">Revoke</button>`;
 function admTabHTML() {
   const t = ADM.tab, st = ADM.settings;
@@ -321,7 +321,7 @@ function admTabHTML() {
     return `${st.email.ready ? '' : `<div class="note warn" style="margin-bottom:14px">${icon('mail')}<span><b>Email isn’t working yet</b> — invites and password-reset emails can’t be sent. Finish setup in <a href="#" data-act="adm-tab" data-v="email">Email</a>.</span></div>`}
       <div class="grid g4" style="gap:10px">${tile('Accounts', s.users, `${s.admins} administrador${s.admins === 1 ? '' : 'es'} · ${s.invites || 0} convite${s.invites === 1 ? '' : 's'} pendente${s.invites === 1 ? '' : 's'}`)}${tile('Signed-in sessions', s.sessions, 'active right now or kept signed in')}${tile('Sign-ins · 24 h', s.logins24, `${s.failed24} tentativa${s.failed24 === 1 ? '' : 's'} com falha`, s.failed24 > 10)}${tile('Reset emails · 24 h', s.emails24, s.emailFail24 ? `${s.emailFail24} falha${s.emailFail24 === 1 ? '' : 's'} no envio` : 'nenhuma falha', s.emailFail24 > 0)}</div>
       <div style="height:16px"></div><div class="grid g2">
-      <div class="card"><div class="card-h"><h2>Pending invites</h2><span class="pill">${(ADM.invites || []).length}</span><button class="btn sm ghost" style="margin-left:auto" data-act="adm-new">${icon('plus')}Invite</button></div>${(ADM.invites || []).slice(0, 6).map(i => `<div class="sess-row"><span class="avatar">${esc(initials(i.name || i.email))}</span><div style="flex:1;min-width:0"><b>${esc(i.name || i.email)}</b>${i.role === 'admin' ? ' <span class="pill acc">Admin</span>' : ''}<div class="tiny muted">${i.name ? esc(i.email) + ' · ' : ''}enviado ${ago(i.sentAt)} · ${i.expirado ? 'expirado' : 'expira ' + invDue(i).replace(/<[^>]+>/g, '')}</div></div>${invActs(i)}</div>`).join('') || `<div class="muted small">No invites waiting. New accounts are invite-only — use <b>Invite</b> to email someone a link (it lasts ${st.inviteDays || 7} days).</div>`}
+      <div class="card"><div class="card-h"><h2>Pending invites</h2><span class="pill">${(ADM.invites || []).length}</span><button class="btn sm ghost" style="margin-left:auto" data-act="adm-new">${icon('plus')}Invite</button></div>${(ADM.invites || []).slice(0, 6).map(i => `<div class="sess-row"><span class="avatar">${esc(initials(i.name || i.email))}</span><div style="flex:1;min-width:0"><b>${esc(i.name || i.email)}</b>${i.role === 'admin' ? ' <span class="pill acc">Admin</span>' : ''}<div class="tiny muted">${i.name ? esc(i.email) + ' · ' : ''}enviado ${ago(i.sentAt)} · ${i.expired ? 'expirado' : 'expira ' + invDue(i).replace(/<[^>]+>/g, '')}</div></div>${invActs(i)}</div>`).join('') || `<div class="muted small">No invites waiting. New accounts are invite-only — use <b>Invite</b> to email someone a link (it lasts ${st.inviteDays || 7} days).</div>`}
         ${pend.length ? `<div class="tiny muted" style="margin-top:10px">${pend.length} cadastro${pend.length === 1 ? '' : 's'} antigo${pend.length === 1 ? '' : 's'} ainda aguardando aprovação — veja Usuários.</div>` : ''}</div>
       <div class="card"><div class="card-h"><h2>Locked accounts</h2><span class="pill">${locked.length}</span></div>${locked.map(u => `<div class="sess-row">${avatarHTML(u)}<div style="flex:1;min-width:0"><b>${esc(u.name)}</b><div class="tiny muted">${esc(u.email)} · até ${when(u.lockedUntil)}</div></div><button class="btn sm" data-act="adm-unlock" data-id="${u.id}">Unlock</button></div>`).join('') || `<div class="muted small">Nenhuma conta bloqueada. As contas são bloqueadas após ${st.security.lockThreshold} tentativas de login com falha por ${st.security.lockMinutes} minutos${st.security.autoResetOnLock ? ', e o proprietário recebe um link de redefinição por e-mail' : ''}.</div>`}</div></div>
       <div style="height:16px"></div><div class="card"><div class="card-h"><h2>Quick settings</h2></div><div class="grid g3" style="gap:10px">
