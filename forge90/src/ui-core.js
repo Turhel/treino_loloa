@@ -249,7 +249,7 @@ function lineChart(el, cfg) {
   hit.addEventListener('pointerdown', ev => { touchTT = ev.pointerType !== 'mouse'; move(ev); });
   hit.addEventListener('pointerleave', ev => { if (ev.pointerType === 'mouse') hide(); });
   if (!lineChart._doc) { lineChart._doc = true; document.addEventListener('pointerdown', ev => { $$('.chart .tt:not(.hidden)').forEach(t => { const c = t.closest('.chart'); if (c && !c.contains(ev.target) && c._hide) c._hide(); }); }); }
-  el._hide = hide; el.tabIndex = 0; el.setAttribute('role', 'img'); el.setAttribute('aria-label', (cfg.label || cfg.series.map(x => x.label).join(', ')) + ' chart. Use the left and right arrow keys to read values.');
+  el._hide = hide; el.tabIndex = 0; el.setAttribute('role', 'img'); el.setAttribute('aria-label', (cfg.label || cfg.series.map(x => x.label).join(', ')) + ' gráfico. Use as setas para esquerda e direita para ler os valores.');
   el.onkeydown = ev => { if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return; ev.preventDefault(); const cur = el._ki == null ? (ev.key === 'ArrowLeft' ? dates.length : -1) : el._ki; el._ki = Math.max(0, Math.min(dates.length - 1, cur + (ev.key === 'ArrowLeft' ? -1 : 1)));
     const r = svg.getBoundingClientRect(); move({ clientX: r.left + X(dates[el._ki]) * r.width / W }); };
   el.onblur = () => { el._ki = null; hide(); };
