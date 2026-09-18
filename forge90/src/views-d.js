@@ -41,7 +41,7 @@ function exerciseEditor(id, group) {
 function refreshXEMap() { const m = $('#xe-map'); if (m && XE) m.innerHTML = muscleMap([...XE.primary], [...XE.secondary]); }
 function saveExercise(form) {
   const fd = new FormData(form); const name = String(fd.get('name') || '').trim();
-  if (!name) { toast('Give the exercise a name'); return; }
+  if (!name) { toast('Dê um nome ao exercício'); return; }
   const group = fd.get('group');
   if (!XE.primary.size) XE.primary.add(GROUP_REGION[group]);
   const lines = k => String(fd.get(k) || '').split('\n').map(x => x.trim()).filter(Boolean);
@@ -81,7 +81,7 @@ function renderQuickEdit() {
   const ph = phaseForWeek(planWeek(d));
   const tplOpt = k => `<option value="${k}" ${e.w && e.w.t === k ? 'selected' : ''}>${esc(TEMPLATES[k].name)}</option>`;
   const woOpts = `<option value="">— Dia de descanso —</option>` + (e.w && TEMPLATES[e.w.t] && TEMPLATES[e.w.t].legacy ? `<option value="${e.w.t}" selected>${esc(TEMPLATES[e.w.t].name)} (plano anterior)</option>` : '')
-    + `<optgroup label="This week’s phase — ${esc(ph.name)}">${ph.templates.map(tplOpt).join('')}</optgroup>`
+    + `<optgroup label="Fase desta semana — ${esc(ph.name)}">${ph.templates.map(tplOpt).join('')}</optgroup>`
     + ALL_PHASES.filter(p => p.templates.join() !== ph.templates.join()).map(p => `<optgroup label="${esc(p.name)}">${p.templates.map(tplOpt).join('')}</optgroup>`).join('');
   let woBody = '';
   if (e.w && TEMPLATES[e.w.t]) { const t = TEMPLATES[e.w.t]; const rows = sessionRows(e.w);
@@ -104,7 +104,7 @@ function renderQuickEdit() {
     <section class="qe-sec ${QE.focus !== 'wo' ? 'focus' : ''}"><div class="row"><h3 style="flex:1">${icon('food')}Refeições</h3><span class="tiny muted">★ favoritos primeiro · alterações preservam suas refeições escolhidas manualmente quando o plano é recalculado</span></div>
       ${MEAL_SLOTS.map(mealRow).join('')}
       <div class="qe-tot"><div><span class="tiny muted">Total do dia</span><b class="num">${fmt(x.totals.k)}</b><span class="small muted"> / ${fmt(x.tg.kcal)} kcal</span></div><div class="small num"><span style="color:var(--prot)"><b>${fmt(x.totals.p)}</b>/${fmt(x.tg.protein)}g P</span> · <span style="color:var(--carb)">${fmt(x.totals.c)}C</span> · <span style="color:var(--fat)">${fmt(x.totals.f)}F</span></div><span class="tiny muted">As porções são ajustadas automaticamente</span></div></section>
-    <div class="row" style="justify-content:flex-end;margin-top:12px;gap:6px"><button class="btn" data-act="undo" ${undoStack.length ? '' : 'disabled'}>${icon('undo')}Undo</button><button class="btn primary" data-act="close-modal">Concluído</button></div>`);
+    <div class="row" style="justify-content:flex-end;margin-top:12px;gap:6px"><button class="btn" data-act="undo" ${undoStack.length ? '' : 'disabled'}>${icon('undo')}Desfazer</button><button class="btn primary" data-act="close-modal">Concluído</button></div>`);
   const f = QE.focus === 'wo' ? $('#qe-wo') : QE.focus.startsWith('meal:') ? $('#qe-' + QE.focus.slice(5)) : null;
   if (f) setTimeout(() => { f.focus(); f.closest('section, .qe-meal').scrollIntoView({ block: 'nearest' }); }, 30);
 }
@@ -126,7 +126,7 @@ document.addEventListener('change', e => {
 function curPlanWeekStart() { const t = todayISO(), st = S.settings.startDate; return t < st ? st : planWeekStart(planWeek(t)); }
 function toggleExercise(id, on) {
   const e = EX[id]; if (!e) return; const g = exGroupOf(e);
-  if (!on && !Object.values(EX).some(x => x.id !== id && exGroupOf(x) === g && !exOffNow(x.id))) { toast(`Keep at least one ${g.toLowerCase()} exercise switched on — switch another one on first.`); render(); return; }
+  if (!on && !Object.values(EX).some(x => x.id !== id && exGroupOf(x) === g && !exOffNow(x.id))) { toast(`Mantenha pelo menos um exercício de ${g.toLowerCase()} ativado — ative outro antes.`); render(); return; }
   let from = curPlanWeekStart();
   if (!on) {   // already logged this week? then the change starts next week so today's log stays with the exercise
     const logged = Object.keys(S.logs || {}).some(d => d >= from && d <= todayISO() && (S.logs[d][id] || []).some(x => x && (x.w != null || x.r != null)));
@@ -136,6 +136,6 @@ function toggleExercise(id, on) {
   if (!on) { if (!per.some(([, t]) => !t)) per.push([from, null]); }
   else { const open = per.find(([, t]) => !t); if (open) { if (open[0] >= from) per.splice(per.indexOf(open), 1); else open[1] = from; } if (!per.length) delete S.exOff[id]; }
   saveState(); render();
-  toast(on ? `${e.name} is back in the rotation from ${fmtDate(from)}` : `${e.name} switched off from ${fmtDate(from)} — its sessions use your other ${g.toLowerCase()} exercises`);
+  toast(on ? `${e.name} voltou à rotação a partir de ${fmtDate(from)}` : `${e.name} foi desativado a partir de ${fmtDate(from)} — as sessões usarão seus outros exercícios de ${g.toLowerCase()}`);
 }
 document.addEventListener('change', e => { const t = e.target; if (t && t.dataset && t.dataset.input === 'ex-on') toggleExercise(t.dataset.id, t.checked); });
