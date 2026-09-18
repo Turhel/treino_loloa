@@ -4,14 +4,14 @@
    FORGE 90 — Views: dashboard, calendar (drag & drop), day detail
    ============================================================ */
 const KIND_VAR = k => `var(--k-${k})`;
-function phasePill(wk) { const p = phaseForWeek(wk); return `<span class="pill"><i class="dot" style="background:${KIND_VAR(p.dot)}"></i>Ciclo ${p.cycle} · ${p.name}</span>`; }
+function phasePill(wk) { const p = phaseForWeek(wk); return `<span class="pill"><i class="dot" style="background:${KIND_VAR(p.dot)}"></i>Ciclo ${p.cycle} · ${pt(p.name)}</span>`; }
 function woChip(date, e, extraCls = '') {
   const t = TEMPLATES[e.w.t];
-  return `<div class="chip wo ${extraCls}" style="--k:${KIND_VAR(t.kind)}" draggable="true" data-drag="workout" data-date="${date}" data-tip-wo="${date}">${icon(t.icon)}<span class="nm">${esc(t.short)}</span></div>`;
+  return `<div class="chip wo ${extraCls}" style="--k:${KIND_VAR(t.kind)}" draggable="true" data-drag="workout" data-date="${date}" data-tip-wo="${date}">${icon(t.icon)}<span class="nm">${esc(pt(t.short))}</span></div>`;
 }
 function batchBadge(b, compact) {
   if (!b) return '';
-  if (b.role === 'cook') return `<span class="bd cook">${compact ? '' : 'COOK '}×${b.batch.size}</span>`;
+  if (b.role === 'cook') return `<span class="bd cook">${compact ? '' : 'PREPARAR '}×${b.batch.size}</span>`;
   return `<span class="bd ${b.frozen ? 'frz' : 'left'}">${b.frozen ? '❄' : '↺'}${compact ? '' : ' '}${b.idx}/${b.batch.size}</span>`;
 }
 
@@ -25,20 +25,20 @@ function viewDashboard() {
   const cur = latestStats(); const trend = weightTrend(); const pj = projection();
   const startLBM = st.startWeight * (1 - st.startBF / 100);
   const dW = cur.w - st.startWeight, dBF = cur.bf - st.startBF, dL = cur.lbm - startLBM;
-  const eyebrow = idx < 0 ? `Começa em ${fmtDate(start, { weekday: 'long', month: 'long', day: 'numeric' })}` : `Ciclo ${cyc} · Semana ${ph.wic} de 13 · ${ph.name}`;
+  const eyebrow = idx < 0 ? `Começa em ${fmtDate(start, { weekday: 'long', month: 'long', day: 'numeric' })}` : `Ciclo ${cyc} · Semana ${ph.wic} de 13 · ${pt(ph.name)}`;
   const title = idx < 0 ? `${-idx} dia${-idx === 1 ? '' : 's'} até o Dia 1` : cyc === 1 && idx < LAUNCH_DAYS ? `Dia ${idx + 1} de 90` : `Dia ${idx + 1}`;
-  const bars = Array.from({ length: 13 }, (_, i) => { const w = cStartWk + i; const p = phaseForWeek(w); const cw = idx < 0 ? 0 : wk; return `<i class="${p.cls} ${w < cw ? 'done' : ''} ${w === cw && idx >= 0 ? 'now' : ''}" data-tip="Semana ${w} · ${p.name}"></i>`; }).join('');
-  const barLabels = (cyc === 1 ? CYCLE1 : CYCLEN).map(p => `<span>${p.key === 'test' ? 'Teste' : p.name}</span>`).join('');
+  const bars = Array.from({ length: 13 }, (_, i) => { const w = cStartWk + i; const p = phaseForWeek(w); const cw = idx < 0 ? 0 : wk; return `<i class="${p.cls} ${w < cw ? 'done' : ''} ${w === cw && idx >= 0 ? 'now' : ''}" data-tip="Semana ${w} · ${pt(p.name)}"></i>`; }).join('');
+  const barLabels = (cyc === 1 ? CYCLE1 : CYCLEN).map(p => `<span>${p.key === 'test' ? 'Teste' : pt(p.name)}</span>`).join('');
   const day = A.days[focus];
   const tile = (lbl, ic, val, unit, delta, good, extra = '') => `<div class="card stat"><div class="lbl">${icon(ic)}${lbl}</div><div class="val">${val}<small>${unit}</small></div><div class="delta ${delta == null ? 'neu' : good ? 'good' : 'bad'}">${delta == null ? extra : delta}</div></div>`;
   const sign = (v, d = 1) => (v > 0 ? '+' : v < 0 ? '−' : '±') + fmt(Math.abs(v), d);
   const hasW = S.weights.length > 0;
   const tiles = `<div class="grid g5">
-    ${tile('Peso corporal', 'scale', fmt(cur.w, 1), 'lb', hasW ? `${sign(dW)} lb desde o início` : null, goalKind() === 'bulk' ? dW >= 0 : dW <= 0, 'Registre sua primeira pesagem')}
+    ${tile('Peso corporal', 'scale', fmt(cur.w, 1), 'kg', hasW ? `${sign(dW)} kg desde o início` : null, goalKind() === 'bulk' ? dW >= 0 : dW <= 0, 'Registre sua primeira pesagem')}
     ${tile('Gordura corporal', 'target', fmt(cur.bf, 1), '%' + (cur.est ? ' est.' : ''), hasW ? `${sign(dBF)} pts` : null, dBF <= 0, 'Meta ' + st.goalBF + '%')}
-    ${tile('Massa magra', 'dumbbell', fmt(cur.lbm, 1), 'lb', hasW ? `${sign(dL)} lb` : null, dL >= -1, 'Peso × (1 − % de gordura)')}
-    ${tile('Tendência semanal', 'trend', trend ? fmt(trend.rate, 2) : '—', 'lb/sem.', null, true, trend ? (goalKind() === 'maintain' ? 'Meta: manter' : `Meta ${fmt(Math.abs(planRate(cur.w)), 2)} lb/sem. ${goalKind() === 'bulk' ? 'ganho' : 'perda'}`) : 'Precisa de ~1 semana de pesagens')}
-    ${tile('Até a meta', 'flame', fmt(Math.abs(cur.w - st.goalWeight), 1), 'lb', null, true, goalKind() === 'maintain' ? 'Mantendo em manutenção' : `≈ ${fmt(pj.weeks, 0)} semanas a ${fmt(Math.abs(planRate(cur.w)), 2)} lb/sem. de ${goalKind() === 'bulk' ? 'ganho' : 'perda'}`)}
+    ${tile('Massa magra', 'dumbbell', fmt(cur.lbm, 1), 'kg', hasW ? `${sign(dL)} kg` : null, dL >= -1, 'Peso × (1 − % de gordura)')}
+    ${tile('Tendência semanal', 'trend', trend ? fmt(trend.rate, 2) : '—', 'kg/sem.', null, true, trend ? (goalKind() === 'maintain' ? 'Meta: manter' : `Meta ${fmt(Math.abs(planRate(cur.w)), 2)} kg/sem. ${goalKind() === 'bulk' ? 'ganho' : 'perda'}`) : 'Precisa de ~1 semana de pesagens')}
+    ${tile('Até a meta', 'flame', fmt(Math.abs(cur.w - st.goalWeight), 1), 'kg', null, true, goalKind() === 'maintain' ? 'Mantendo em manutenção' : `≈ ${fmt(pj.weeks, 0)} semanas a ${fmt(Math.abs(planRate(cur.w)), 2)} kg/sem. de ${goalKind() === 'bulk' ? 'ganho' : 'perda'}`)}
   </div>`;
 
   // today card
@@ -47,12 +47,12 @@ function viewDashboard() {
     const t = TEMPLATES[day.entry.w.t]; const rows = sessionRows(day.entry.w);
     wo = `<div class="row" style="align-items:flex-start;gap:14px">${muscleMap(rows.flatMap(r => r.ex.primary), rows.flatMap(r => r.ex.secondary), 'mm')
       .replace('class="mm"', 'class="mm" style="width:96px;height:96px;flex:none"')}
-      <div style="flex:1;min-width:0"><div class="row wrap" style="gap:6px 10px"><span class="pill" style="background:${KIND_VAR(t.kind)};color:#fff">${icon(t.icon).replace('<svg', '<svg style="width:12px;height:12px"')}${esc(t.name)}</span><span class="muted small">${rows.reduce((a, r) => a + r.sets, 0)} séries · ~${estMinutes(rows)} min</span>${S.done[focus] ? '<span class="pill acc">' + icon('check').replace('<svg', '<svg style="width:12px;height:12px"') + 'Concluído</span>' : ''}</div>
-      ${focus === today ? `<div class="tiny muted" style="margin-top:8px">${t.focus ? esc(t.focus) : ''}</div>` : `<div class="sets" style="margin-top:10px;gap:5px">${rows.map(r => `<span class="pill" data-tip-ex="${r.ex.id}" style="cursor:help">${esc(r.ex.name)} <span class="muted">${r.sets}×${esc(r.reps)}</span></span>`).join('')}</div><div class="tiny muted" style="margin-top:8px">O registro de séries será liberado aqui no Dia 1.</div>`}</div></div>
+      <div style="flex:1;min-width:0"><div class="row wrap" style="gap:6px 10px"><span class="pill" style="background:${KIND_VAR(t.kind)};color:#fff">${icon(t.icon).replace('<svg', '<svg style="width:12px;height:12px"')}${esc(pt(t.name))}</span><span class="muted small">${rows.reduce((a, r) => a + r.sets, 0)} séries · ~${estMinutes(rows)} min</span>${S.done[focus] ? '<span class="pill acc">' + icon('check').replace('<svg', '<svg style="width:12px;height:12px"') + 'Concluído</span>' : ''}</div>
+      ${focus === today ? `<div class="tiny muted" style="margin-top:8px">${t.focus ? esc(pt(t.focus)) : ''}</div>` : `<div class="sets" style="margin-top:10px;gap:5px">${rows.map(r => `<span class="pill" data-tip-ex="${r.ex.id}" style="cursor:help">${esc(pt(r.ex.name))} <span class="muted">${r.sets}×${esc(r.reps)}</span></span>`).join('')}</div><div class="tiny muted" style="margin-top:8px">O registro de séries será liberado aqui no Dia 1.</div>`}</div></div>
       ${focus === today ? todayLogHTML(focus, rows) : ''}`;
   } else wo = `<div class="note">${icon('info')}<span><b>Dia de descanso.</b> Busque 8–10 mil passos e 10 minutos de mobilidade. A meta calórica fica ~${fmt(S.settings.sessionKcal)} kcal menor porque não há treino.</span></div>`;
   const meals = day.meals.map(m => { const b = A.batches.info[focus + '|' + m.slot];
-    return `<div class="row" style="padding:7px 0;border-top:1px solid var(--line)" data-tip-meal="${focus}|${m.slot}"><span style="font-size:20px;width:26px;text-align:center">${esc(m.r.emoji)}</span><div style="flex:1;min-width:0"><div class="tiny muted" style="text-transform:uppercase;letter-spacing:.08em;font-weight:700">${SLOT_LABEL[m.slot]}</div><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.r.name)} ${batchBadge(b)}${shareBadge(focus, m.slot)}</div></div><span class="num small"><b>${fmt(m.m.k)}</b> kcal · <span style="color:var(--prot)">${fmt(m.m.p)}P</span></span><button class="btn icon ghost qe-pen" data-act="qe" data-d="${focus}" data-f="meal:${m.slot}" title="Trocar esta refeição" aria-label="Trocar ${SLOT_LABEL[m.slot].toLowerCase()}">${icon('edit')}</button></div>`; }).join('');
+    return `<div class="row" style="padding:7px 0;border-top:1px solid var(--line)" data-tip-meal="${focus}|${m.slot}"><span style="font-size:20px;width:26px;text-align:center">${esc(m.r.emoji)}</span><div style="flex:1;min-width:0"><div class="tiny muted" style="text-transform:uppercase;letter-spacing:.08em;font-weight:700">${SLOT_LABEL[m.slot]}</div><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(pt(m.r.name))} ${batchBadge(b)}${shareBadge(focus, m.slot)}</div></div><span class="num small"><b>${fmt(m.m.k)}</b> kcal · <span style="color:var(--prot)">${fmt(m.m.p)}P</span></span><button class="btn icon ghost qe-pen" data-act="qe" data-d="${focus}" data-f="meal:${m.slot}" title="Trocar esta refeição" aria-label="Trocar ${SLOT_LABEL[m.slot].toLowerCase()}">${icon('edit')}</button></div>`; }).join('');
   const kfrac = day.totals.k / day.tg.kcal;
   const todayCard = `<div class="card"><div class="card-h"><h2>${focus === today ? 'Hoje' : fmtDate(focus, { weekday: 'long', month: 'short', day: 'numeric' })}</h2><span class="pill ${day.isTrain ? 'acc' : ''}">${day.isTrain ? 'Dia de treino' : 'Dia de descanso'}</span>${syncBtnHTML('sm')}<a class="btn sm ghost" href="#/day/${focus}">Abrir dia ${icon('right')}</a></div>
     <div class="qe-links"><button class="btn sm" data-act="qe" data-d="${focus}" data-f="wo">${icon('dumbbell')}Editar treino</button><button class="btn sm" data-act="qe" data-d="${focus}" data-f="meals">${icon('food')}Editar refeições</button>${focus === today ? scanBtnHTML('today', 'sm') + addFoodBtnHTML('', 'sm') : ''}${day.entry.w ? `<button class="btn sm primary" data-act="wo-open" data-d="${focus}" title="Um exercício por vez, com cronômetro de descanso">${icon('play')}Modo treino</button>` : ''}<a class="btn sm ghost" href="#/workouts">${icon('grip')}Plano de treino</a><a class="btn sm ghost" href="#/foods">${icon('book')}Receitas</a></div>
@@ -64,10 +64,10 @@ function viewDashboard() {
   // outlook
   const outlook = `<div class="card"><div class="card-h"><h2>Projeção da meta</h2></div>
     <div class="grid g2" style="gap:12px">
-      <div><div class="tiny muted">${pj.cyc === 1 ? 'Fim dos 90 dias' : 'Fim do ciclo ' + pj.cyc} (${fmtDate(pj.endPlan, { month: 'short', day: 'numeric' })})</div><div style="font-size:22px;font-weight:700" class="num">~${fmt(pj.endW, 0)} lb</div></div>
-      <div><div class="tiny muted">Reach ${st.goalWeight} lb</div><div style="font-size:22px;font-weight:700">${pj.reached ? 'Atingida 🎉' : fmtDate(pj.goalDate, { month: 'short', year: 'numeric' })}</div></div></div>
+      <div><div class="tiny muted">${pj.cyc === 1 ? 'Fim dos 90 dias' : 'Fim do ciclo ' + pj.cyc} (${fmtDate(pj.endPlan, { month: 'short', day: 'numeric' })})</div><div style="font-size:22px;font-weight:700" class="num">~${fmt(pj.endW, 0)} kg</div></div>
+      <div><div class="tiny muted">Atingir ${st.goalWeight} kg</div><div style="font-size:22px;font-weight:700">${pj.reached ? 'Atingida 🎉' : fmtDate(pj.goalDate, { month: 'short', year: 'numeric' })}</div></div></div>
     ${pj.reached ? `<div class="note acc" style="margin-top:12px">${icon('target')}<span>Meta atingida — as calorias agora estão em manutenção. O treino continua em ciclos de 13 semanas. Altere isso em Configurações.</span></div>` : ''}
-    <div class="note acc" style="margin-top:12px">${icon('info')}<span>Mantendo seus atuais <b>${fmt(pj.lbm, 0)} lb</b> de massa magra, ${st.goalBF}% de gordura corporal corresponde a cerca de <b>${fmt(pj.wAtGoalBF, 0)} lb</b>. Chegar a ${st.goalWeight} lb <i>e</i> ${st.goalBF}% significa terminar perto de ${fmt(st.goalWeight * (1 - st.goalBF / 100), 0)} lb de massa magra — então trate ${fmt(pj.wAtGoalBF, 0)} lb como o ponto para reavaliar pelo percentual de gordura, e não apenas pelo peso da balança.</span></div>
+    <div class="note acc" style="margin-top:12px">${icon('info')}<span>Mantendo seus atuais <b>${fmt(pj.lbm, 0)} kg</b> de massa magra, ${st.goalBF}% de gordura corporal corresponde a cerca de <b>${fmt(pj.wAtGoalBF, 0)} kg</b>. Chegar a ${st.goalWeight} kg <i>e</i> ${st.goalBF}% significa terminar perto de ${fmt(st.goalWeight * (1 - st.goalBF / 100), 0)} kg de massa magra — então trate ${fmt(pj.wAtGoalBF, 0)} kg como o ponto para reavaliar pelo percentual de gordura, e não apenas pelo peso da balança.</span></div>
     ${trend ? `<div class="note ${trend.delta ? 'warn' : ''}" style="margin-top:8px">${icon('trend')}<span>${esc(trend.advice)} ${trend.delta ? `<button class="btn sm" data-act="apply-trend" data-delta="${trend.delta}" style="margin-left:6px">Aplicar ${trend.delta > 0 ? '+' : ''}${trend.delta} kcal</button>` : ''}</span></div>` : ''}
     <hr class="sep"><h3 style="margin-bottom:10px">Pesagem rápida</h3>${weighForm()}</div>`;
 
@@ -80,10 +80,10 @@ function viewDashboard() {
   // PRs
   const prs = recentPRs(6);
   const prCard = `<div class="card"><div class="card-h"><h2>Recordes recentes</h2><a class="btn sm ghost" href="#/progress">Todo o progresso ${icon('right')}</a></div>
-    ${prs.length ? `<table class="tbl">${prs.map(p => `<tr><td><span class="prb">${icon('trophy')}PR</span></td><td><span class="ex-name" data-tip-ex="${p.ex}">${esc(EX[p.ex].name)}</span></td><td>${fmt(p.set.w)} lb × ${p.set.r}</td><td class="muted">e1RM ${fmt(p.best)}</td><td class="muted">${fmtDate(p.d)}</td></tr>`).join('')}</table>`
+    ${prs.length ? `<table class="tbl">${prs.map(p => `<tr><td><span class="prb">${icon('trophy')}PR</span></td><td><span class="ex-name" data-tip-ex="${p.ex}">${esc(pt(EX[p.ex].name))}</span></td><td>${fmt(p.set.w)} kg × ${p.set.r}</td><td class="muted">e1RM ${fmt(p.best)}</td><td class="muted">${fmtDate(p.d)}</td></tr>`).join('')}</table>`
       : `<div class="empty-state">${icon('trophy')}<div>Registre suas séries em qualquer dia de treino e seus recordes pessoais aparecerão aqui.</div></div>`}</div>`;
 
-  const hero = `<div class="hero">${heroArt()}<div class="eyebrow">${eyebrow}</div><h1 style="margin-top:6px">${title}</h1><p>${esc(ph.summary)}</p>
+  const hero = `<div class="hero">${heroArt()}<div class="eyebrow">${eyebrow}</div><h1 style="margin-top:6px">${title}</h1><p>${esc(pt(ph.summary))}</p>
       <div class="weekbar">${bars}</div><div class="weekbar-l"><span>${fmtDate(cStart, { month: 'short', day: 'numeric' })}</span>${barLabels}<span>${fmtDate(cEnd, { month: 'short', day: 'numeric' })}</span></div></div>`;
   // panels in the order (and with the ones hidden) the user picked — see views-k
   return dashLayoutHTML({ hero, stats: tiles, today: todayCard, outlook, gym: gymPanelHTML(), week: strip, prs: prCard }, syncInviteNote() + bfEstimateNote());
