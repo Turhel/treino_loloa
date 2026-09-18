@@ -194,25 +194,25 @@ function groceryPhoneHTML(G) {
   const order = AISLES.concat(Object.keys(aisles).filter(a => !AISLES.includes(a)));
   const unitOf = id => ING[id].u ? ING[id].u + 's' : ING[id].ml ? 'ml' : 'g';
   const row = r => { const { id, total, have } = r; const g = groceryText(id, total); const st = groStateOf(r, got); const pi = packInfo(id); const npk = Math.ceil(total / pi.P - 1e-9);
-    const pk = pi.w >= .3 && pi.P > 1 ? `≈ ${npk} pack${npk === 1 ? '' : 's'}` : '';
-    const note = st === 'home' ? `<small class="at">${icon('box')}In your pantry${have > total * 1.01 ? ' · ' + esc(pantryQtyText(id, have)) : ''}</small>` : have > 0 ? `<small class="at">${icon('box')}${esc(pantryQtyText(id, have))} at home</small>` : pk ? `<small>${pk} · ${fmt(pi.P)} ${unitOf(id)} each</small>` : '';
-    return `<div class="pg-row ${st}"><button type="button" class="pg-it" data-act="gro-tap" data-id="${id}" aria-pressed="${st !== 'buy'}"><span class="ck">${icon('check')}</span><span class="t"><b>${esc(g.name)}</b>${note}</span><span class="q num">${esc(g.qty)}${g.sub ? `<small>${esc(g.sub)}</small>` : ''}</span></button>${st === 'home' ? `<button type="button" class="btn sm pg-need" data-act="gro-need" data-id="${id}">Need it</button>` : ''}</div>`; };
+    const pk = pi.w >= .3 && pi.P > 1 ? `≈ ${npk} embalagem${npk === 1 ? '' : 'ens'}` : '';
+    const note = st === 'home' ? `<small class="at">${icon('box')}Na sua despensa${have > total * 1.01 ? ' · ' + esc(pantryQtyText(id, have)) : ''}</small>` : have > 0 ? `<small class="at">${icon('box')}${esc(pantryQtyText(id, have))} em casa</small>` : pk ? `<small>${pk} · ${fmt(pi.P)} ${unitOf(id)} cada</small>` : '';
+    return `<div class="pg-row ${st}"><button type="button" class="pg-it" data-act="gro-tap" data-id="${id}" aria-pressed="${st !== 'buy'}"><span class="ck">${icon('check')}</span><span class="t"><b>${esc(g.name)}</b>${note}</span><span class="q num">${esc(g.qty)}${g.sub ? `<small>${esc(g.sub)}</small>` : ''}</span></button>${st === 'home' ? `<button type="button" class="btn sm pg-need" data-act="gro-need" data-id="${id}">Preciso comprar</button>` : ''}</div>`; };
   const list = order.filter(a => aisles[a]).map(a => `<section class="pg-aisle"><h3>${esc(a)}</h3><div class="card pad0">${aisles[a].sort((x, y) => ING[x.id].n.localeCompare(ING[y.id].n)).map(row).join('')}</div></section>`).join('');
-  const empty = { buy: all ? 'Everything’s in the cart or at home.' : 'Nothing planned this week.', cart: 'Tap items on To buy as you shop — they land here.', home: 'Nothing your pantry covers this week.' }[tab];
-  return `<div class="row pg-tools"><select class="inp" data-input="gro-week" aria-label="Week">${opts}</select><button type="button" class="btn icon" data-act="copy-list-ph" aria-label="Copy the list" title="Copy the list">${icon('list')}</button></div>
+  const empty = { buy: all ? 'Tudo está no carrinho ou em casa.' : 'Nada planejado para esta semana.', cart: 'Toque nos itens em Comprar enquanto faz as compras — eles aparecerão aqui.', home: 'Nada da sua despensa cobre esta semana.' }[tab];
+  return `<div class="row pg-tools"><select class="inp" data-input="gro-week" aria-label="Semana">${opts}</select><button type="button" class="btn icon" data-act="copy-list-ph" aria-label="Copiar a lista" title="Copiar a lista">${icon('list')}</button></div>
     ${syncGroceryNote(G.wd, G.A)}
-    <div class="pg-chips" role="group" aria-label="Show">${[['buy', 'To buy'], ['cart', 'In the cart'], ['home', 'At home']].map(([k, l]) => `<button type="button" class="chipb ${tab === k ? 'on' : ''}" data-act="gro-tab" data-v="${k}" aria-pressed="${tab === k}">${l}<span class="n num">${n[k]}</span></button>`).join('')}</div>
-    ${all ? `<div class="ph-prog"><div class="track"><i style="width:${(n.cart + n.home) / all * 100}%"></i></div><span class="num small muted">${n.cart + n.home} of ${all} sorted</span></div>
+    <div class="pg-chips" role="group" aria-label="Mostrar">${[['buy', 'Comprar'], ['cart', 'No carrinho'], ['home', 'Em casa']].map(([k, l]) => `<button type="button" class="chipb ${tab === k ? 'on' : ''}" data-act="gro-tab" data-v="${k}" aria-pressed="${tab === k}">${l}<span class="n num">${n[k]}</span></button>`).join('')}</div>
+    ${all ? `<div class="ph-prog"><div class="track"><i style="width:${(n.cart + n.home) / all * 100}%"></i></div><span class="num small muted">${n.cart + n.home} de ${all} organizados</span></div>
       <div class="row pg-all"><button type="button" class="btn sm ghost" data-act="gro-all" data-v="1" ${n.buy ? '' : 'disabled'}>${icon('check')}Check all</button><button type="button" class="btn sm ghost" data-act="gro-all" data-v="0" ${n.cart + n.home ? '' : 'disabled'}>${icon('x')}Uncheck all</button></div>` : ''}
     ${GL.note}
-    ${tab === 'home' && n.home ? `<div class="tiny muted" style="margin:0 2px 10px">Your pantry already covers these, so they’re ticked for you. Tap <b>Need it</b> if the pantry is behind.</div>` : ''}
+    ${tab === 'home' && n.home ? `<div class="tiny muted" style="margin:0 2px 10px">Sua despensa já cobre estes itens, então eles aparecem marcados. Toque em <b>Preciso comprar</b> se a despensa estiver desatualizada.</div>` : ''}
     ${list || `<div class="card empty-state">${icon('cart')}<div>${empty}</div></div>`}
-    <div class="tiny muted" style="margin-top:12px">Rice & quinoa are listed uncooked (~⅓ of cooked weight). Seasonings, garlic, lemon/lime and cooking spray aren’t listed.</div>
+    <div class="tiny muted" style="margin-top:12px">Arroz e quinoa aparecem em peso cru (~⅓ do peso cozido). Temperos, alho, limão e spray culinário não aparecem na lista.</div>
     ${n.cart ? `<div class="pg-dock"><button type="button" class="btn primary big block" data-act="gro-pantry">${icon('box')}Put ${n.cart} item${n.cart === 1 ? '' : 's'} in the pantry</button></div>` : ''}`;
 }
 function viewPrep() {
   const G = groceryWeek();
-  return `<div class="row pg-tools"><select class="inp" data-input="gro-week" aria-label="Week">${G.opts}</select></div>
+  return `<div class="row pg-tools"><select class="inp" data-input="gro-week" aria-label="Semana">${G.opts}</select></div>
     ${prepScheduleHTML(G)}<div style="height:16px"></div>${moneySaverHTML(G.wd)}`;
 }
 

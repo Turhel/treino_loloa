@@ -137,11 +137,11 @@ async function loadSharedFoods() {
 }
 function sharedAdd(food) { SHARED_FOODS[food.id] = food; rebuildCatalog(); }
 const foodLabel = id => { const g = ING[id]; return g ? g.n + (g.brand ? ' · ' + g.brand : '') : id; };
-const pantryName = id => { const g = ING[id]; return !g ? 'Removed food' : g.dry ? g.dryName : g.n; };   // rice & co. are kept and shown uncooked
+const pantryName = id => { const g = ING[id]; return !g ? 'Alimento removido' : g.dry ? g.dryName : g.n; };   // rice & co. are kept and shown uncooked
 const canScan = () => AUTH.mode === 'server';
-const scanBtnHTML = (mode = 'today', cls = '', date = '') => canScan() ? `<button class="btn ${cls}" data-act="scan" data-v="${mode}" ${date ? `data-d="${date}"` : ''} title="${mode === 'pantry' ? 'Escanear compras para a despensa' : `Escanear um código de barras to add it to ${date && date !== todayISO() ? fmtDate(date) : 'today'}`}">${icon('scan')}Scan</button>` : '';
+const scanBtnHTML = (mode = 'today', cls = '', date = '') => canScan() ? `<button class="btn ${cls}" data-act="scan" data-v="${mode}" ${date ? `data-d="${date}"` : ''} title="${mode === 'pantry' ? 'Escanear compras para a despensa' : `Escanear um código de barras para adicionar em ${date && date !== todayISO() ? fmtDate(date) : 'hoje'}`}">${icon('scan')}Scan</button>` : '';
 // "Add food" — pick any food or scanned product to add to a day (works without a camera)
-const addFoodBtnHTML = (date = '', cls = '') => `<button class="btn ${cls}" data-act="qa-pick" ${date ? `data-d="${date}"` : ''} title="Add a snack or any food to ${date && date !== todayISO() ? fmtDate(date) : 'today'}">${icon('plus')}Add food</button>`;
+const addFoodBtnHTML = (date = '', cls = '') => `<button class="btn ${cls}" data-act="qa-pick" ${date ? `data-d="${date}"` : ''} title="Adicionar um lanche ou alimento em ${date && date !== todayISO() ? fmtDate(date) : 'hoje'}">${icon('plus')}Add food</button>`;
 
 /* ---------- scanner ---------- */
 let SCN = null;           // { mode, stream, timer, busy, last, lastAt, added: [] }
@@ -149,13 +149,13 @@ function openScanner(mode, date, draft) {
   if (mode !== 'gym' && !canScan()) { toast('O escaneamento precisa do servidor FORGE 90.'); return; }
   scanStop(); SCN = { mode, date: date || todayISO(), added: [], last: '', lastAt: 0, draft: draft || null };
   const gym = mode === 'gym';
-  modal(`<div class="scan-m"><div class="row"><h2 style="flex:1">${gym ? 'Escanear seu cartão de associado' : mode === 'pantry' ? 'Escanear para a despensa' : 'Escanear um código de barras'}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Close">${icon('x')}</button></div>
-    <div class="tiny muted" style="margin:2px 0 10px">${gym ? 'Mantenha o cartão ou chaveiro reto, com todo o código de barras dentro da área. A maioria dos códigos de academia funciona, inclusive QR codes exibidos em celulares.' : mode === 'pantry' ? 'Each scan adds one package with a typical use-by date — keep scanning, then fix dates or amounts on the Pantry page.' : `Scan a snack or meal to add it to ${SCN.date === todayISO() ? 'today' : fmtDate(SCN.date, { weekday: 'long', month: 'short', day: 'numeric' })}.`}</div>
-    <div class="scan-view" id="scan-view"><video id="scan-video" playsinline muted></video><div class="scan-guide"></div><div class="scan-msg" id="scan-msg">Starting the camera…</div>
+  modal(`<div class="scan-m"><div class="row"><h2 style="flex:1">${gym ? 'Escanear seu cartão de associado' : mode === 'pantry' ? 'Escanear para a despensa' : 'Escanear um código de barras'}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
+    <div class="tiny muted" style="margin:2px 0 10px">${gym ? 'Mantenha o cartão ou chaveiro reto, com todo o código de barras dentro da área. A maioria dos códigos de academia funciona, inclusive QR codes exibidos em celulares.' : mode === 'pantry' ? 'Cada leitura adiciona uma embalagem com uma data de validade típica — continue escaneando e depois ajuste datas ou quantidades na página Despensa.' : `Escaneie um lanche ou refeição para adicionar em ${SCN.date === todayISO() ? 'hoje' : fmtDate(SCN.date, { weekday: 'long', month: 'short', day: 'numeric' })}.`}</div>
+    <div class="scan-view" id="scan-view"><video id="scan-video" playsinline muted></video><div class="scan-guide"></div><div class="scan-msg" id="scan-msg">Iniciando a câmera…</div>
       <button type="button" class="btn sm scan-torch hidden" id="scan-torch" data-act="scan-torch">${icon('bolt')}Light</button></div>
-    ${gym ? `<div class="row wrap" style="gap:8px;margin-top:10px"><button type="button" class="btn" data-act="gym-type">${icon('edit')}Type the number instead</button></div>` : `<form class="row" data-form="scan-code" style="gap:8px;margin-top:10px"><input class="inp" id="scan-code" inputmode="numeric" pattern="[0-9 ]*" placeholder="Or type the barcode number" autocomplete="off" style="flex:1"><button class="btn" type="submit">Look up</button></form>
+    ${gym ? `<div class="row wrap" style="gap:8px;margin-top:10px"><button type="button" class="btn" data-act="gym-type">${icon('edit')}Type the number instead</button></div>` : `<form class="row" data-form="scan-code" style="gap:8px;margin-top:10px"><input class="inp" id="scan-code" inputmode="numeric" pattern="[0-9 ]*" placeholder="Ou digite o número do código de barras" autocomplete="off" style="flex:1"><button class="btn" type="submit">Buscar</button></form>
       <div class="row" style="margin-top:8px"><button type="button" class="btn sm ghost" style="flex:1" data-act="food-by-name" data-v="${mode}" data-d="${esc(date || todayISO())}">${icon('search')}Search by name instead</button></div>`}
-    <label class="btn sm ghost scan-photo">${icon('upload')}<span class="scan-photo-t">Use a photo instead</span><input type="file" accept="image/*" capture="environment" data-input="scan-photo" hidden></label>
+    <label class="btn sm ghost scan-photo">${icon('upload')}<span class="scan-photo-t">Usar uma foto</span><input type="file" accept="image/*" capture="environment" data-input="scan-photo" hidden></label>
     ${mode === 'pantry' ? `<div class="scan-added" id="scan-added">${scanAddedHTML()}</div>` : ''}</div>`, 'scan-modal');
   scanStart();
 }
@@ -166,10 +166,10 @@ function scanAddedHTML() {
   const rows = SCN.added.slice(0, 12).map(e => `<div class="scan-row"><span class="sr-ok">${icon('check')}</span><div class="sr-t"><b>${esc(foodLabel(e.food))}</b><span class="tiny muted">${esc(pantryQtyText(e.food, packInfo(e.food).P * e.n))}${e.base > 0 ? ` · ${esc(pantryQtyText(e.food, e.base))} already here` : ''}</span></div>
     <div class="qstep">${scanStepHTML(e, 'scan')}</div></div>`).join('');
   const n = SCN.added.reduce((a, e) => a + e.n, 0);
-  return `<div class="tiny muted">Added this session</div>${rows}${SCN.added.length > 12 ? `<div class="tiny muted">…and ${SCN.added.length - 12} more</div>` : ''}
+  return `<div class="tiny muted">Adicionado nesta sessão</div>${rows}${SCN.added.length > 12 ? `<div class="tiny muted">…and ${SCN.added.length - 12} more</div>` : ''}
     <button type="button" class="btn sm primary scan-rev" data-act="scan-review">${icon('list')}Review ${n} item${n === 1 ? '' : 's'}</button>`;
 }
-const scanStepHTML = (e, ns) => `<button type="button" class="btn icon sm" data-act="${ns}-less" data-f="${esc(e.food)}" aria-label="One fewer">${icon('minus')}</button><b class="qn">${e.n}</b><button type="button" class="btn icon sm" data-act="${ns}-more" data-f="${esc(e.food)}" aria-label="One more">${icon('plus')}</button>`;
+const scanStepHTML = (e, ns) => `<button type="button" class="btn icon sm" data-act="${ns}-less" data-f="${esc(e.food)}" aria-label="Diminuir um">${icon('minus')}</button><b class="qn">${e.n}</b><button type="button" class="btn icon sm" data-act="${ns}-more" data-f="${esc(e.food)}" aria-label="Adicionar um">${icon('plus')}</button>`;
 function scanPaint() { const el = $('#scan-added'); if (el) el.innerHTML = scanAddedHTML(); }
 /* one row per food per scanning session; scanning the same barcode again bumps its count.
    The row a scan lands on may already have held stock (pantryAdd merges by use-by date),
@@ -189,16 +189,16 @@ async function scanStart() {
   const v = $('#scan-video'); const me = SCN; if (!v || !me) return;
   const gone = () => SCN !== me || !document.body.contains(v);
   // no live camera (plain http, blocked, none): a photo still works — on a phone it opens the camera app
-  const noLive = t => { if (gone()) return; scanMsg(t, 'warn'); const ph = $('#modal .scan-photo'); if (ph) { ph.classList.remove('ghost'); ph.classList.add('primary'); ph.querySelector('.scan-photo-t').textContent = 'Take a photo of the barcode'; } };
-  if (!window.isSecureContext) { noLive('The live camera needs HTTPS. Take a photo of the barcode instead, or type the number.'); return; }
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { noLive('This browser can’t open the camera here. Take a photo instead, or type the number.'); return; }
+  const noLive = t => { if (gone()) return; scanMsg(t, 'warn'); const ph = $('#modal .scan-photo'); if (ph) { ph.classList.remove('ghost'); ph.classList.add('primary'); ph.querySelector('.scan-photo-t').textContent = 'Tirar uma foto do código de barras'; } };
+  if (!window.isSecureContext) { noLive('A câmera ao vivo precisa de HTTPS. Tire uma foto do código de barras ou digite o número.'); return; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { noLive('Este navegador não consegue abrir a câmera aqui. Tire uma foto ou digite o número.'); return; }
   try { me.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }); }
-  catch (e) { noLive(e && e.name === 'NotAllowedError' ? 'Camera access was blocked. Allow it in the browser’s site settings, or take a photo instead.' : 'No camera found. Take a photo of the barcode or type the number.'); return; }
+  catch (e) { noLive(e && e.name === 'NotAllowedError' ? 'O acesso à câmera foi bloqueado. Permita nas configurações do site do navegador ou tire uma foto.' : 'Nenhuma câmera encontrada. Tire uma foto do código de barras ou digite o número.'); return; }
   if (gone()) { scanStop(me); return; }
   v.srcObject = me.stream; try { await v.play(); } catch (e) { /* autoplay */ }
   const track = me.stream.getVideoTracks()[0]; const caps = track && track.getCapabilities ? track.getCapabilities() : {};
   if (caps.torch) { const t = $('#scan-torch'); if (t) t.classList.remove('hidden'); }
-  scanMsg('Line the barcode up inside the box');
+  scanMsg('Alinhe o código de barras dentro da caixa');
   let detector = null;
   const gym = me.mode === 'gym'; const kinds = gym ? Object.keys(BD_FMT) : ['ean_13', 'ean_8', 'upc_a', 'upc_e'];
   if ('BarcodeDetector' in window) { try { const f = await window.BarcodeDetector.getSupportedFormats(); const want = kinds.filter(x => f.includes(x)); if (want.length) detector = new window.BarcodeDetector({ formats: want }); } catch (e) { detector = null; } }
@@ -291,7 +291,7 @@ function productForm(gtin, sug, error) {
       k: x('k'), p: x('p'), c: x('c'), f: x('f'), pk: perItem ? (s.pk && s.srv ? Math.max(1, Math.round(s.pk / s.srv)) : 1) : s.pk, srv: perItem ? null : s.srv };
     PF = { gtin, resolve, sug: s };
     scanStop();
-    modal(`<div class="prod-m"><div class="row"><h2 style="flex:1">${sug ? 'Add this product?' : 'Novo produto'}</h2><button class="btn icon ghost" data-act="prod-cancel" aria-label="Close">${icon('x')}</button></div>
+    modal(`<div class="prod-m"><div class="row"><h2 style="flex:1">${sug ? 'Add this product?' : 'Novo produto'}</h2><button class="btn icon ghost" data-act="prod-cancel" aria-label="Fechar">${icon('x')}</button></div>
       <div class="prod-head">${s.image ? `<img src="${esc(s.image)}" alt="" loading="lazy" onerror="this.remove()">` : `<span class="prod-ph">${icon('scan')}</span>`}<div><div class="tiny muted">Barcode ${esc(gtin)}</div>
         <div class="small">${sug ? 'Found on <b>Open Food Facts</b>. Check the details, then add it to the food list — everyone on this server can use it after that.' : `${error ? esc(error) + ' ' : 'This barcode isn’t in Open Food Facts. '}Enter it from the nutrition label and it’s added to the food list for everyone.`}</div></div></div>
       <form data-form="product" class="grid g2" style="gap:12px;margin-top:12px">${productFieldsHTML(v)}
@@ -305,7 +305,7 @@ function sharedFoodEditor(id) {
   const mine = AUTH.user && (g.by === AUTH.user.id || isAdmin());
   const v = { edit: id, n: g.n, brand: g.brand, sub: g.sub, basis: g.u ? 'u' : g.ml ? 'ml' : 'g', u: g.u, g: g.g, k: g.k, p: g.p, c: g.c, f: g.f, pk: g.pk, srv: g.srv };
   PF = { gtin: g.gtin, edit: id, resolve: null };
-  modal(`<div class="prod-m"><div class="row"><h2 style="flex:1">${mine ? 'Edit product' : 'Product details'}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Close">${icon('x')}</button></div>
+  modal(`<div class="prod-m"><div class="row"><h2 style="flex:1">${mine ? 'Edit product' : 'Product details'}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
     <div class="prod-head"><span class="prod-ph">${icon('scan')}</span><div>${g.gtin ? `<div class="tiny muted">Barcode ${esc(g.gtin)}</div>` : ''}<div class="small">On the shared food list — added by ${esc(g.byName || 'someone')}${g.at ? ' on ' + esc(fmtDate(String(g.at).slice(0, 10), { month: 'short', day: 'numeric', year: 'numeric' })) : ''}${g.src === 'off' ? ' from Open Food Facts' : ''}. ${mine ? 'Changes apply for everyone.' : 'Only they or an administrator can change it.'}</div></div></div>
     <form data-form="product" class="grid g2" style="gap:12px;margin-top:12px">${productFieldsHTML(v, !mine)}
       <div class="row wrap" style="grid-column:1/-1;justify-content:flex-end;gap:8px">${isAdmin() ? `<button type="button" class="btn danger" data-act="prod-del" data-id="${id}" style="margin-right:auto">${icon('trash')}Delete</button>` : ''}<button type="button" class="btn" data-act="close-modal">${mine ? 'Cancel' : 'Close'}</button>${mine ? '<button class="btn primary" type="submit">Save for everyone</button>' : ''}</div></form>
@@ -331,7 +331,7 @@ function scanReview() {
   if (!SCN || !SCN.added.length) return;
   const added = SCN.added; scanStop();
   SCN = { mode: 'pantry', date: todayISO(), added, last: '', lastAt: 0, draft: null, review: true };
-  modal(`<div class="scan-rev-m"><div class="row"><h2 style="flex:1">Scanned items</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Close">${icon('x')}</button></div>
+  modal(`<div class="scan-rev-m"><div class="row"><h2 style="flex:1">Scanned items</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
     <div class="tiny muted" style="margin:2px 0 10px">Everything here is already na despensa. Adjust the counts or use-by dates, or take something back off.</div>
     <div id="scan-rev-list">${scanReviewListHTML()}</div>
     <div class="row wrap" style="justify-content:flex-end;gap:8px;margin-top:12px"><button type="button" class="btn" data-act="scan-again">${icon('scan')}Scan more</button><button type="button" class="btn primary" data-act="scan-done">Done</button></div></div>`, 'scan-rev-modal');
@@ -342,7 +342,7 @@ function scanReviewListHTML() {
     return `<div class="sr-row"><div class="sr-t"><b>${esc(foodLabel(e.food))}</b><span class="tiny muted">${esc(pantryQtyText(e.food, packInfo(e.food).P * e.n))}</span></div>
       <div class="qstep">${scanStepHTML(e, 'srv')}</div>
       <input class="inp sm sr-exp" type="date" data-input="sr-exp" data-f="${esc(e.food)}" value="${it && it.exp ? esc(it.exp) : ''}" aria-label="Use by">
-      <button type="button" class="btn icon sm ghost" data-act="srv-rm" data-f="${esc(e.food)}" aria-label="Remove">${icon('trash')}</button></div>`;
+      <button type="button" class="btn icon sm ghost" data-act="srv-rm" data-f="${esc(e.food)}" aria-label="Remover">${icon('trash')}</button></div>`;
   }).join('');
 }
 function scanReviewPaint() { const el = $('#scan-rev-list'); if (el) el.innerHTML = scanReviewListHTML(); }
@@ -352,7 +352,7 @@ let QP = null;
 function quickPick(date) {
   const d = date || todayISO(); if (!inPlan(d)) { toast('That day isn’t in your plan.'); return; }
   QP = { d };
-  modal(`<div class="qp-m"><div class="row"><h2 style="flex:1">Add food to ${d === todayISO() ? 'today' : esc(fmtDate(d, { weekday: 'short', month: 'short', day: 'numeric' }))}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Close">${icon('x')}</button></div>
+  modal(`<div class="qp-m"><div class="row"><h2 style="flex:1">Add food to ${d === todayISO() ? 'today' : esc(fmtDate(d, { weekday: 'short', month: 'short', day: 'numeric' }))}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
     <div class="row" style="gap:8px;margin:10px 0"><input class="inp" type="search" id="qp-q" data-input="qp-q" placeholder="Search foods and scanned products…" style="flex:1;min-width:0" autocomplete="off">${scanBtnHTML('today', '', d)}</div>
     <div class="qp-list" id="qp-list">${qpListHTML('')}</div></div>`, 'qp-modal');
   const q = $('#qp-q'); if (q && window.matchMedia && matchMedia('(pointer: fine)').matches) q.focus();
@@ -381,7 +381,7 @@ function foodByName(mode, date) {
   const hint = mode === 'pantry' ? 'Pick a food to put one package na despensa — handy for loose produce and anything without a barcode.'
     : mode === 'foods' ? 'Search everything on the food list, including products other people scanned. Pick one to see or edit it.'
     : 'Search the food list and anything scanned on this server.';
-  modal(`<div class="qp-m"><div class="row"><h2 style="flex:1">${esc(title)}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Close">${icon('x')}</button></div>
+  modal(`<div class="qp-m"><div class="row"><h2 style="flex:1">${esc(title)}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
     <div class="tiny muted" style="margin:2px 0 8px">${esc(hint)}</div>
     <div class="row" style="gap:8px;margin-bottom:10px"><input class="inp" type="search" id="fp-q" data-input="fp-q" placeholder="Search foods and scanned products…" style="flex:1;min-width:0" autocomplete="off">${mode !== 'foods' && canScan() ? `<button type="button" class="btn" data-act="fp-scan">${icon('scan')}Scan</button>` : ''}</div>
     <div class="qp-list" id="fp-list">${qpListHTML('', 'fp-pick', FP.d)}</div>
@@ -413,14 +413,14 @@ function quickAdd(id, date) {
 function qaAmount() { const u = QA.units.find(x => x[0] === QA.unit); return Math.max(0, +QA.n || 0) * u[1]; }
 function renderQuickAdd() {
   const g = ING[QA.id]; const amt = qaAmount(); const m = ingMacros(QA.id, amt);
-  modal(`<div class="qa-m"><div class="row"><h2 style="flex:1">Add to ${QA.d === todayISO() ? 'today' : fmtDate(QA.d)}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Close">${icon('x')}</button></div>
+  modal(`<div class="qa-m"><div class="row"><h2 style="flex:1">Add to ${QA.d === todayISO() ? 'today' : fmtDate(QA.d)}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
     <div class="qa-food"><b>${esc(g.n)}</b>${g.brand ? `<span class="tiny muted">${esc(g.brand)}</span>` : ''}${favFoodBtnHTML(QA.id)}</div>
     <div class="grid g2" style="gap:12px;margin-top:10px">
       <div class="field"><label>Amount</label><div class="row" style="gap:6px"><input class="inp" type="number" min="0" step="${QA.unit === 'g' ? 5 : 0.5}" value="${QA.n}" data-input="qa-n" style="width:90px"><select class="inp" data-input="qa-unit">${QA.units.map(([k, , l]) => `<option value="${k}" ${QA.unit === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div></div>
       <div class="field"><label>With</label><select class="inp" data-input="qa-slot">${MEAL_SLOTS.map(s => `<option value="${s}" ${QA.slot === s ? 'selected' : ''}>${SLOT_LABEL[s]}</option>`).join('')}</select></div></div>
     <div class="qa-mac" id="qa-mac"><b>${fmt(m.k)}</b> kcal · <span style="color:var(--prot)">${fmt(m.p)}P</span> · <span style="color:var(--carb)">${fmt(m.c)}C</span> · <span style="color:var(--fat)">${fmt(m.f)}F</span></div>
     <div class="tiny muted">It counts toward the day’s macros, and the rest of the day’s portions shrink to make room.</div>
-    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:14px"><button class="btn" data-act="close-modal">Cancel</button><button class="btn primary" data-act="qa-save">${icon('plus')}Add</button></div></div>`, 'sm qa-modal');
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:14px"><button class="btn" data-act="close-modal">Cancelar</button><button class="btn primary" data-act="qa-save">${icon('plus')}Add</button></div></div>`, 'sm qa-modal');
 }
 function qaSave() {
   const amt = qaAmount(); if (!(amt > 0)) { toast('Enter an amount'); return; }
@@ -537,16 +537,16 @@ function pantryProjected(date) {
 }
 const expDate = exp => fmtDate(exp, exp.slice(0, 4) === todayISO().slice(0, 4) ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' });
 function daysLeft(exp) { return exp ? dayDiff(todayISO(), exp) : null; }
-function expText(exp) { const n = daysLeft(exp); if (n == null) return 'no date'; if (n < 0) return `expired ${-n} day${n === -1 ? '' : 's'} ago`; if (n === 0) return 'expires today'; if (n === 1) return 'vence amanhã'; return `${n} days left`; }
+function expText(exp) { const n = daysLeft(exp); if (n == null) return 'sem data'; if (n < 0) return `venceu há ${-n} dia${n === -1 ? '' : 's'}`; if (n === 0) return 'vence hoje'; if (n === 1) return 'vence amanhã'; return `${n} dia${n === 1 ? '' : 's'} restante${n === 1 ? '' : 's'}`; }
 function pantrySoon() { return pantryItems().filter(x => x.exp && daysLeft(x.exp) <= PANTRY_SOON).sort((a, b) => a.exp < b.exp ? -1 : 1); }
 
-const PAN_SORTS = [['aisle', 'Aisle'], ['name', 'Name'], ['expiry', 'Use-by date'], ['added', 'Recently added']];
+const PAN_SORTS = [['aisle', 'Corredor'], ['name', 'Nome'], ['expiry', 'Validade'], ['added', 'Adicionados recentemente']];
 function viewPantry() {
   pantryCatchUp(); pantryMergeDupes();
   const items = pantryItems(); const soon = pantrySoon(); const shared = pantryShared();
   const byFood = {}; items.forEach(x => (byFood[x.food] = byFood[x.food] || []).push(x));
-  const lotHTML = x => `<div class="pan-lot ${x.exp && daysLeft(x.exp) < 0 ? 'bad' : x.exp && daysLeft(x.exp) <= PANTRY_SOON ? 'soon' : ''}"><span class="num">${esc(pantryQtyText(x.food, x.qty))}</span><span class="tiny">${x.exp ? `${esc(expDate(x.exp))} · ${esc(expText(x.exp))}` : 'no use-by date'}</span>
-      <button type="button" class="btn icon ghost sm" data-act="pan-edit" data-id="${x.id}" title="Edit" aria-label="Edit">${icon('edit')}</button><button type="button" class="btn icon ghost sm" data-act="pan-del" data-id="${x.id}" title="Acabou — remover" aria-label="Remove">${icon('x')}</button></div>`;
+  const lotHTML = x => `<div class="pan-lot ${x.exp && daysLeft(x.exp) < 0 ? 'bad' : x.exp && daysLeft(x.exp) <= PANTRY_SOON ? 'soon' : ''}"><span class="num">${esc(pantryQtyText(x.food, x.qty))}</span><span class="tiny">${x.exp ? `${esc(expDate(x.exp))} · ${esc(expText(x.exp))}` : 'sem data de validade'}</span>
+      <button type="button" class="btn icon ghost sm" data-act="pan-edit" data-id="${x.id}" title="Editar" aria-label="Editar">${icon('edit')}</button><button type="button" class="btn icon ghost sm" data-act="pan-del" data-id="${x.id}" title="Acabou — remover" aria-label="Remover">${icon('x')}</button></div>`;
   // search and sort
   const words = String(UI.panQ || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
   // searching is nearly always "what do I have and what goes off first", so results come back soonest-first
@@ -561,41 +561,41 @@ function viewPantry() {
   if (!flat) { const aisles = {}; foods.forEach(f => { const a = ING[f] ? ING[f].a : 'Pantry'; (aisles[a] = aisles[a] || []).push(f); });
     list = AISLES.concat(Object.keys(aisles).filter(a => !AISLES.includes(a))).filter(a => aisles[a]).map(a => `<div class="pan-aisle"><h3>${esc(a)}</h3>${aisles[a].sort(byName).map(foodRow).join('')}</div>`).join(''); }
   else list = foods.length ? `<div class="pan-aisle">${foods.sort(sort === 'name' ? byName : sort === 'expiry' ? (x, y) => firstExp(x).localeCompare(firstExp(y)) || byName(x, y) : (x, y) => lastAdded(y).localeCompare(lastAdded(x)) || byName(x, y)).map(foodRow).join('')}</div>` : '';
-  const tools = all.length ? `<div class="row wrap pan-tools"><div class="rec-search">${icon('search')}<input class="inp" type="search" placeholder="Search the pantry…" data-input="panq" value="${esc(UI.panQ || '')}" aria-label="Search the pantry" autocomplete="off"></div>
-      <label class="pan-sort"><span class="tiny muted">${words.length ? 'Sorted by' : 'Sort'}</span><select class="inp" data-input="pan-sort" ${words.length ? 'disabled title="Durante a busca, os resultados são ordenados pela data de validade"' : ''}>${PAN_SORTS.map(([k, l]) => `<option value="${k}" ${k === sort ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>` : '';
+  const tools = all.length ? `<div class="row wrap pan-tools"><div class="rec-search">${icon('search')}<input class="inp" type="search" placeholder="Buscar na despensa…" data-input="panq" value="${esc(UI.panQ || '')}" aria-label="Buscar na despensa" autocomplete="off"></div>
+      <label class="pan-sort"><span class="tiny muted">${words.length ? 'Ordenado por' : 'Ordenar'}</span><select class="inp" data-input="pan-sort" ${words.length ? 'disabled title="Durante a busca, os resultados são ordenados pela data de validade"' : ''}>${PAN_SORTS.map(([k, l]) => `<option value="${k}" ${k === sort ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>` : '';
   const soonCard = soon.length ? `<div class="card pan-soon"><div class="card-h"><h2>${icon('clock')}Expiring soon</h2><span class="pill warn-pill">${soon.length}</span></div>
-      ${soon.map(x => `<div class="pan-srow ${daysLeft(x.exp) < 0 ? 'bad' : ''}"><b>${esc(pantryName(x.food))}</b><span class="num tiny">${esc(pantryQtyText(x.food, x.qty))}</span><span class="tiny">${esc(expText(x.exp))}</span><button type="button" class="btn sm ghost" data-act="pan-del" data-id="${x.id}">Used up</button></div>`).join('')}
+      ${soon.map(x => `<div class="pan-srow ${daysLeft(x.exp) < 0 ? 'bad' : ''}"><b>${esc(pantryName(x.food))}</b><span class="num tiny">${esc(pantryQtyText(x.food, x.qty))}</span><span class="tiny">${esc(expText(x.exp))}</span><button type="button" class="btn sm ghost" data-act="pan-del" data-id="${x.id}">Acabou</button></div>`).join('')}
       <div class="tiny muted" style="margin-top:6px">Anything within ${PANTRY_SOON} days of its use-by date shows here.</div></div>` : '';
-  return `<div class="page-head"><div class="t"><h1>Pantry</h1><p>What you already have at home. The shopping list ticks off what’s here, and planned meals use the pantry up automatically as each day passes${shared ? ` — shared with ${esc(syncName())}` : ''}.</p></div>
+  return `<div class="page-head"><div class="t"><h1>Despensa</h1><p>O que você já tem em casa. A lista de compras marca o que está disponível, e as refeições planejadas descontam os itens da despensa automaticamente conforme os dias passam${shared ? ` — shared with ${esc(syncName())}` : ''}.</p></div>
       <div class="row wrap">${scanBtnHTML('pantry', 'primary')}<button class="btn ${canScan() ? '' : 'primary'}" data-act="pan-add">${icon('plus')}Add item</button></div></div>
     ${soonCard}${soon.length ? '<div style="height:16px"></div>' : ''}
-    <div class="card"><div class="card-h"><h2>In the pantry</h2><span class="pill">${foods.length < all.length ? `${foods.length} of ${all.length}` : all.length} food${all.length === 1 ? '' : 's'}</span>${shared ? `<span class="pill acc">${icon('users')}Shared</span>` : ''}</div>
+    <div class="card"><div class="card-h"><h2>Na despensa</h2><span class="pill">${foods.length < all.length ? `${foods.length} of ${all.length}` : all.length} food${all.length === 1 ? '' : 's'}</span>${shared ? `<span class="pill acc">${icon('users')}Compartilhada</span>` : ''}</div>
       ${tools}${all.length && !foods.length ? `<div class="muted small" style="padding:10px 2px">Nothing na despensa matches “${esc(String(UI.panQ || '').trim())}”.</div>` : ''}
-      ${all.length ? list : `<div class="empty-state">${icon('box')}<div>The pantry is empty. ${canScan() ? 'Scan groceries, ' : ''}add items by hand, or tick items on the <a href="#/grocery">shopping list</a> and add them here.</div></div>`}
-      <div class="tiny muted" style="margin-top:10px">${S.pantryThrough ? `Planned meals through ${fmtDate(S.pantryThrough, { month: 'short', day: 'numeric' })} have been taken out, soonest-expiring first.` : ''} Use-by dates start from typical shelf life — edit them to match the package.</div></div>`;
+      ${all.length ? list : `<div class="empty-state">${icon('box')}<div>A despensa está vazia. ${canScan() ? 'Escaneie compras, ' : ''}adicione itens manualmente ou marque itens na <a href="#/grocery">lista de compras</a> e traga-os para cá.</div></div>`}
+      <div class="tiny muted" style="margin-top:10px">${S.pantryThrough ? `As refeições planejadas até ${fmtDate(S.pantryThrough, { month: 'short', day: 'numeric' })} já foram descontadas, priorizando os itens que vencem primeiro.` : ''} As datas de validade começam com uma estimativa típica — edite para corresponder à embalagem.</div></div>`;
 }
 // pantry amounts are kept in the food's own unit; rice & co. are entered uncooked like on the shopping list
-const panUnit = id => { const g = ING[id]; return !g ? '' : g.u ? g.u + 's' : g.dry ? 'g uncooked' : g.ml ? 'ml' : 'g'; };
+const panUnit = id => { const g = ING[id]; return !g ? '' : g.u ? g.u + 's' : g.dry ? 'g cru' : g.ml ? 'ml' : 'g'; };
 const panToShown = (id, q) => { const g = ING[id]; return g && g.dry ? Math.round(q * g.dry) : Math.round(q * 100) / 100; };
 const panFromShown = (id, q) => { const g = ING[id]; return g && g.dry ? q / g.dry : q; };
 function panFindFood(q) { q = String(q || '').trim().toLowerCase(); if (!q) return null; return Object.values(ING).find(x => foodLabel(x.id).toLowerCase() === q) || Object.values(ING).find(x => x.n.toLowerCase() === q) || null; }
 function pantryItemModal(itemId, foodId) {
   const it = itemId ? pantryItems().find(x => x.id === itemId) : null; const food = it ? it.food : (foodId || '');
-  if (itemId && !it) { toast('That item is gone — someone may have used it up'); render(); return; }
-  modal(`<div><div class="row"><h2 style="flex:1">${it ? 'Edit pantry item' : 'Add to the pantry'}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Close">${icon('x')}</button></div>
+  if (itemId && !it) { toast('Esse item não está mais disponível — alguém pode ter usado tudo'); render(); return; }
+  modal(`<div><div class="row"><h2 style="flex:1">${it ? 'Editar item da despensa' : 'Adicionar à despensa'}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
     <form data-form="pantry" data-id="${it ? it.id : ''}" class="grid" style="gap:12px;margin-top:12px">
-      <div class="field"><label>Food</label>${it ? `<b>${esc(pantryName(food))}${ING[food] && ING[food].brand ? ' · ' + esc(ING[food].brand) : ''}</b>` : `<input class="inp" list="pan-foods" name="foodq" data-input="pan-foodq" value="${food && ING[food] ? esc(foodLabel(food)) : ''}" placeholder="Search foods…" required autocomplete="off"><datalist id="pan-foods">${Object.values(ING).sort((a, b) => (isFavFood(b.id) - isFavFood(a.id)) || a.n.localeCompare(b.n)).map(g => `<option value="${esc(foodLabel(g.id))}">`).join('')}</datalist>`}</div>
-      <div class="grid g2" style="gap:12px"><div class="field"><label>Amount <span class="muted" id="pan-unit" style="font-weight:500">${esc(panUnit(food))}</span></label><input class="inp" type="number" min="0" step="1" inputmode="numeric" name="qty" value="${it ? panToShown(food, it.qty) : ''}" placeholder="${it ? '' : 'uma embalagem se ficar em branco'}"></div>
-        <div class="field"><label>Use by</label><input class="inp" type="date" name="exp" value="${it && it.exp ? it.exp : ''}"><span class="tiny muted">${it ? '' : 'Blank = typical shelf life'}</span></div></div>
-      <div class="row wrap" style="justify-content:flex-end;gap:8px">${it ? `<button type="button" class="btn danger" data-act="pan-del" data-id="${it.id}" style="margin-right:auto">${icon('trash')}Remove</button>` : ''}<button type="button" class="btn" data-act="close-modal">Cancel</button><button class="btn primary" type="submit">${it ? 'Save' : 'Add'}</button></div></form></div>`, 'sm');
+      <div class="field"><label>Alimento</label>${it ? `<b>${esc(pantryName(food))}${ING[food] && ING[food].brand ? ' · ' + esc(ING[food].brand) : ''}</b>` : `<input class="inp" list="pan-foods" name="foodq" data-input="pan-foodq" value="${food && ING[food] ? esc(foodLabel(food)) : ''}" placeholder="Buscar alimentos…" required autocomplete="off"><datalist id="pan-foods">${Object.values(ING).sort((a, b) => (isFavFood(b.id) - isFavFood(a.id)) || a.n.localeCompare(b.n)).map(g => `<option value="${esc(foodLabel(g.id))}">`).join('')}</datalist>`}</div>
+      <div class="grid g2" style="gap:12px"><div class="field"><label>Quantidade <span class="muted" id="pan-unit" style="font-weight:500">${esc(panUnit(food))}</span></label><input class="inp" type="number" min="0" step="1" inputmode="numeric" name="qty" value="${it ? panToShown(food, it.qty) : ''}" placeholder="${it ? '' : 'uma embalagem se ficar em branco'}"></div>
+        <div class="field"><label>Validade</label><input class="inp" type="date" name="exp" value="${it && it.exp ? it.exp : ''}"><span class="tiny muted">${it ? '' : 'Em branco = validade típica'}</span></div></div>
+      <div class="row wrap" style="justify-content:flex-end;gap:8px">${it ? `<button type="button" class="btn danger" data-act="pan-del" data-id="${it.id}" style="margin-right:auto">${icon('trash')}Remove</button>` : ''}<button type="button" class="btn" data-act="close-modal">Cancelar</button><button class="btn primary" type="submit">${it ? 'Salvar' : 'Adicionar'}</button></div></form></div>`, 'sm');
 }
 function pantrySubmit(form) {
   const fd = new FormData(form); const itemId = form.dataset.id; const qs = String(fd.get('qty') || '').trim();
   if (itemId) { const it = pantryItems().find(x => x.id === itemId); if (!it) { closeModal(); render(); return; }
-    pantrySet(itemId, { qty: qs === '' ? 0 : Math.max(0, Math.round(panFromShown(it.food, Math.round(+qs)) * 100) / 100), exp: fd.get('exp') || null }); closeModal(); render(); toast('Pantry updated'); return; }
-  const g = panFindFood(fd.get('foodq')); if (!g) { toast('Pick a food from the list'); return; }
-  if (qs !== '' && !(+qs > 0)) { toast('Enter an amount above 0, or leave it blank for one package'); return; }
-  pantryAdd(g.id, qs === '' ? null : panFromShown(g.id, Math.round(+qs)), fd.get('exp') || null, 'manual'); closeModal(); render(); toast(`${g.n} added to the pantry`);
+    pantrySet(itemId, { qty: qs === '' ? 0 : Math.max(0, Math.round(panFromShown(it.food, Math.round(+qs)) * 100) / 100), exp: fd.get('exp') || null }); closeModal(); render(); toast('Despensa atualizada'); return; }
+  const g = panFindFood(fd.get('foodq')); if (!g) { toast('Escolha um alimento da lista'); return; }
+  if (qs !== '' && !(+qs > 0)) { toast('Informe uma quantidade maior que 0 ou deixe em branco para uma embalagem'); return; }
+  pantryAdd(g.id, qs === '' ? null : panFromShown(g.id, Math.round(+qs)), fd.get('exp') || null, 'manual'); closeModal(); render(); toast(`${g.n} adicionado à despensa`);
 }
 function pantryNavBadge() { const a = $('.nav a[data-nav="pantry"]'); if (!a) return; const n = S ? pantrySoon().length : 0; let b = a.querySelector('.nav-badge'); if (!n) { if (b) b.remove(); return; } if (!b) { b = document.createElement('span'); b.className = 'nav-badge'; a.appendChild(b); } b.textContent = n; b.title = `${n} item${n === 1 ? '' : 's'} da despensa perto do vencimento`; }
 
@@ -610,7 +610,7 @@ function groceryRows(A, wd, totals) {
   const proj = pantryProjected(days[0]);
   const rows = Object.entries(tot).filter(([id]) => ING[id]).map(([id, a]) => { const have = pantryHave(id, proj); let need = Math.max(0, a - have); if (need < (ING[id].u ? 0.05 : 1)) need = 0; return { id, total: a, have, need }; });
   const part = days.length < wd.length;
-  const note = `<div class="note gro-pan-note">${icon('box')}<span>${part ? `This week’s list covers <b>${fmtDate(days[0], { weekday: 'long' })}</b> on — earlier days are already eaten. ` : ''}Items your <a href="#/pantry">pantry</a> already covers${days[0] > t ? ' (after the meals planned before then)' : ''} are ticked with a pantry icon — untick any you still need to buy. Partly covered items show the full amount and what’s at home.</span></div>`;
+  const note = `<div class="note gro-pan-note">${icon('box')}<span>${part ? `A lista desta semana cobre a partir de <b>${fmtDate(days[0], { weekday: 'long' })}</b> — os dias anteriores já passaram. ` : ''}Itens já cobertos pela sua <a href="#/pantry">despensa</a>${days[0] > t ? ' (após as refeições planejadas anteriores)' : ''} aparecem marcados com o ícone da despensa — desmarque o que ainda precisar comprar. Itens parcialmente cobertos mostram a quantidade total e o que já há em casa.</span></div>`;
   return { rows, note };
 }
 // checked state: pantry-covered rows are ticked unless the user unticked them (stored as 0); other rows need a tick (1)
@@ -651,15 +651,15 @@ function groAll(on) {
 function groceryAddChecked() {
   const G = GRO_ROWS; if (!G) return; const got = groGot(); const done = [];
   G.rows.forEach(r => { const st = groRowState(r, got); if (!st.checked || st.covered) return; const pi = packInfo(r.id); const q = pi.P > 1 ? Math.ceil(r.total / pi.P - 1e-9) * pi.P : r.total; if (pantryAdd(r.id, q, null, 'list')) done.push(r.id); });
-  if (!done.length) { toast('Tick the items you bought first'); return; }
-  groSetMany(done.map(id => [id, null])); toast(`${done.length} item${done.length === 1 ? '' : 's'} added to the pantry`);
+  if (!done.length) { toast('Marque primeiro os itens que você comprou'); return; }
+  groSetMany(done.map(id => [id, null])); toast(`${done.length} item${done.length === 1 ? '' : 'ns'} adicionado${done.length === 1 ? '' : 's'} à despensa`);
 }
 
 Object.assign(ACT, {
   scan: el => openScanner(el.dataset.v || 'today', el.dataset.d || null),
-  'scan-torch': async () => { const t = SCN && SCN.stream && SCN.stream.getVideoTracks()[0]; if (!t) return; SCN.torch = !SCN.torch; try { await t.applyConstraints({ advanced: [{ torch: SCN.torch }] }); } catch (e) { toast('The light isn’t available'); } },
-  'prod-del': el => { const g = ING[el.dataset.id]; if (!g) return; confirmBox(`Delete ${esc(g.n)}?`, 'It comes off the shared food list for everyone. Meals and pantry items that use it lose it too.', 'Delete', async () => {
-    try { await api('DELETE', '/api/foods/shared/' + encodeURIComponent(g.id)); delete SHARED_FOODS[g.id]; rebuildCatalog(); render(); toast(`${g.n} deleted`); } catch (e) { toast(e.message); } }, true); },
+  'scan-torch': async () => { const t = SCN && SCN.stream && SCN.stream.getVideoTracks()[0]; if (!t) return; SCN.torch = !SCN.torch; try { await t.applyConstraints({ advanced: [{ torch: SCN.torch }] }); } catch (e) { toast('A luz não está disponível'); } },
+  'prod-del': el => { const g = ING[el.dataset.id]; if (!g) return; confirmBox(`Excluir ${esc(g.n)}?`, 'Ele será removido da lista compartilhada de alimentos para todos. Refeições e itens da despensa que usam esse alimento também perderão a referência.', 'Excluir', async () => {
+    try { await api('DELETE', '/api/foods/shared/' + encodeURIComponent(g.id)); delete SHARED_FOODS[g.id]; rebuildCatalog(); render(); toast(`${g.n} excluído`); } catch (e) { toast(e.message); } }, true); },
   'food-edit': el => { const g = ING[el.dataset.id]; if (g && g.shared) sharedFoodEditor(g.id); else foodEditor(el.dataset.id); },
   'prod-cancel': () => { const r = PF && PF.resolve; PF = null; if (SCN && SCN.mode === 'pantry') { openScannerKeep(); } else { scanStop(); closeModal(); } if (r) r(null); },
   'scan-less': el => { scanCount(el.dataset.f, (SCN.added.find(x => x.food === el.dataset.f) || { n: 0 }).n - 1); scanPaint(); },
@@ -682,15 +682,15 @@ Object.assign(ACT, {
   'fav-food': el => toggleFavFood(el.dataset.id),
   'pan-add': () => pantryItemModal(null),
   'pan-edit': el => pantryItemModal(el.dataset.id),
-  'pan-del': el => { const it = pantryItems().find(x => x.id === el.dataset.id); pantryDel(el.dataset.id); closeModal(); render(); if (it) toast(`${pantryName(it.food)} removed from the pantry`); },
+  'pan-del': el => { const it = pantryItems().find(x => x.id === el.dataset.id); pantryDel(el.dataset.id); closeModal(); render(); if (it) toast(`${pantryName(it.food)} removido da despensa`); },
   'gro-all': el => groAll(el.dataset.v === '1'),
   'gro-pantry': () => groceryAddChecked(),
   'recq-clear': () => { UI.recQ = ''; render(); },
-  'pan-share': async el => { const on = el.dataset.v === '1'; try { const r = await api('POST', '/api/sync/pantry/share', { on }); if (!on && r.previous) S.pantrySharedCopy = r.previous; await syncFetch(true); await pantrySyncReconcile(); render(); toast(on ? 'Pantry shared' : 'Pantry no longer shared'); } catch (e) { toast(e.message); } }
+  'pan-share': async el => { const on = el.dataset.v === '1'; try { const r = await api('POST', '/api/sync/pantry/share', { on }); if (!on && r.previous) S.pantrySharedCopy = r.previous; await syncFetch(true); await pantrySyncReconcile(); render(); toast(on ? 'Despensa compartilhada' : 'Despensa não é mais compartilhada'); } catch (e) { toast(e.message); } }
 });
 document.addEventListener('submit', e => {
   const f = e.target; if (!f.dataset) return;
-  if (f.dataset.form === 'scan-code') { e.preventDefault(); const v = ($('#scan-code') || {}).value || ''; const code = gtinNorm(v); if (!/^\d{8}$|^\d{13,14}$/.test(code)) { scanMsg('Enter the 8, 12 or 13 digits under the barcode', 'warn'); return; } SCN.last = ''; scanFound(code); }
+  if (f.dataset.form === 'scan-code') { e.preventDefault(); const v = ($('#scan-code') || {}).value || ''; const code = gtinNorm(v); if (!/^\d{8}$|^\d{13,14}$/.test(code)) { scanMsg('Digite os 8, 12 ou 13 dígitos abaixo do código de barras', 'warn'); return; } SCN.last = ''; scanFound(code); }
   if (f.dataset.form === 'product') { e.preventDefault(); productSave(f); }
   if (f.dataset.form === 'pantry') { e.preventDefault(); pantrySubmit(f); }
 });
@@ -711,12 +711,12 @@ document.addEventListener('change', async e => {
   if (t.dataset.input === 'qa-slot' && QA) QA.slot = t.value;
   if (t.dataset.input === 'pf-basis') { const u = $('#modal .pf-unit'); if (u) u.classList.toggle('hidden', t.value !== 'u'); const s = $('#modal [name="srv"]'); if (s) s.disabled = t.value === 'u'; const pu = $('#modal .pf-pku'); if (pu) pu.textContent = `(${t.value === 'u' ? 'items' : t.value})`; }
   if (t.dataset.input === 'scan-photo') {
-    const f = t.files && t.files[0]; t.value = ''; if (!f) return; scanMsg('Reading the photo…');
+    const f = t.files && t.files[0]; t.value = ''; if (!f) return; scanMsg('Lendo a foto…');
     try { const bmp = await createImageBitmap(f); const W = Math.min(1600, bmp.width), H = Math.round(bmp.height * W / bmp.width); const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.drawImage(bmp, 0, 0, W, H);
       const gym = SCN && SCN.mode === 'gym'; let code = null, fmt = null;
       if ('BarcodeDetector' in window) { try { const f = await window.BarcodeDetector.getSupportedFormats(); const want = (gym ? Object.keys(BD_FMT) : ['ean_13', 'ean_8', 'upc_a', 'upc_e']).filter(k => f.includes(k)); const r = await new window.BarcodeDetector({ formats: want }).detect(c); if (r[0]) { code = r[0].rawValue; fmt = BD_FMT[r[0].format] || r[0].format; } } catch (er) { /* fall back */ } }
       if (!code) { const img = x.getImageData(0, 0, W, H); if (gym) { const d = bcDecodeAny(img); if (d) { code = d.code; fmt = d.fmt; } } else code = bcDecodeImage(img); }
-      if (code && SCN) { SCN.last = ''; scanFound(code, fmt); } else scanMsg('No barcode found in that photo — try closer and straight on, or type the number.', 'warn'); }
-    catch (er) { scanMsg('That photo couldn’t be read.', 'warn'); }
+      if (code && SCN) { SCN.last = ''; scanFound(code, fmt); } else scanMsg('Nenhum código de barras encontrado na foto — tente mais perto e de frente, ou digite o número.', 'warn'); }
+    catch (er) { scanMsg('Não foi possível ler a foto.', 'warn'); }
   }
 });
