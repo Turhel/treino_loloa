@@ -1701,5 +1701,13 @@ function translateNode(node) {
   node.childNodes.forEach(translateNode);
 }
 function translateForge90() { translateNode(document.documentElement); document.documentElement.lang = 'pt-BR'; }
+
+// Native browser dialogs are outside the DOM, so translate them at call time too.
+const PT_NATIVE_CONFIRM = window.confirm.bind(window);
+const PT_NATIVE_ALERT = window.alert.bind(window);
+const PT_NATIVE_PROMPT = window.prompt.bind(window);
+window.confirm = message => PT_NATIVE_CONFIRM(pt(String(message ?? '')));
+window.alert = message => PT_NATIVE_ALERT(pt(String(message ?? '')));
+window.prompt = (message, defaultValue) => PT_NATIVE_PROMPT(pt(String(message ?? '')), defaultValue);
 new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(translateNode)))
   .observe(document.documentElement, { childList: true, subtree: true });
