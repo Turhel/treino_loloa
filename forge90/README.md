@@ -158,7 +158,7 @@ Um administrador convida novos usuários em Administrador → Usuários. Cada li
 
 ## Instalação
 
-GitHub Container Registry:
+Registro de Contêineres do GitHub:
 
 ```
 ghcr.io/oroshi-zz/forge_90:latest
