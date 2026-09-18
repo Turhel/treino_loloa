@@ -376,12 +376,12 @@ function updateRecipePreview() {
   const tot = zeroM(); e.ing.forEach(([id, a], i) => { if (!ING[id]) return; const m = ingMacros(id, +a || 0); addM(tot, m); const s = $(`.re-m[data-i="${i}"]`); if (s) s.textContent = `${fmt(m.k)} kcal · ${fmt(m.p)}P`; });
   const y = Math.max(1, +e.yield || 1); const ps = { k: tot.k / y, p: tot.p / y, c: tot.c / y, f: tot.f / y };
   const blocked = e.ing.filter(([id]) => !foodAllowed(id)).map(([id]) => ING[id] && ING[id].n).filter(Boolean);
-  el.innerHTML = `<div class="row wrap" style="gap:18px"><div><div class="tiny muted">Per serving</div><div style="font-size:22px;font-weight:700" class="num">${fmt(ps.k)} kcal</div></div>
-    <div class="num"><span style="color:var(--prot)"><b>${fmt(ps.p)}</b>g protein</span> · <span style="color:var(--carb)"><b>${fmt(ps.c)}</b>g carbs</span> · <span style="color:var(--fat)"><b>${fmt(ps.f)}</b>g fat</span></div>
-    <div class="tiny muted">${ps.k ? Math.round(ps.p * 4 / ps.k * 100) : 0}% of calories from protein</div></div>
+  el.innerHTML = `<div class="row wrap" style="gap:18px"><div><div class="tiny muted">Por porção</div><div style="font-size:22px;font-weight:700" class="num">${fmt(ps.k)} kcal</div></div>
+    <div class="num"><span style="color:var(--prot)"><b>${fmt(ps.p)}</b>g proteína</span> · <span style="color:var(--carb)"><b>${fmt(ps.c)}</b>g carboidratos</span> · <span style="color:var(--fat)"><b>${fmt(ps.f)}</b>g gordura</span></div>
+    <div class="tiny muted">${ps.k ? Math.round(ps.p * 4 / ps.k * 100) : 0}% das calorias vêm da proteína</div></div>
     ${e.imp && e.imp.nut && e.imp.nut.k ? (() => { const n = e.imp.nut; const off = ps.k && n.k ? Math.abs(ps.k - n.k) / n.k : 0;
-      return `<div class="tiny ${off > .25 ? '' : 'muted'}" style="margin-top:6px">The source lists <b>${fmt(n.k)} kcal</b>${n.p ? ` and <b>${fmt(n.p)} g protein</b>` : ''} por porção${off > .25 && e.ing.every(r => ING[r[0]] && +r[1] > 0) ? ` — yours is ${fmt(off * 100)}% ${ps.k > n.k ? 'higher' : 'lower'}, so check the amounts and servings.` : '.'}</div>`; })() : ''}
-    ${blocked.length ? `<div class="note warn" style="margin-top:8px">${icon('info')}<span>Uses foods you’ve turned off (${esc(blocked.join(', '))}) — it won’t be scheduled until they’re back on.</span></div>` : ''}`;
+      return `<div class="tiny ${off > .25 ? '' : 'muted'}" style="margin-top:6px">A fonte informa <b>${fmt(n.k)} kcal</b>${n.p ? ` e <b>${fmt(n.p)} g de proteína</b>` : ''} por porção${off > .25 && e.ing.every(r => ING[r[0]] && +r[1] > 0) ? ` — o valor calculado aqui é ${fmt(off * 100)}% ${ps.k > n.k ? 'maior' : 'menor'}, então confira as quantidades e porções.` : '.'}</div>`; })() : ''}
+    ${blocked.length ? `<div class="note warn" style="margin-top:8px">${icon('info')}<span>Usa alimentos que você desativou (${esc(blocked.join(', '))}) — a receita não será incluída no plano até que sejam reativados.</span></div>` : ''}`;
 }
 function saveRecipe() {
   const e = RE; const name = e.name.trim();
