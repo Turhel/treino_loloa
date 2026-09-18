@@ -157,6 +157,7 @@ const PT_PHRASES = {
   'Excessive arching of the lower back to push heavier weight.': 'Arquear demais a lombar para empurrar mais carga.',
   'Set both pulleys at about shoulder height and step forward into a staggered stance.': 'Ajuste as duas polias na altura dos ombros e avance em uma base alternada.',
   'Lock a slight bend in your elbows and keep it fixed the whole set.': 'Mantenha uma leve flexão nos cotovelos, fixa durante toda a série.',
+  'Keep a soft bend in the elbows.': 'Mantenha uma leve flexão nos cotovelos.',
   'Bring your hands together in a wide arc in front of your chest — like hugging a big tree.': 'Junte as mãos em um arco amplo à frente do peito — como se abraçasse uma árvore grande.',
   'Squeeze for a second, then open slowly until you feel a stretch with elbows just behind your torso.': 'Contraia por um segundo e abra devagar até sentir alongar, com os cotovelos um pouco atrás do tronco.',
   'Move at the shoulder, not the elbow': 'Mova pelo ombro, não pelo cotovelo',
