@@ -1850,7 +1850,7 @@ const PT_PHRASES = {
   "Shopping list copied": "Lista de compras copiada",
 };
 
-const PT_EXACT_KEYS = new Set(['Off', 'Rest', 'Test', 'Week', 'Progress', 'lb', 'of', 'all', 'breakfast', 'lunch', 'dinner', 'snack', '— none —', "Browser", "Decline", "Unsync", "List", "Prep", "Plan", "Kitchen", "Workout", "This week", "Upper", "Lower", "Full body", "Mixed", "Gym card", "Body stats", "Recent PRs", "Required", "You", "Food", "Name", "Plain HTTP", "Direct connection"]);
+const PT_EXACT_KEYS = new Set(['Off', 'Rest', 'Test', 'Week', 'Progress', 'lb', 'of', 'all', 'breakfast', 'lunch', 'dinner', 'snack', '— none —', "Browser", "Decline", "Unsync", "List", "Prep", "Plan", "Kitchen", "Workout", "This week", "Upper", "Lower", "Full body", "Mixed", "Gym card", "Body stats", "Recent PRs", "Required", "You", "Food", "Name", "Plain HTTP", "Direct connection", "Account", "Administrator", "Owner", "Remove", "Security", "Scan", "Approve", "Unlock", "Swap", "Today"]);
 const PT_PAIRS = Object.entries(PT_PHRASES)
   .filter(([from]) => !PT_EXACT_KEYS.has(from))
   .sort((a, b) => b[0].length - a[0].length);
