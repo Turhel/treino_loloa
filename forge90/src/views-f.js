@@ -140,7 +140,7 @@ Object.assign(ACT, { 'onb-back': () => { const f = $('form[data-form="onb"]'); i
 /* Reminder to replace an estimated body-fat % with a measured one */
 function bfEstimateNote() {
   if (!S.settings.bfEstimated || S.weights.some(x => x.bf != null && x.bf !== '')) return '';
-  return `<div class="note warn bf-est-note">${icon('info')}<span>Your body fat (${fmt(S.settings.startBF, 1)}%) is an <b>estimate</b> from height, age and sex, so your calorie targets are approximate. When you can, measure it (smart scale, calipers or DEXA) and add it to a weigh-in — targets update automatically.</span><a class="btn sm" href="#/progress">Add a weigh-in</a></div>`;
+  return `<div class="note warn bf-est-note">${icon('info')}<span>Sua gordura corporal (${fmt(S.settings.startBF, 1)}%) é uma <b>estimativa</b> baseada em altura, idade e sexo, então suas metas calóricas são aproximadas. Quando puder, faça uma medição (balança inteligente, adipômetro ou DEXA) e registre em uma pesagem — as metas serão atualizadas automaticamente.</span><a class="btn sm" href="#/progress">Adicionar pesagem</a></div>`;
 }
 
 /* ================================================================
@@ -166,16 +166,16 @@ function attachPartner(days) {
 function shareBadge(date, slot, compact) {             // compact (calendar chips): only flag meals that need attention
   if (!syncKeyOn(date, slot) || !myMeal(date, slot)) return '';
   const k = date + '|' + slot; const inc = SY.data.changesIn.find(c => c.date === date && c.slot === slot), out = SY.data.changesOut.find(c => c.date === date && c.slot === slot);
-  if (inc) return `<span class="bd shr pend" data-tip="${esc(syncName())} changed this to ${esc(inc.name || inc.rid)} — open Sync to accept or decline">${icon('users')}?</span>`;
-  if (out) return `<span class="bd shr pend" data-tip="Waiting for ${esc(syncName())} to accept this change">${icon('users')}…</span>`;
+  if (inc) return `<span class="bd shr pend" data-tip="${esc(syncName())} alterou para ${esc(inc.name || inc.rid)} — abra Sincronização para aceitar ou recusar">${icon('users')}?</span>`;
+  if (out) return `<span class="bd shr pend" data-tip="Aguardando ${esc(syncName())} aceitar esta alteração">${icon('users')}…</span>`;
   if (compact) return '';
-  if (isSharedMeal(date, slot)) return `<span class="bd shr" data-tip="Shared with ${esc(syncName())} — on both plans and one shopping list">${icon('users')}</span>`;
-  return `<span class="bd shr off" data-tip="${SY.data.div[k] ? esc(syncName()) + ' declined this change, so you eat different meals here' : 'Not the same meal as ' + esc(syncName()) + ' today'}">${icon('users')}</span>`;
+  if (isSharedMeal(date, slot)) return `<span class="bd shr" data-tip="Compartilhado com ${esc(syncName())} — nos dois planos e em uma única lista de compras">${icon('users')}</span>`;
+  return `<span class="bd shr off" data-tip="${SY.data.div[k] ? esc(syncName()) + ' recusou esta alteração, então vocês terão refeições diferentes aqui' : 'Refeição diferente da de ' + esc(syncName()) + ' hoje'}">${icon('users')}</span>`;
 }
 function syncBtnHTML(cls = '') {
   if (!syncActive()) return '';
   const n = SY.data.changesIn.length + (SY.data.slotReq && SY.data.slotReq.by !== AUTH.user.id ? 1 : 0);
-  return `<button class="btn sync-btn ${cls} ${n ? 'has' : ''}" data-act="sync-open" title="Meal plan synced with ${esc(syncName())}${n ? ` — ${n} change${n === 1 ? '' : 's'} to review` : ''}">${icon('users')}<span>Sync</span>${n ? `<b class="sync-badge">${n}</b>` : ''}</button>`;
+  return `<button class="btn sync-btn ${cls} ${n ? 'has' : ''}" data-act="sync-open" title="Plano alimentar sincronizado com ${esc(syncName())}${n ? ` — ${n} alteração${n === 1 ? '' : 'ões'} para revisar` : ''}">${icon('users')}<span>Sync</span>${n ? `<b class="sync-badge">${n}</b>` : ''}</button>`;
 }
 function refreshSyncUI() {
   $$('.sync-btn').forEach(b => { const cls = [...b.classList].filter(c => !['btn', 'sync-btn', 'has'].includes(c)).join(' '); const h = syncBtnHTML(cls); if (h) b.outerHTML = h; else b.remove(); });
@@ -243,7 +243,7 @@ function syncDiff() {
     const mine = myMeal(d, sl), ag = sy.agreed[k]; const pend = sy.changesOut.find(c => c.date === d && c.slot === sl);
     if (mine === ag) { if (pend) out.push({ date: d, slot: sl, rid: mine }); return; }
     if (pend && pend.rid === mine) return; if (!pend && sy.div[k] === mine) return;
-    const r = mine && RECIPE[mine]; const c = { date: d, slot: sl, rid: mine, name: r ? r.name : 'Nothing', emoji: r ? r.emoji : '', prevName: ag && RECIPE[ag] ? RECIPE[ag].name : (ag ? ag : 'Nothing') };
+    const r = mine && RECIPE[mine]; const c = { date: d, slot: sl, rid: mine, name: r ? r.name : 'Nenhuma', emoji: r ? r.emoji : '', prevName: ag && RECIPE[ag] ? RECIPE[ag].name : (ag ? ag : 'Nenhuma') };
     if (r && r.custom && S.customRecipes[mine]) { c.recipe = S.customRecipes[mine]; const foods = {}; (c.recipe.ing || []).forEach(([id]) => { if (S.customFoods[id]) foods[id] = S.customFoods[id]; }); if (Object.keys(foods).length) c.foods = foods; }
     out.push(c); });
   return out;
@@ -287,27 +287,27 @@ function syncPanel() {
   const req = sy.slotReq && sy.slotReq.by !== AUTH.user.id ? `<div class="note warn" style="margin-bottom:12px">${icon('users')}<span style="flex:1"><b>${esc(syncName())}</b> quer compartilhar: ${MEAL_SLOTS.filter(k => sy.slotReq.slots[k]).map(k => SLOT_LABEL[k]).join(', ')}.</span><button class="btn sm primary" data-act="sync-slots-ok" data-v="1">Aprovar</button><button class="btn sm ghost" data-act="sync-slots-ok" data-v="0">Manter como está</button></div>` : '';
   const shared = computeAll(); let nShared = 0; const wk = [todayISO()]; for (let i = 1; i < 7; i++) wk.push(addDays(todayISO(), i));
   wk.forEach(d => MEAL_SLOTS.forEach(sl => { if (shared.days[d] && isSharedMeal(d, sl)) nShared++; }));
-  modal(`<div class="sync-modal"><div class="row" style="align-items:flex-start"><span class="lk-ic">${icon('users')}</span><div style="flex:1;min-width:0"><h2 style="margin:0">Sincronizado com ${esc(syncName())}</h2><div class="small muted">Compartilhando ${esc(slotsTxt)} desde ${fmtDate(sy.since, { month: 'short', day: 'numeric' })} · ${nShared} refeição${nShared === 1 ? '' : 'ões'} compartilhada${nShared === 1 ? '' : 's'} nos próximos 7 dias</div></div><button class="btn icon ghost" data-act="close-modal" aria-label="Close">${icon('x')}</button></div>
+  modal(`<div class="sync-modal"><div class="row" style="align-items:flex-start"><span class="lk-ic">${icon('users')}</span><div style="flex:1;min-width:0"><h2 style="margin:0">Sincronizado com ${esc(syncName())}</h2><div class="small muted">Compartilhando ${esc(slotsTxt)} desde ${fmtDate(sy.since, { month: 'short', day: 'numeric' })} · ${nShared} refeição${nShared === 1 ? '' : 'ões'} compartilhada${nShared === 1 ? '' : 's'} nos próximos 7 dias</div></div><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
     <div style="height:14px"></div>${req}
-    <div class="card-h" style="margin-bottom:6px"><h3>Aguardando você <span class="pill ${inc.length ? 'warn-pill' : ''}">${inc.length}</span></h3>${inc.length > 1 ? `<button class="btn sm primary" data-act="sync-resolve" data-v="accept" data-ids="${inc.map(c => c.id).join(',')}">${icon('check')}Accept all</button><button class="btn sm ghost" data-act="sync-resolve" data-v="decline" data-ids="${inc.map(c => c.id).join(',')}">Recusar tudo</button>` : ''}</div>
+    <div class="card-h" style="margin-bottom:6px"><h3>Aguardando você <span class="pill ${inc.length ? 'warn-pill' : ''}">${inc.length}</span></h3>${inc.length > 1 ? `<button class="btn sm primary" data-act="sync-resolve" data-v="accept" data-ids="${inc.map(c => c.id).join(',')}">${icon('check')}Aceitar tudo</button><button class="btn sm ghost" data-act="sync-resolve" data-v="decline" data-ids="${inc.map(c => c.id).join(',')}">Recusar tudo</button>` : ''}</div>
     ${inc.map(c => `<div class="sync-row"><div class="sync-when">${chgLabel(c)}</div><div class="sync-chg">${chgMeal(c.prev, c.prevName)} <span class="arr">${icon('right')}</span> <b>${chgMeal(c.rid, c.name, c.emoji)}</b></div><div class="sync-acts"><button class="btn sm primary" data-act="sync-resolve" data-v="accept" data-ids="${c.id}">Aceitar</button><button class="btn sm ghost" data-act="sync-resolve" data-v="decline" data-ids="${c.id}">Recusar</button></div></div>`).join('') || `<div class="muted small" style="padding:4px 0 8px">Nada para revisar. Quando ${esc(syncName())} alterar uma refeição compartilhada, ela aparecerá aqui.</div>`}
     <div class="card-h" style="margin:14px 0 6px"><h3>Aguardando ${esc(syncName())} <span class="pill">${out.length}</span></h3></div>
     ${out.map(c => `<div class="sync-row"><div class="sync-when">${chgLabel(c)}</div><div class="sync-chg">${chgMeal(c.prev, c.prevName)} <span class="arr">${icon('right')}</span> <b>${chgMeal(c.rid, c.name, c.emoji)}</b></div><div class="sync-acts"><button class="btn sm ghost" data-act="sync-resolve" data-v="cancel" data-ids="${c.id}" title="Recolocar a refeição compartilhada no seu plano">Desfazer</button></div></div>`).join('') || `<div class="muted small" style="padding:4px 0 8px">Suas alterações em refeições compartilhadas são enviadas automaticamente. Elas aparecem aqui até ${esc(syncName())} aceitar ou recusar.</div>`}
     ${sy.events.length ? `<div class="card-h" style="margin:14px 0 6px"><h3>Recentes</h3></div><div class="ev-list">${sy.events.slice(-6).reverse().map(e => `<div class="ev-row"><span class="ev-dot ${e.type === 'decline' ? 'bad' : ''}"></span><div style="flex:1;min-width:0">${esc(e.text)}<div class="tiny muted">${ago(e.t)}</div></div></div>`).join('')}</div>` : ''}
-    <div class="note" style="margin-top:14px">${icon('info')}<span>When you accept, the meal on your plan changes to match. If you decline, you each keep your own meal that day and the shopping list counts them separately. Your portions are always sized to your own targets.</span></div>
-    <div class="row" style="justify-content:space-between;margin-top:12px"><a class="btn ghost" href="#/account" data-act="close-modal">${icon('user')}Configurações de sincronização</a><button class="btn" data-act="sync-refresh">${icon('loop')}Refresh</button></div></div>`, 'sync-m');
+    <div class="note" style="margin-top:14px">${icon('info')}<span>Ao aceitar, a refeição do seu plano é alterada para corresponder à proposta. Se recusar, cada pessoa mantém sua própria refeição naquele dia e a lista de compras contabiliza ambas separadamente. Suas porções continuam sempre ajustadas às suas próprias metas.</span></div>
+    <div class="row" style="justify-content:space-between;margin-top:12px"><a class="btn ghost" href="#/account" data-act="close-modal">${icon('user')}Configurações de sincronização</a><button class="btn" data-act="sync-refresh">${icon('loop')}Atualizar</button></div></div>`, 'sync-m');
 }
 // A partner's own recipe (and any foods it needs) joins my recipes when I accept it — copied field by field, never trusted as-is
 const cleanStr = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
 const cleanNum = (v, lo, hi, d) => { const n = +v; return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
 function cleanFood(f) {
-  return { n: cleanStr(f.n, 80) || 'Food', sub: SUB_CAT[f.sub] ? f.sub : 'sauces', a: AISLES.includes(f.a) ? f.a : 'Pantry', r: ['P', 'C', 'F', 'V', 'X'].includes(f.r) ? f.r : 'V',
+  return { n: cleanStr(f.n, 80) || 'Alimento', sub: SUB_CAT[f.sub] ? f.sub : 'sauces', a: AISLES.includes(f.a) ? f.a : 'Pantry', r: ['P', 'C', 'F', 'V', 'X'].includes(f.r) ? f.r : 'V',
     k: cleanNum(f.k, 0, 2000, 0), p: cleanNum(f.p, 0, 200, 0), c: cleanNum(f.c, 0, 200, 0), f: cleanNum(f.f, 0, 200, 0), pk: f.pk == null ? null : cleanNum(f.pk, 0, 100000, null),
     u: f.u ? cleanStr(f.u, 20) : null, g: f.u ? cleanNum(f.g, 1, 5000, 100) : null, ml: !f.u && !!f.ml };
 }
 function cleanRecipe(r, id) {
   const cats = ['breakfast', 'lunch', 'dinner', 'snack'];
-  return { id, custom: true, name: cleanStr(r.name, 80) || 'Shared recipe', emoji: cleanStr(r.emoji, 8) || '🍽️', cat: cats.includes(r.cat) ? r.cat : 'dinner', yield: Math.round(cleanNum(r.yield, 1, 12, 1)),
+  return { id, custom: true, name: cleanStr(r.name, 80) || 'Receita compartilhada', emoji: cleanStr(r.emoji, 8) || '🍽️', cat: cats.includes(r.cat) ? r.cat : 'dinner', yield: Math.round(cleanNum(r.yield, 1, 12, 1)),
     storage: ['fridge', 'freezer', 'none'].includes(r.storage) ? r.storage : 'fridge', time: cleanNum(r.time, 0, 600, 0), fixed: !!r.fixed, rotate: false,
     tags: (Array.isArray(r.tags) ? r.tags : []).slice(0, 12).map(t => cleanStr(t, 30)).filter(Boolean),
     links: (Array.isArray(r.links) ? r.links : []).filter(l => l && /^https?:\/\/[^\s]+$/i.test(String(l.url || ''))).slice(0, 4).map(l => ({ url: cleanStr(l.url, 500), label: cleanStr(l.label, 60) })),
@@ -326,7 +326,7 @@ async function syncResolve(ids, action) {
       if (action === 'accept') { importRecipe(c); if (!c.rid || RECIPE[c.rid]) S.plan[c.date].m[c.slot] = c.rid; markMealEdit(c.date, c.slot); }
       if (action === 'cancel') { const ag = before.agreed[c.date + '|' + c.slot]; if (ag === null || RECIPE[ag]) S.plan[c.date].m[c.slot] = ag === undefined ? S.plan[c.date].m[c.slot] : ag; } });
     SY.data = r.sync; SY.rev = r.sync.rev; invalidate(); if (action !== 'decline') saveState(); else syncOnSave(); render();
-    toast(action === 'accept' ? `Aceita${r.done.length === 1 ? '' : 's'} ${r.done.length} alteração${r.done.length === 1 ? '' : 'ões'} — seu plano e sua lista de compras foram atualizados.` : action === 'decline' ? `Recusada${r.done.length === 1 ? '' : 's'} ${r.done.length === 1 ? 'a alteração' : r.done.length + ' alterações'} — cada pessoa manterá sua própria refeição nesse dia.` : 'Change withdrawn — the shared meal is back on your plan.');
+    toast(action === 'accept' ? `Aceita${r.done.length === 1 ? '' : 's'} ${r.done.length} alteração${r.done.length === 1 ? '' : 'ões'} — seu plano e sua lista de compras foram atualizados.` : action === 'decline' ? `Recusada${r.done.length === 1 ? '' : 's'} ${r.done.length === 1 ? 'a alteração' : r.done.length + ' alterações'} — cada pessoa manterá sua própria refeição nesse dia.` : 'Alteração retirada — a refeição compartilhada voltou ao seu plano.');
     refreshSyncUI(); }
   catch (e) { toast(e.message); }
 }
@@ -365,10 +365,10 @@ Object.assign(ACT, {
       const n = await syncPostBaseline(jointMeals(sy.since, end, sy.slots), end); await syncPublish();
       toast(`Sincronizado com ${syncName()} — ${n} refeição${n === 1 ? '' : 'ões'} compartilhada${n === 1 ? '' : 's'} foi${n === 1 ? '' : 'ram'} planejada${n === 1 ? '' : 's'} em conjunto a partir de ${fmtDate(sy.since)}.`); refreshSyncUI(); render(); }
     catch (e) { toast(e.message); el.disabled = false; syncFetch(true); } },
-  'sync-decline': () => confirmBox('Recusar a solicitação de sincronização?', `${esc(syncName())} será avisado de que você recusou. Uma nova solicitação poderá ser enviada depois.`, 'Decline', async () => { try { SY.leaving = true; await api('POST', '/api/sync/respond', { accept: false }); syncTake(null); toast('Request declined'); } catch (e) { SY.leaving = false; toast(e.message); } }),
+  'sync-decline': () => confirmBox('Recusar a solicitação de sincronização?', `${esc(syncName())} será avisado de que você recusou. Uma nova solicitação poderá ser enviada depois.`, 'Recusar', async () => { try { SY.leaving = true; await api('POST', '/api/sync/respond', { accept: false }); syncTake(null); toast('Solicitação recusada'); } catch (e) { SY.leaving = false; toast(e.message); } }),
   'sync-end': () => { const active = syncActive();
-    confirmBox(active ? 'Parar de sincronizar planos de refeição?' : 'Cancelar a solicitação de sincronização?', active ? `Você e ${esc(syncName())} mantêm as refeições atuais. A partir de agora, os planos e as listas de compras voltam a ser separados.` : `${esc(syncName())} não poderá mais aceitar a solicitação.`, active ? 'Unsync' : 'Cancelar solicitação', async () => {
-      try { SY.leaving = true; await api('DELETE', '/api/sync'); syncTake(null); toast(active ? 'Meal plans unsynced — your meals stay as they are.' : 'Request cancelled'); } catch (e) { SY.leaving = false; toast(e.message); } }, active); },
+    confirmBox(active ? 'Parar de sincronizar planos de refeição?' : 'Cancelar a solicitação de sincronização?', active ? `Você e ${esc(syncName())} mantêm as refeições atuais. A partir de agora, os planos e as listas de compras voltam a ser separados.` : `${esc(syncName())} não poderá mais aceitar a solicitação.`, active ? 'Parar sincronização' : 'Cancelar solicitação', async () => {
+      try { SY.leaving = true; await api('DELETE', '/api/sync'); syncTake(null); toast(active ? 'Sincronização encerrada — suas refeições permanecem como estão.' : 'Solicitação cancelada'); } catch (e) { SY.leaving = false; toast(e.message); } }, active); },
   'sync-slots-ok': async el => { const ok = el.dataset.v === '1'; const old = Object.assign({}, SY.data.slots);
     try { const r = await api('POST', '/api/sync/slots', { approve: ok }); SY.data = r.sync; SY.rev = r.sync.rev;
       if (ok) { const added = {}; MEAL_SLOTS.forEach(k => { if (SY.data.slots[k] && !old[k]) added[k] = 1; });
@@ -393,7 +393,7 @@ function syncInviteNote() {
 function syncGroceryNote(wd, A) {
   if (!syncActive()) return '';
   let n = 0, nb = 0; wd.forEach(d => A.days[d].meals.forEach(m => { if (m.partner) n++; })); A.batches.list.forEach(b => { if (b.partnerServ && wd.includes(b.cook)) nb++; });
-  return `<div class="note acc sync-gro">${icon('users')}<span>Compras para dois: esta lista inclui <b>${esc(syncName())}’s portions of ${n} refeição${n === 1 ? '' : 'ões'} compartilhada${n === 1 ? '' : 's'}</b>${nb ? ` e ${nb} preparo${nb === 1 ? '' : 's'} em lote compartilhado${nb === 1 ? '' : 's'}` : ''} nesta semana. Marcar um item como comprado também o marca para ${esc(syncName())} também.${SY.snap ? '' : ` <i>Aguardando carregar as porções de ${esc(syncName())}…</i>`}</span></div><div style="height:16px"></div>`;
+  return `<div class="note acc sync-gro">${icon('users')}<span>Compras para dois: esta lista inclui <b>as porções de ${esc(syncName())} em ${n} refeição${n === 1 ? '' : 'ões'} compartilhada${n === 1 ? '' : 's'}</b>${nb ? ` e ${nb} preparo${nb === 1 ? '' : 's'} em lote compartilhado${nb === 1 ? '' : 's'}` : ''} nesta semana. Marcar um item como comprado também o marca para ${esc(syncName())} também.${SY.snap ? '' : ` <i>Aguardando carregar as porções de ${esc(syncName())}…</i>`}</span></div><div style="height:16px"></div>`;
 }
 // don't re-render under someone's cursor — a sync refresh waits until they leave the field
 document.addEventListener('focusout', () => { if (!SY.needRender) return; setTimeout(() => { if (SY.needRender && !(document.activeElement && document.activeElement.closest && document.activeElement.closest('#view input, #view select, #view textarea'))) { SY.needRender = false; invalidate(); if ($('#view')) render(); } }, 250); });
