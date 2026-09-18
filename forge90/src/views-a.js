@@ -243,18 +243,18 @@ document.addEventListener('drop', e => {
 function applyDrop(d, type, tDate, tSlot, copy) {
   if (type === 'trash') {
     if (d.from !== 'cal') return;
-    pushUndo('remove');
-    if (d.kind === 'meal') { const rid = S.plan[d.date].m[d.slot]; S.plan[d.date].m[d.slot] = null; markMealEdit(d.date, d.slot); commitPlan(`Removed ${RECIPE[rid] ? RECIPE[rid].name : 'meal'} from ${fmtDate(d.date)}`); }
-    else { S.plan[d.date].w = null; commitPlan(`Removed workout from ${fmtDate(d.date)} — it’s now a rest day`); }
+    pushUndo('remoção');
+    if (d.kind === 'meal') { const rid = S.plan[d.date].m[d.slot]; S.plan[d.date].m[d.slot] = null; markMealEdit(d.date, d.slot); commitPlan(`Removido ${RECIPE[rid] ? RECIPE[rid].name : 'refeição'} de ${fmtDate(d.date)}`); }
+    else { S.plan[d.date].w = null; commitPlan(`Treino removido de ${fmtDate(d.date)} — agora é um dia de descanso`); }
     return;
   }
   const tE = S.plan[tDate];
   if (d.kind === 'workout') {
-    if (d.from === 'lib') { pushUndo('add workout'); tE.w = { t: d.t, wk: planWeek(tDate) }; commitPlan(`${TEMPLATES[d.t].name} → ${fmtDate(tDate)}`); return; }
+    if (d.from === 'lib') { pushUndo('adicionar treino'); tE.w = { t: d.t, wk: planWeek(tDate) }; commitPlan(`${TEMPLATES[d.t].name} → ${fmtDate(tDate)}`); return; }
     if (d.date === tDate) return;
-    pushUndo('move workout'); const src = S.plan[d.date]; const a = src.w, b = tE.w;
+    pushUndo('mover treino'); const src = S.plan[d.date]; const a = src.w, b = tE.w;
     tE.w = a ? Object.assign({}, a) : null; if (!copy) src.w = b ? Object.assign({}, b) : null;
-    commitPlan(copy ? `Copied workout to ${fmtDate(tDate)}` : b ? `Swapped workouts: ${fmtDate(d.date)} ↔ ${fmtDate(tDate)}` : `Moved workout to ${fmtDate(tDate)}`);
+    commitPlan(copy ? `Treino copiado para ${fmtDate(tDate)}` : b ? `Treinos trocados: ${fmtDate(d.date)} ↔ ${fmtDate(tDate)}` : `Treino movido para ${fmtDate(tDate)}`);
     return;
   }
   // meals
@@ -263,16 +263,16 @@ function applyDrop(d, type, tDate, tSlot, copy) {
     if (d.from === 'cal') tSlot = d.slot;
     else { const cat = RECIPE[rid].cat; tSlot = cat !== 'snack' ? cat : (!tE.m.snack1 ? 'snack1' : 'snack2'); }
   }
-  if (d.from === 'lib') { pushUndo('add meal'); tE.m[tSlot] = rid; markMealEdit(tDate, tSlot); commitPlan(`${RECIPE[rid].name} → ${fmtDate(tDate)} ${SLOT_LABEL[tSlot].toLowerCase()}`); return; }
+  if (d.from === 'lib') { pushUndo('adicionar refeição'); tE.m[tSlot] = rid; markMealEdit(tDate, tSlot); commitPlan(`${RECIPE[rid].name} → ${fmtDate(tDate)} ${SLOT_LABEL[tSlot].toLowerCase()}`); return; }
   if (d.date === tDate && d.slot === tSlot) return;
-  pushUndo('move meal'); const src = S.plan[d.date]; const prev = tE.m[tSlot] || null;
+  pushUndo('mover refeição'); const src = S.plan[d.date]; const prev = tE.m[tSlot] || null;
   tE.m[tSlot] = rid; markMealEdit(tDate, tSlot); if (!copy) { src.m[d.slot] = prev; markMealEdit(d.date, d.slot); }
-  commitPlan(copy ? `Copied ${RECIPE[rid].name} to ${fmtDate(tDate)}` : prev ? `Swapped ${RECIPE[rid].name} ↔ ${RECIPE[prev].name}` : `Moved ${RECIPE[rid].name} to ${fmtDate(tDate)}`);
+  commitPlan(copy ? `${RECIPE[rid].name} copiada para ${fmtDate(tDate)}` : prev ? `Refeições trocadas: ${RECIPE[rid].name} ↔ ${RECIPE[prev].name}` : `${RECIPE[rid].name} movida para ${fmtDate(tDate)}`);
 }
 
 /* ---------------- DAY DETAIL ---------------- */
 function viewDay(date) {
-  if (!date || !inPlan(date)) return `<div class="card empty-state">${icon('cal')}<h2 style="margin:8px 0">That day isn’t in the plan</h2><a class="btn" href="#/calendar">Back to calendar</a></div>`;
+  if (!date || !inPlan(date)) return `<div class="card empty-state">${icon('cal')}<h2 style="margin:8px 0">Esse dia não está no plano</h2><a class="btn" href="#/calendar">Voltar ao calendário</a></div>`;
   const A = computeAll(); const day = A.days[date]; const e = S.plan[date];
   const idx = planIndex(date), wk = planWeek(date);
   const prev = inPlan(addDays(date, -1)) ? addDays(date, -1) : null, next = inPlan(addDays(date, 1)) ? addDays(date, 1) : null;

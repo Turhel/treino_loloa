@@ -314,9 +314,9 @@ function confirmBox(title, text, okLabel, onOk, danger) {
 const undoStack = [];
 function pushUndo(label) { undoStack.push({ plan: JSON.stringify(S.plan), fav: JSON.stringify(S.favRecipes || {}), share: S.settings.shareIngredients !== false, swap: JSON.stringify(S.slotSwap || {}), gym: JSON.stringify({ c: S.gymCards || [], a: S.gymActive || null }), label }); if (undoStack.length > 40) undoStack.shift(); }
 function undo() {
-  const u = undoStack.pop(); if (!u) { toast('Nothing to undo'); return; }
+  const u = undoStack.pop(); if (!u) { toast('Nada para desfazer'); return; }
   S.plan = JSON.parse(u.plan); if (u.fav) S.favRecipes = JSON.parse(u.fav); if (u.swap) S.slotSwap = JSON.parse(u.swap); if (u.gym) { const g = JSON.parse(u.gym); S.gymCards = g.c; S.gymActive = g.a; } if (u.share != null) S.settings.shareIngredients = u.share; invalidate(); saveState(); render(); refreshFavButtons();
   if (typeof renderQuickEdit === 'function' && QE && $('#modal .qe-sec')) renderQuickEdit();
-  toast('Undid: ' + u.label);
+  toast('Desfeito: ' + u.label);
 }
 function commitPlan(label) { saveState(); render(); toast(label, true); }

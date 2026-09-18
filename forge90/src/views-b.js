@@ -589,14 +589,14 @@ document.addEventListener('change', e => {
     arr[+i] = arr[+i] || {}; const prev = arr[+i][k]; arr[+i][k] = el.value === '' ? null : +el.value;
     for (let j = 0; j < arr.length; j++) if (!arr[j]) arr[j] = {};
     saveState();
-    const hint = $('#hint-' + ex); if (hint) { const b = prBadge(d, ex); const old = hint.querySelector('.prb'); if (old) old.remove(); if (b) { hint.insertAdjacentHTML('afterbegin', b); if (!old) toast(`New PR on ${EX[ex].name}! 🏆`); } }
-    if (k === 'r') { const c = refreshLogProgress(d, ex); if (c && c.done >= c.total && !S.done[d] && !(prev > 0) && +el.value > 0) toast('Every set is logged — nice work! Tap “Mark workout complete” to finish the session. 💪'); }
+    const hint = $('#hint-' + ex); if (hint) { const b = prBadge(d, ex); const old = hint.querySelector('.prb'); if (old) old.remove(); if (b) { hint.insertAdjacentHTML('afterbegin', b); if (!old) toast(`Novo recorde em ${EX[ex].name}! 🏆`); } }
+    if (k === 'r') { const c = refreshLogProgress(d, ex); if (c && c.done >= c.total && !S.done[d] && !(prev > 0) && +el.value > 0) toast('Todas as séries foram registradas — ótimo! Toque em “Marcar treino como concluído” para finalizar a sessão. 💪'); }
     return;
   }
   const inp = el.dataset.input;
-  if (inp === 'day-wo') { pushUndo('change workout'); const d = el.dataset.date; S.plan[d].w = el.value ? { t: el.value, wk: planWeek(d) } : null; commitPlan(el.value ? `Session set to ${TEMPLATES[el.value].name}` : 'Changed to a rest day'); }
-  else if (inp === 'day-meal') { pushUndo('change meal'); S.plan[el.dataset.date].m[el.dataset.slot] = el.value || null; markMealEdit(el.dataset.date, el.dataset.slot); commitPlan(el.value ? `${SLOT_LABEL[el.dataset.slot]} → ${RECIPE[el.value].name}` : `${SLOT_LABEL[el.dataset.slot]} removed`); }
-  else if (inp === 'share') { pushUndo('ingredient sharing'); S.settings.shareIngredients = el.checked; const from = nextPlanWeekStart(); replanMeals(from); saveState(); render();
+  if (inp === 'day-wo') { pushUndo('alteração de treino'); const d = el.dataset.date; S.plan[d].w = el.value ? { t: el.value, wk: planWeek(d) } : null; commitPlan(el.value ? `Sessão definida como ${TEMPLATES[el.value].name}` : 'Alterado para dia de descanso'); }
+  else if (inp === 'day-meal') { pushUndo('alteração de refeição'); S.plan[el.dataset.date].m[el.dataset.slot] = el.value || null; markMealEdit(el.dataset.date, el.dataset.slot); commitPlan(el.value ? `${SLOT_LABEL[el.dataset.slot]} → ${RECIPE[el.value].name}` : `${SLOT_LABEL[el.dataset.slot]} removido`); }
+  else if (inp === 'share') { pushUndo('compartilhamento de ingredientes'); S.settings.shareIngredients = el.checked; const from = nextPlanWeekStart(); replanMeals(from); saveState(); render();
     toast(`Compartilhamento de ingredientes ${el.checked ? 'ativado' : 'desativado'} — refeições a partir de ${fmtDate(from)} foram replanejadas (as escolhidas manualmente foram mantidas)`, true); }
   else if (inp === 'gro-week') { UI.groWeek = +el.value; saveUI(); render(); }
   else if (inp === 'gro') groTick(el);
