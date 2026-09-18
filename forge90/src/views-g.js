@@ -359,34 +359,34 @@ let IMPQ = null;                         // queue of Mealie recipes being review
 const IMPUI = { tab: 'url', url: '', q: '', items: [], page: 1, pages: 1, total: 0, sel: {}, busy: false, err: '', loaded: false };
 async function loadInteg(force) { if (INTEG && !force) return INTEG; try { INTEG = await api('GET', '/api/integrations'); } catch (e) { INTEG = { mealie: { configured: false, canEdit: isAdmin() }, error: e.message }; } return INTEG; }
 function importModal(tab) {
-  if (AUTH.mode !== 'server') { toast('Importing recipes needs the FORGE 90 server.'); return; }
+  if (AUTH.mode !== 'server') { toast('A importação de receitas precisa do servidor FORGE 90.'); return; }
   if (tab) IMPUI.tab = tab; IMPUI.err = '';
   renderImportModal(); loadInteg(true).then(() => { if (!$('#modal .imp-modal')) return; renderImportModal(); if (IMPUI.tab === 'mealie' && INTEG.mealie.configured && !IMPUI.loaded) impSearch(); });
 }
 function renderImportModal() {
   const t = IMPUI.tab; const mc = INTEG && INTEG.mealie;
-  const body = t === 'url' ? `<form class="imp-url" data-form="imp-url"><label class="small" for="imp-url-in">Recipe page link</label>
-      <div class="row" style="gap:8px"><input class="inp" id="imp-url-in" type="url" inputmode="url" placeholder="https://…" value="${esc(IMPUI.url)}" autocomplete="off" style="flex:1" required><button class="btn primary" type="submit" ${IMPUI.busy ? 'disabled' : ''}>${IMPUI.busy ? 'Importing…' : 'Import'}</button></div></form>
-      <div class="tiny muted" style="margin-top:8px">Works with most recipe sites (anything that publishes standard recipe data). You’ll review the recipe before it’s saved, and anything the page doesn’t say — like which foods to use — is highlighted for you to fill in.</div>`
+  const body = t === 'url' ? `<form class="imp-url" data-form="imp-url"><label class="small" for="imp-url-in">Link da página da receita</label>
+      <div class="row" style="gap:8px"><input class="inp" id="imp-url-in" type="url" inputmode="url" placeholder="https://…" value="${esc(IMPUI.url)}" autocomplete="off" style="flex:1" required><button class="btn primary" type="submit" ${IMPUI.busy ? 'disabled' : ''}>${IMPUI.busy ? 'Importando…' : 'Importar'}</button></div></form>
+      <div class="tiny muted" style="margin-top:8px">Funciona com a maioria dos sites de receitas que publicam dados em formato padrão. Você revisará a receita antes de salvá-la, e qualquer informação ausente — como quais alimentos usar — será destacada para preenchimento.</div>`
     : !mc ? `<div class="muted small">Checking the Mealie connection…</div>`
-    : !mc.configured ? `<div class="note">${icon('info')}<span>Mealie isn’t connected. ${mc.canEdit ? `Connect it in <a href="#/settings" data-act="close-modal">Settings → API connections</a>.` : 'Ask an administrator to connect it in Settings.'}</span></div>`
-    : `<div class="row" style="gap:8px"><input class="inp" type="search" id="imp-q" placeholder="Search your Mealie recipes…" value="${esc(IMPUI.q)}" data-input="imp-q" autocomplete="off" style="flex:1"></div>
+    : !mc.configured ? `<div class="note">${icon('info')}<span>O Mealie não está conectado. ${mc.canEdit ? `Conecte em <a href="#/settings" data-act="close-modal">Configurações → Conexões de API</a>.` : 'Peça a um administrador para conectá-lo em Configurações.'}</span></div>`
+    : `<div class="row" style="gap:8px"><input class="inp" type="search" id="imp-q" placeholder="Buscar receitas no Mealie…" value="${esc(IMPUI.q)}" data-input="imp-q" autocomplete="off" style="flex:1"></div>
       <div class="imp-list" id="imp-list">${impListHTML()}</div>
       <div class="row" style="justify-content:space-between;margin-top:10px;gap:8px;flex-wrap:wrap"><span class="tiny muted" id="imp-count">${impCountText()}</span>
         <button class="btn primary" data-act="imp-mealie-go" id="imp-go" ${Object.keys(IMPUI.sel).length && !IMPUI.busy ? '' : 'disabled'}>${impGoLabel()}</button></div>`;
-  modal(`<div class="imp-modal"><div class="row"><h2 style="flex:1">Import a recipe</h2><button class="btn icon ghost" data-act="close-modal">${icon('x')}</button></div>
-    <div class="seg" style="margin:12px 0 14px">${[['url', 'Web link'], ['mealie', 'Mealie']].map(([k, l]) => `<button class="${t === k ? 'on' : ''}" data-act="imp-tab" data-v="${k}">${l}</button>`).join('')}</div>
+  modal(`<div class="imp-modal"><div class="row"><h2 style="flex:1">Importar uma receita</h2><button class="btn icon ghost" data-act="close-modal">${icon('x')}</button></div>
+    <div class="seg" style="margin:12px 0 14px">${[['url', 'Link da web'], ['mealie', 'Mealie']].map(([k, l]) => `<button class="${t === k ? 'on' : ''}" data-act="imp-tab" data-v="${k}">${l}</button>`).join('')}</div>
     ${IMPUI.err ? `<div class="note warn" style="margin-bottom:10px">${icon('info')}<span>${esc(IMPUI.err)}</span></div>` : ''}${body}</div>`);
   const f = $(t === 'url' ? '#imp-url-in' : '#imp-q'); if (f && !IMPUI.busy) { f.focus(); if (f.value) f.setSelectionRange(f.value.length, f.value.length); }
 }
-const impGoLabel = () => { const n = Object.keys(IMPUI.sel).length; return IMPUI.busy ? 'Importing…' : n ? `Import ${n} recipe${n > 1 ? 's' : ''}` : 'Import'; };
-const impCountText = () => IMPUI.total ? `${IMPUI.total} recipe${IMPUI.total === 1 ? '' : 's'} in Mealie${IMPUI.q ? ' match' : ''} · ${Object.keys(IMPUI.sel).length} selected` : '';
+const impGoLabel = () => { const n = Object.keys(IMPUI.sel).length; return IMPUI.busy ? 'Importando…' : n ? `Importar ${n} receita${n > 1 ? 's' : ''}` : 'Importar'; };
+const impCountText = () => IMPUI.total ? `${IMPUI.total} receita${IMPUI.total === 1 ? '' : 's'} no Mealie${IMPUI.q ? ' correspondente' + (IMPUI.total === 1 ? '' : 's') : ''} · ${Object.keys(IMPUI.sel).length} selecionada${Object.keys(IMPUI.sel).length === 1 ? '' : 's'}` : '';
 function impListHTML() {
-  if (!IMPUI.loaded) return `<div class="muted small" style="padding:12px">Loading recipes…</div>`;
-  if (!IMPUI.items.length) return `<div class="muted small" style="padding:12px">${IMPUI.q ? 'No recipes match.' : 'No recipes in Mealie yet.'}</div>`;
+  if (!IMPUI.loaded) return `<div class="muted small" style="padding:12px">Carregando receitas…</div>`;
+  if (!IMPUI.items.length) return `<div class="muted small" style="padding:12px">${IMPUI.q ? 'Nenhuma receita corresponde à busca.' : 'Ainda não há receitas no Mealie.'}</div>`;
   return IMPUI.items.map(r => { const on = !!IMPUI.sel[r.slug]; const have = RECIPES.find(x => impAscii(x.name).trim() === impAscii(r.name).trim());
-    return `<label class="imp-item ${on ? 'on' : ''}"><input type="checkbox" data-input="imp-sel" value="${esc(r.slug)}" ${on ? 'checked' : ''}><span class="imp-it"><span class="imp-nm"><b>${esc(r.name)}</b>${have ? '<span class="pill">Already in your recipes</span>' : ''}</span><small>${esc([r.yield, r.minutes ? r.minutes + ' min' : '', r.description].filter(Boolean).join(' · '))}</small></span></label>`; }).join('')
-    + (IMPUI.page < IMPUI.pages ? `<button class="btn sm ghost" data-act="imp-more" style="margin:8px auto;display:flex">Load more</button>` : '');
+    return `<label class="imp-item ${on ? 'on' : ''}"><input type="checkbox" data-input="imp-sel" value="${esc(r.slug)}" ${on ? 'checked' : ''}><span class="imp-it"><span class="imp-nm"><b>${esc(r.name)}</b>${have ? '<span class="pill">Já está nas suas receitas</span>' : ''}</span><small>${esc([r.yield, r.minutes ? r.minutes + ' min' : '', r.description].filter(Boolean).join(' · '))}</small></span></label>`; }).join('')
+    + (IMPUI.page < IMPUI.pages ? `<button class="btn sm ghost" data-act="imp-more" style="margin:8px auto;display:flex">Carregar mais</button>` : '');
 }
 async function impSearch(more) {
   const q = IMPUI.q; const page = more ? IMPUI.page + 1 : 1;
@@ -404,25 +404,25 @@ async function impFromUrl() {
   catch (e) {
     IMPUI.busy = false;
     if (e.status === 422 && e.data && e.data.partial) { const p = e.data.partial; IMPQ = null;
-      importToEditor({ source: 'web', name: p.name || '', url: p.url || url, site: p.site || linkHost(url), servings: p.servings || null, steps: p.steps || [], ingredients: [] }, { error: e.message + ' Paste the ingredient list below and the rest is worked out for you.' }); return; }
+      importToEditor({ source: 'web', name: p.name || '', url: p.url || url, site: p.site || linkHost(url), servings: p.servings || null, steps: p.steps || [], ingredients: [] }, { error: e.message + ' Cole a lista de ingredientes abaixo e o restante será processado para você.' }); return; }
     IMPUI.err = e.message; if ($('#modal .imp-modal')) renderImportModal();
   }
 }
 async function impNext() {
   if (!IMPQ) return;
   IMPQ.i++;
-  if (IMPQ.i >= IMPQ.list.length) { const d = IMPQ.done, n = IMPQ.list.length; IMPQ = null; closeModal(); render(); toast(`Imported ${d} of ${n} recipe${n > 1 ? 's' : ''} from Mealie`); return; }
+  if (IMPQ.i >= IMPQ.list.length) { const d = IMPQ.done, n = IMPQ.list.length; IMPQ = null; closeModal(); render(); toast(`Importadas ${d} de ${n} receita${n > 1 ? 's' : ''} do Mealie`); return; }
   const slug = IMPQ.list[IMPQ.i];
-  modal(`<div class="imp-loading"><h2>Importing from Mealie</h2><p class="sub small">Recipe ${IMPQ.i + 1} of ${IMPQ.list.length}…</p></div>`, 'sm');
+  modal(`<div class="imp-loading"><h2>Importando do Mealie</h2><p class="sub small">Recipe ${IMPQ.i + 1} of ${IMPQ.list.length}…</p></div>`, 'sm');
   try { const r = await api('GET', '/api/import/mealie/recipes/' + encodeURIComponent(slug)); if (!IMPQ) return; importToEditor(r.recipe); }
-  catch (e) { toast(`Couldn’t import “${(IMPUI.items.find(x => x.slug === slug) || {}).name || slug}”: ${e.message}`); impNext(); }
+  catch (e) { toast(`Não foi possível importar “${(IMPUI.items.find(x => x.slug === slug) || {}).name || slug}”: ${e.message}`); impNext(); }
 }
 function impStartQueue() {
   const list = IMPUI.items.filter(r => IMPUI.sel[r.slug]).map(r => r.slug); Object.keys(IMPUI.sel).forEach(s => { if (!list.includes(s)) list.push(s); });
   if (!list.length) return; IMPQ = { list, i: -1, done: 0 }; IMPUI.sel = {}; impNext();
 }
 
-/* ---------- Settings → API connections ---------- */
+/* ---------- Configurações → Conexões de API ---------- */
 function apiCardHTML() {
   if (AUTH.mode !== 'server') return '';
   return `<div style="height:16px"></div><div class="card" id="api-card"><div class="card-h"><h2>Conexões de API</h2></div><div id="api-body"><div class="muted small">Carregando…</div></div></div>`;
@@ -452,7 +452,7 @@ Object.assign(ACT, {
   're-imp-add': el => { if (!RE || !RE.imp) return; const s = RE.imp.skipped.splice(+el.dataset.i, 1)[0]; if (!s) return; const r = impRow({ text: s.text }); const row = r.row || ['', '', { src: s.text, st: 'none', est: null, sugg: [], key: impKey(impParseLine(s.text).food), p: impParseLine(s.text) }];
     if (!row[0] && row[2]) row[2].st = 'none'; RE.ing.push(row); renderRecipeEditor(); },
   're-imp-paste-show': () => { if (!RE || !RE.imp) return; RE.imp.paste = true; impRefresh(); const t = $('#re-imp-paste'); if (t) t.focus(); },
-  're-imp-paste': () => { const t = $('#re-imp-paste'); if (!t || !RE) return; const n = impAddLines(t.value.split(/\n+/)); if (!n) { toast('No ingredients found in that text'); return; } RE.imp.paste = false; RE.imp.noIng = false; RE.imp.error = ''; renderRecipeEditor(); toast(`Added ${n} ingredient${n > 1 ? 's' : ''}`); },
+  're-imp-paste': () => { const t = $('#re-imp-paste'); if (!t || !RE) return; const n = impAddLines(t.value.split(/\n+/)); if (!n) { toast('Nenhum ingrediente foi encontrado nesse texto'); return; } RE.imp.paste = false; RE.imp.noIng = false; RE.imp.error = ''; renderRecipeEditor(); toast(`Adicionado${n > 1 ? 's' : ''} ${n} ingrediente${n > 1 ? 's' : ''}`); },
   're-skip': () => { if (IMPQ) impNext(); else closeModal(); },
   'mealie-test': async el => { el.disabled = true; mealieMsg(true, 'Testando…'); try { const r = await api('POST', '/api/integrations/mealie/test', mealieFormData()); mealieMsg(true, `Conectado${r.user ? ' como ' + r.user : ''}${r.version ? ' · Mealie ' + r.version : ''}. Salve para usar.`); } catch (e) { mealieMsg(false, e.message); } el.disabled = false; },
   'mealie-off': () => confirmBox('Desconectar o Mealie?', 'Ninguém neste servidor poderá importar do Mealie até que ele seja conectado novamente. As receitas já importadas serão mantidas.', 'Desconectar', async () => { try { INTEG = { mealie: (await api('DELETE', '/api/integrations/mealie')).mealie }; IMPUI.loaded = false; IMPUI.items = []; render(); toast('Mealie desconectado'); } catch (e) { toast(e.message); } }, true)

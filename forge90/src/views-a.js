@@ -25,20 +25,20 @@ function viewDashboard() {
   const cur = latestStats(); const trend = weightTrend(); const pj = projection();
   const startLBM = st.startWeight * (1 - st.startBF / 100);
   const dW = cur.w - st.startWeight, dBF = cur.bf - st.startBF, dL = cur.lbm - startLBM;
-  const eyebrow = idx < 0 ? `Starts ${fmtDate(start, { weekday: 'long', month: 'long', day: 'numeric' })}` : `Cycle ${cyc} · Week ${ph.wic} of 13 · ${ph.name}`;
-  const title = idx < 0 ? `${-idx} day${-idx === 1 ? '' : 's'} until Day 1` : cyc === 1 && idx < LAUNCH_DAYS ? `Day ${idx + 1} of 90` : `Day ${idx + 1}`;
+  const eyebrow = idx < 0 ? `Começa em ${fmtDate(start, { weekday: 'long', month: 'long', day: 'numeric' })}` : `Ciclo ${cyc} · Semana ${ph.wic} de 13 · ${ph.name}`;
+  const title = idx < 0 ? `${-idx} dia${-idx === 1 ? '' : 's'} até o Dia 1` : cyc === 1 && idx < LAUNCH_DAYS ? `Dia ${idx + 1} de 90` : `Dia ${idx + 1}`;
   const bars = Array.from({ length: 13 }, (_, i) => { const w = cStartWk + i; const p = phaseForWeek(w); const cw = idx < 0 ? 0 : wk; return `<i class="${p.cls} ${w < cw ? 'done' : ''} ${w === cw && idx >= 0 ? 'now' : ''}" data-tip="Week ${w} · ${p.name}"></i>`; }).join('');
-  const barLabels = (cyc === 1 ? CYCLE1 : CYCLEN).map(p => `<span>${p.key === 'test' ? 'Test' : p.name}</span>`).join('');
+  const barLabels = (cyc === 1 ? CYCLE1 : CYCLEN).map(p => `<span>${p.key === 'test' ? 'Teste' : p.name}</span>`).join('');
   const day = A.days[focus];
   const tile = (lbl, ic, val, unit, delta, good, extra = '') => `<div class="card stat"><div class="lbl">${icon(ic)}${lbl}</div><div class="val">${val}<small>${unit}</small></div><div class="delta ${delta == null ? 'neu' : good ? 'good' : 'bad'}">${delta == null ? extra : delta}</div></div>`;
   const sign = (v, d = 1) => (v > 0 ? '+' : v < 0 ? '−' : '±') + fmt(Math.abs(v), d);
   const hasW = S.weights.length > 0;
   const tiles = `<div class="grid g5">
-    ${tile('Body weight', 'scale', fmt(cur.w, 1), 'lb', hasW ? `${sign(dW)} lb since start` : null, goalKind() === 'bulk' ? dW >= 0 : dW <= 0, 'Log your first weigh-in')}
-    ${tile('Body fat', 'target', fmt(cur.bf, 1), '%' + (cur.est ? ' est.' : ''), hasW ? `${sign(dBF)} pts` : null, dBF <= 0, 'Goal ' + st.goalBF + '%')}
-    ${tile('Lean mass', 'dumbbell', fmt(cur.lbm, 1), 'lb', hasW ? `${sign(dL)} lb` : null, dL >= -1, 'Weight × (1 − BF%)')}
-    ${tile('Weekly trend', 'trend', trend ? fmt(trend.rate, 2) : '—', 'lb/wk', null, true, trend ? (goalKind() === 'maintain' ? 'Target: hold' : `Target ${fmt(Math.abs(planRate(cur.w)), 2)} lb/wk ${goalKind() === 'bulk' ? 'gain' : 'loss'}`) : 'Needs ~1 week of weigh-ins')}
-    ${tile('To goal', 'flame', fmt(Math.abs(cur.w - st.goalWeight), 1), 'lb', null, true, goalKind() === 'maintain' ? 'Holding at maintenance' : `≈ ${fmt(pj.weeks, 0)} weeks at ${fmt(Math.abs(planRate(cur.w)), 2)} lb/wk ${goalKind() === 'bulk' ? 'gain' : 'loss'}`)}
+    ${tile('Peso corporal', 'scale', fmt(cur.w, 1), 'lb', hasW ? `${sign(dW)} lb since start` : null, goalKind() === 'bulk' ? dW >= 0 : dW <= 0, 'Registre sua primeira pesagem')}
+    ${tile('Gordura corporal', 'target', fmt(cur.bf, 1), '%' + (cur.est ? ' est.' : ''), hasW ? `${sign(dBF)} pts` : null, dBF <= 0, 'Meta ' + st.goalBF + '%')}
+    ${tile('Massa magra', 'dumbbell', fmt(cur.lbm, 1), 'lb', hasW ? `${sign(dL)} lb` : null, dL >= -1, 'Peso × (1 − % de gordura)')}
+    ${tile('Tendência semanal', 'trend', trend ? fmt(trend.rate, 2) : '—', 'lb/sem.', null, true, trend ? (goalKind() === 'maintain' ? 'Meta: manter' : `Meta ${fmt(Math.abs(planRate(cur.w)), 2)} lb/sem. ${goalKind() === 'bulk' ? 'ganho' : 'perda'}`) : 'Precisa de ~1 semana de pesagens')}
+    ${tile('Até a meta', 'flame', fmt(Math.abs(cur.w - st.goalWeight), 1), 'lb', null, true, goalKind() === 'maintain' ? 'Mantendo em manutenção' : `≈ ${fmt(pj.weeks, 0)} semanas a ${fmt(Math.abs(planRate(cur.w)), 2)} lb/sem. de ${goalKind() === 'bulk' ? 'ganho' : 'perda'}`)}
   </div>`;
 
   // today card
@@ -47,7 +47,7 @@ function viewDashboard() {
     const t = TEMPLATES[day.entry.w.t]; const rows = sessionRows(day.entry.w);
     wo = `<div class="row" style="align-items:flex-start;gap:14px">${muscleMap(rows.flatMap(r => r.ex.primary), rows.flatMap(r => r.ex.secondary), 'mm')
       .replace('class="mm"', 'class="mm" style="width:96px;height:96px;flex:none"')}
-      <div style="flex:1;min-width:0"><div class="row wrap" style="gap:6px 10px"><span class="pill" style="background:${KIND_VAR(t.kind)};color:#fff">${icon(t.icon).replace('<svg', '<svg style="width:12px;height:12px"')}${esc(t.name)}</span><span class="muted small">${rows.reduce((a, r) => a + r.sets, 0)} sets · ~${estMinutes(rows)} min</span>${S.done[focus] ? '<span class="pill acc">' + icon('check').replace('<svg', '<svg style="width:12px;height:12px"') + 'Done</span>' : ''}</div>
+      <div style="flex:1;min-width:0"><div class="row wrap" style="gap:6px 10px"><span class="pill" style="background:${KIND_VAR(t.kind)};color:#fff">${icon(t.icon).replace('<svg', '<svg style="width:12px;height:12px"')}${esc(t.name)}</span><span class="muted small">${rows.reduce((a, r) => a + r.sets, 0)} sets · ~${estMinutes(rows)} min</span>${S.done[focus] ? '<span class="pill acc">' + icon('check').replace('<svg', '<svg style="width:12px;height:12px"') + 'Concluído</span>' : ''}</div>
       ${focus === today ? `<div class="tiny muted" style="margin-top:8px">${t.focus ? esc(t.focus) : ''}</div>` : `<div class="sets" style="margin-top:10px;gap:5px">${rows.map(r => `<span class="pill" data-tip-ex="${r.ex.id}" style="cursor:help">${esc(r.ex.name)} <span class="muted">${r.sets}×${esc(r.reps)}</span></span>`).join('')}</div><div class="tiny muted" style="margin-top:8px">Set logging opens here on Day 1.</div>`}</div></div>
       ${focus === today ? todayLogHTML(focus, rows) : ''}`;
   } else wo = `<div class="note">${icon('info')}<span><b>Rest day.</b> Aim for 8–10k steps and 10 minutes of mobility. The calorie target is ~${fmt(S.settings.sessionKcal)} kcal lower since there’s no session.</span></div>`;

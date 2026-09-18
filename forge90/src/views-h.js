@@ -103,10 +103,10 @@ function avatarSquare(file, size = 256) {
 }
 async function avatarUpload(file) {
   if (!file) return;
-  if (!/^image\//.test(file.type || '')) { toast('Choose an image file (JPEG, PNG, WebP…).'); return; }
-  if (file.size > 20 * 1024 * 1024) { toast('That image is over 20 MB — choose a smaller one.'); return; }
-  let data; try { data = await avatarSquare(file); } catch (e) { toast('That image couldn’t be read. Try a JPEG or PNG.'); return; }
-  try { const r = await api('PUT', '/api/account/avatar', { data }); avatarApplied(r.user); toast('Profile picture updated'); } catch (e) { toast(e.message); }
+  if (!/^image\//.test(file.type || '')) { toast('Escolha um arquivo de imagem (JPEG, PNG, WebP…).'); return; }
+  if (file.size > 20 * 1024 * 1024) { toast('A imagem tem mais de 20 MB — escolha uma menor.'); return; }
+  let data; try { data = await avatarSquare(file); } catch (e) { toast('Não foi possível ler a imagem. Tente um JPEG ou PNG.'); return; }
+  try { const r = await api('PUT', '/api/account/avatar', { data }); avatarApplied(r.user); toast('Foto do perfil atualizada'); } catch (e) { toast(e.message); }
 }
 function avatarApplied(user) { AUTH.user = user; if (typeof ACC !== 'undefined' && ACC) { ACC.user = user; const r = $('#acc-root'); if (r) r.innerHTML = accountHTML(ACC); } sideFoot(); }
 
