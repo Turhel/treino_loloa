@@ -132,16 +132,16 @@ const tipEl = () => $('#tip');
 function exTipHTML(exId, extra = '') {
   const ex = EX[exId]; if (!ex) return '';
   const muscles = ex.primary.map(k => REGION_LABEL[k]).join(', ') + (ex.secondary.length ? ` <span class="muted">· ${ex.secondary.map(k => REGION_LABEL[k]).join(', ')}</span>` : '');
-  return `<div class="tmm">${muscleMap(ex.primary, ex.secondary)}<div><h4>${esc(ex.name)}</h4><div class="tmeta">${esc(ex.equip)} · ${ex.compound ? 'Compound' : 'Isolation'}</div><div class="small">${muscles}</div></div></div>
-    ${extra}${ex.why ? `<div class="why"><b>Why it’s here:</b> ${esc(ex.why)}</div>` : ''}<ol>${ex.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
-    <div class="cue"><b>Cues:</b> ${ex.cues.map(esc).join(' · ')}</div><div class="mistake"><b>Avoid:</b> ${esc(ex.mistake)}</div>`;
+  return `<div class="tmm">${muscleMap(ex.primary, ex.secondary)}<div><h4>${esc(ex.name)}</h4><div class="tmeta">${esc(ex.equip)} · ${ex.compound ? 'Composto' : 'Isolador'}</div><div class="small">${muscles}</div></div></div>
+    ${extra}${ex.why ? `<div class="why"><b>Por que está aqui:</b> ${esc(ex.why)}</div>` : ''}<ol>${ex.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
+    <div class="cue"><b>Pontos-chave:</b> ${ex.cues.map(esc).join(' · ')}</div><div class="mistake"><b>Evite:</b> ${esc(ex.mistake)}</div>`;
 }
 function woTipHTML(date) {
   const e = S.plan[date]; if (!e || !e.w) return '';
   const t = TEMPLATES[e.w.t]; const rows = sessionRows(e.w);
   const prim = new Set(), sec = new Set(); rows.forEach(r => { r.ex.primary.forEach(k => prim.add(k)); r.ex.secondary.forEach(k => sec.add(k)); });
   return `<div class="tmm">${muscleMap([...prim], [...sec])}<div><h4>${esc(t.name)}</h4><div class="tmeta">Semana ${e.w.wk} · ${phaseForWeek(e.w.wk).name} · ${rows.reduce((a, r) => a + r.sets, 0)} séries · ~${estMinutes(rows)} min</div><div class="small sub">${esc(t.focus)}</div></div></div>
-    <ul class="tl">${rows.map(r => `<li>${esc(r.ex.name)}<span>${r.sets}×${esc(r.reps)}</span></li>`).join('')}</ul><div class="tiny muted" style="margin-top:8px">Drag to move · Ctrl/Alt-drag to copy · click the day for details</div>`;
+    <ul class="tl">${rows.map(r => `<li>${esc(r.ex.name)}<span>${r.sets}×${esc(r.reps)}</span></li>`).join('')}</ul><div class="tiny muted" style="margin-top:8px">Arraste para mover · mantenha Ctrl/Alt ao arrastar para copiar · clique no dia para ver os detalhes</div>`;
 }
 function tplTipHTML(t) {
   const T = TEMPLATES[t]; const rows = sessionRows({ t, wk: ({ 1: 1, 2: 5, 3: 9, 4: 13, 5: 22 })[T.phase] || 1 });
