@@ -113,7 +113,7 @@ function mondayOf(date) { const d = parseISO(date); d.setDate(d.getDate() - ((d.
 function cellHTML(date, A, big, monthNum) {
   const dd = parseISO(date);
   const outMonth = monthNum != null && dd.getMonth() + 1 !== monthNum;
-  if (!inPlan(date)) return `<div class="cell out" style="${outMonth ? 'opacity:.3' : ''}"><div class="cell-head"><span class="dn">${dd.getDate()}</span>${big ? `<span class="dt">${DOW[dd.getDay()]}</span>` : ''}</div><div class="tiny muted" style="margin:auto;text-align:center">Outside plan</div></div>`;
+  if (!inPlan(date)) return `<div class="cell out" style="${outMonth ? 'opacity:.3' : ''}"><div class="cell-head"><span class="dn">${dd.getDate()}</span>${big ? `<span class="dt">${DOW[dd.getDay()]}</span>` : ''}</div><div class="tiny muted" style="margin:auto;text-align:center">Fora do plano</div></div>`;
   const day = A.days[date]; const e = S.plan[date]; const today = date === todayISO();
   const wo = e.w ? woChip(date, e) : `<div class="rest-lbl">Descanso</div>`;
   const meals = MEAL_SLOTS.map(slot => {
@@ -151,9 +151,9 @@ function agendaHTML(dates, A) {
       <div class="ag-date"><span class="dw">${DOW[dd.getDay()]}</span><b>${dd.getDate()}</b><span class="dx">D${planIndex(date) + 1}</span></div>
       <div style="min-width:0"><div class="ag-top">${e.w ? woChip(date, e) : '<span class="rest-lbl">Dia de descanso</span>'}${S.done[date] ? `<span class="pill acc">${icon('check').replace('<svg', '<svg style="width:12px;height:12px"')}Concluído</span>` : ''}<span class="ag-k">${fmt(day.totals.k)} <span>/ ${fmt(day.tg.kcal)} kcal</span></span></div>
         <div class="ag-meals">${meals}</div>
-        <div class="pcf"><span class="p"><b>${fmt(day.totals.p)}</b>g protein</span><span class="c"><b>${fmt(day.totals.c)}</b>g carbs</span><span class="f"><b>${fmt(day.totals.f)}</b>g fat</span></div></div></div>`;
+        <div class="pcf"><span class="p"><b>${fmt(day.totals.p)}</b>g proteína</span><span class="c"><b>${fmt(day.totals.c)}</b>g carboidratos</span><span class="f"><b>${fmt(day.totals.f)}</b>g gordura</span></div></div></div>`;
   }).join('');
-  return `<div class="agenda">${rows || '<div class="card empty-state">No plan days in this range.</div>'}</div>`;
+  return `<div class="agenda">${rows || '<div class="card empty-state">Não há dias do plano neste período.</div>'}</div>`;
 }
 function viewCalendar() {
   if (isPhone() && !UI.phCal) { UI.phCal = 1; UI.calView = 'week'; saveUI(); }        // phones start on the week list (Month stays one tap away)
@@ -184,18 +184,18 @@ function viewCalendar() {
       <div class="cal-bar"><button class="btn icon" data-act="cal-prev">${icon('left')}</button><h2>${title}</h2><button class="btn icon" data-act="cal-next">${icon('right')}</button>
         <button class="btn sm" data-act="cal-today">Hoje</button><div class="spacer"></div>${syncBtnHTML('sm')}
         <div class="seg"><button class="${UI.calView === 'month' ? 'on' : ''}" data-act="cal-view" data-v="month">Mês</button><button class="${UI.calView === 'week' ? 'on' : ''}" data-act="cal-view" data-v="week">Semana</button></div>
-        <button class="btn sm" data-act="undo" ${undoStack.length ? '' : 'disabled'}>${icon('undo')}Undo</button>
+        <button class="btn sm" data-act="undo" ${undoStack.length ? '' : 'disabled'}>${icon('undo')}Desfazer</button>
         ${compact ? '' : `<button class="btn sm ${UI.showLib ? '' : 'primary'}" data-act="toggle-lib">${icon('panel')}${UI.showLib ? 'Ocultar' : 'Mostrar'} biblioteca</button>`}</div>
-      <div class="row wrap" style="gap:14px;margin-bottom:10px">${['push', 'pull', 'legs', 'deload', 'test'].map(k => `<span class="legend-dot"><i style="background:${KIND_VAR(k)}"></i>${{ push: 'Push', pull: 'Pull', legs: 'Legs', deload: 'Deload', test: 'PR test' }[k]}</span>`).join('')}
-        <span class="legend-dot"><span class="bd cook">COOK ×4</span>batch cook</span><span class="legend-dot"><span class="bd left">↺ 2/4</span>leftover</span>${syncActive() ? `<span class="legend-dot"><span class="bd shr pend">${icon('users')}?</span>shared-meal change to review</span>` : ''}</div>
+      <div class="row wrap" style="gap:14px;margin-bottom:10px">${['push', 'pull', 'legs', 'deload', 'test'].map(k => `<span class="legend-dot"><i style="background:${KIND_VAR(k)}"></i>${{ push: 'Empurrar', pull: 'Puxar', legs: 'Pernas', deload: 'Semana leve', test: 'Teste de força' }[k]}</span>`).join('')}
+        <span class="legend-dot"><span class="bd cook">PREPARAR ×4</span>preparo para vários dias</span><span class="legend-dot"><span class="bd left">↺ 2/4</span>refeição já preparada</span>${syncActive() ? `<span class="legend-dot"><span class="bd shr pend">${icon('users')}?</span>alteração em refeição compartilhada para revisar</span>` : ''}</div>
       ${grid}</div>${lib}</div>
-    ${showLib ? '' : `<div class="trash float-trash card" data-drop="trash">${icon('trash')}Drop here to remove</div>`}`;
+    ${showLib ? '' : `<div class="trash float-trash card" data-drop="trash">${icon('trash')}Solte aqui para remover</div>`}`;
 }
 function libraryHTML() {
   let list = '';
   if (UI.libTab === 'workouts') {
     list = ALL_PHASES.map(p => `<div class="lib-ph">${p.name}</div>` + p.templates.map(k => { const t = TEMPLATES[k];
-      return `<div class="lib-item" draggable="true" data-drag="workout" data-from="lib" data-t="${k}" data-tip-tpl="${k}"><i class="bar" style="--k:${KIND_VAR(t.kind)}"></i><div><b>${esc(t.name)}</b><span>${t.rows.length} exercises · ${t.rows.reduce((a, r) => a + r[2], 0)} sets</span></div></div>`; }).join('')).join('');
+      return `<div class="lib-item" draggable="true" data-drag="workout" data-from="lib" data-t="${k}" data-tip-tpl="${k}"><i class="bar" style="--k:${KIND_VAR(t.kind)}"></i><div><b>${esc(t.name)}</b><span>${t.rows.length} exercícios · ${t.rows.reduce((a, r) => a + r[2], 0)} séries</span></div></div>`; }).join('')).join('');
   } else {
     const q = UI.libQ.toLowerCase();
     const rs = RECIPES.filter(r => recipeAllowed(r) && (UI.libFilter === 'all' || r.cat === UI.libFilter) && (!q || r.name.toLowerCase().includes(q))).sort((a, b) => isFav(b.id) - isFav(a.id));
