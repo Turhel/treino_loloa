@@ -457,7 +457,7 @@ function syncView(s, me) {
 }
 function syncMail(req, to, subject, heading, lines, label) {
   if (!to || !emailReady()) return;
-  deliver(to.email, to.name, MAIL.simpleEmail({ title: subject, heading, lines, buttonUrl: baseUrl(req) + '/#/account', buttonLabel: label || 'Abrir FORGE 90', appUrl: baseUrl(req), appName: db.settings.appName })).catch(e => audit('email_failed', { userId: to.id, detail: 'sync notice: ' + e.message }));
+  deliver(to.email, to.name, MAIL.simpleEmail({ title: subject, heading, lines, buttonUrl: baseUrl(req) + '/#/account', buttonLabel: label || 'Abrir FORGE 90', appUrl: baseUrl(req), appName: db.settings.appName })).catch(e => audit('email_failed', { userId: to.id, detail: 'aviso de sincronização: ' + e.message }));
 }
 const needSync = (ctx, status) => { const s = syncOf(ctx.me.u.id); if (!s || (status && s.status !== status)) err(409, status === 'active' ? 'A sincronização de refeições não está ativa.' : 'Nenhuma solicitação de sincronização de refeições foi encontrada.'); return s; };
 route('GET', '/api/sync', { auth: true }, async (req, res, ctx) => {
