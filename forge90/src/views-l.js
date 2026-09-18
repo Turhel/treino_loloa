@@ -102,7 +102,7 @@ const TODAY_PANELS = [
   ['nutrition', 'Calorias e macros', 'full', 'Calorias, proteínas, carboidratos e gorduras em relação às metas de hoje'],
   ['meals', 'Refeições', 'full', 'Refeições do dia — toque em uma para ver a receita ou substituir'],
   ['week', 'Esta semana', 'full', 'Dias próximos a este — toque em um dia para abrir'],
-  ['gym', 'Cartão da academia', 'full', 'Your membership barcode (Check in at the top shows it too)']
+  ['gym', 'Cartão da academia', 'full', 'Código de barras do seu cartão de acesso (o botão de entrada no topo também o exibe)']
 ];
 const dayHref = d => d === todayISO() ? '#/' : '#/day/' + d;
 function dayWord(d) { const n = dayDiff(todayISO(), d); return n === 0 ? 'Hoje' : n === 1 ? 'Amanhã' : n === -1 ? 'Ontem' : fmtDate(d, { weekday: 'long' }); }
@@ -110,7 +110,7 @@ function viewToday(date) {
   const t = todayISO(); date = date || t; const st = S.settings;
   if (date >= st.startDate) ensurePlanThrough(addDays(date, 3));
   const c = gymActive();
-  const checkin = c ? `<button type="button" class="btn ph-checkin" data-act="gym-full" data-id="${c.id}">${icon('scan')}Check in</button>` : '';
+  const checkin = c ? `<button type="button" class="btn ph-checkin" data-act="gym-full" data-id="${c.id}">${icon('scan')}Entrada</button>` : '';
   const idx = planIndex(date);
   const head = `<div class="ph-head"><div class="ph-day"><a class="btn icon ghost" href="${dayHref(addDays(date, -1))}" aria-label="Dia anterior">${icon('left')}</a>
       <div class="d"><small>${esc(dayWord(date))}${idx >= 0 ? ` · Dia ${idx + 1}${idx < LAUNCH_DAYS ? ' de 90' : ''}` : ''}</small><b>${esc(fmtDate(date, { weekday: 'short', month: 'short', day: 'numeric' }))}</b></div>
@@ -121,7 +121,7 @@ function viewToday(date) {
   const prompt = date === t && !weighed ? `<button type="button" class="ph-prompt" data-act="weigh-sheet">${icon('scale')}<span><b>Registrar o peso desta manhã</b><small class="num">${last ? `Último: ${fmt(last.w, 1)} kg em ${esc(fmtDate(last.d, { weekday: 'short' }))}` : 'Sua primeira pesagem inicia a linha de tendência'}</small></span><span class="go">Registrar</span></button>` : '';
   if (!inPlan(date)) {
     const before = date < st.startDate;
-    return head + bar + prompt + `<div class="card empty-state">${icon('cal')}<h2 style="margin:8px 0 4px">${before ? `Your plan starts ${esc(fmtDate(st.startDate, { weekday: 'long', month: 'long', day: 'numeric' }))}` : 'That day isn’t in the plan'}</h2>
+    return head + bar + prompt + `<div class="card empty-state">${icon('cal')}<h2 style="margin:8px 0 4px">${before ? `Seu plano começa em ${esc(fmtDate(st.startDate, { weekday: 'long', month: 'long', day: 'numeric' }))}` : 'Esse dia não está no plano'}</h2>
       <a class="btn primary" href="${dayHref(before ? st.startDate : t)}">${before ? 'Ver Dia 1' : 'Voltar para hoje'}</a></div><div style="height:16px"></div>${progressCardHTML()}`;
   }
   const A = computeAll(); const day = A.days[date];
