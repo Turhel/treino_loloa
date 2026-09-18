@@ -1671,9 +1671,23 @@ const PT_PHRASES = {
   "Lower": "Inferiores",
   "Full body": "Corpo inteiro",
   "Mixed": "Misto",
+  "Required": "Obrigatório",
+  "Put the items you ticked in the pantry and clear their ticks": "Coloque na despensa os itens marcados e desmarque-os",
+  "You": "Você",
+  "Food": "Alimento",
+  "Name": "Nome",
+  "(copy)": "(cópia)",
+  " imported": " importado",
+  "This connection is encrypted.": "Esta conexão é criptografada.",
+  "Plain HTTP": "HTTP sem criptografia",
+  "Direct connection": "Conexão direta",
+  "Turn on light": "Ligar lanterna",
+  "Turn off light": "Desligar lanterna",
+  "Scan again": "Escanear novamente",
+  "Done scanning": "Finalizar escaneamento",
 };
 
-const PT_EXACT_KEYS = new Set(['Off', 'Rest', 'Test', 'Week', 'Progress', 'lb', 'of', 'all', 'breakfast', 'lunch', 'dinner', 'snack', '— none —', "Browser", "Decline", "Unsync", "List", "Prep", "Plan", "Kitchen", "Workout", "This week", "Upper", "Lower", "Full body", "Mixed", "Gym card", "Body stats", "Recent PRs"]);
+const PT_EXACT_KEYS = new Set(['Off', 'Rest', 'Test', 'Week', 'Progress', 'lb', 'of', 'all', 'breakfast', 'lunch', 'dinner', 'snack', '— none —', "Browser", "Decline", "Unsync", "List", "Prep", "Plan", "Kitchen", "Workout", "This week", "Upper", "Lower", "Full body", "Mixed", "Gym card", "Body stats", "Recent PRs", "Required", "You", "Food", "Name", "Plain HTTP", "Direct connection"]);
 const PT_PAIRS = Object.entries(PT_PHRASES)
   .filter(([from]) => !PT_EXACT_KEYS.has(from))
   .sort((a, b) => b[0].length - a[0].length);
