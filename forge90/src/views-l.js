@@ -79,7 +79,7 @@ function renderMealSwap() {
     <div class="rec-search">${icon('search')}<input class="inp" type="search" id="ms-q" data-input="ms-q" value="${esc(MS.q)}" placeholder="Buscar receitas ou ingredientes…" aria-label="Buscar receitas" autocomplete="off"></div>
     <div class="row" style="gap:6px"><button type="button" class="btn sm ${MS.all ? '' : 'primary'}" data-act="ms-all" data-v="0">${esc(cat[0].toUpperCase() + cat.slice(1))}</button><button type="button" class="btn sm ${MS.all ? 'primary' : ''}" data-act="ms-all" data-v="1">Tudo</button></div>
     <div class="ms-list" id="ms-list">${msListHTML()}</div>
-    ${r ? `<button type="button" class="btn sm ghost danger" data-act="ms-none">${icon('x')}Remove this meal</button>` : ''}</div>`, 'ms-modal', true);
+    ${r ? `<button type="button" class="btn sm ghost danger" data-act="ms-none">${icon('x')}Remover esta refeição</button>` : ''}</div>`, 'ms-modal', true);
 }
 function msListHTML() {
   const cur = (S.plan[MS.d].m || {})[MS.slot]; const r = cur && RECIPE[cur]; const cat = r ? r.cat : slotCat(MS.slot);
@@ -97,7 +97,7 @@ function msSet(rid) {
 
 /* ---------------- TODAY (phone): the dashboard and the day view in one page ---------------- */
 const TODAY_PANELS = [
-  ['workout', 'Treino', 'full', 'Today’s session and the Start workout button'],
+  ['workout', 'Treino', 'full', 'Sessão de hoje e botão Iniciar treino'],
   ['progress', 'Progresso', 'full', 'Peso, tendência, gordura corporal, distância até a meta e recorde mais recente — toque para abrir a página completa'],
   ['nutrition', 'Calorias e macros', 'full', 'Calorias, proteínas, carboidratos e gorduras em relação às metas de hoje'],
   ['meals', 'Refeições', 'full', 'Refeições do dia — toque em uma para ver a receita ou substituir'],
@@ -113,36 +113,36 @@ function viewToday(date) {
   const checkin = c ? `<button type="button" class="btn ph-checkin" data-act="gym-full" data-id="${c.id}">${icon('scan')}Check in</button>` : '';
   const idx = planIndex(date);
   const head = `<div class="ph-head"><div class="ph-day"><a class="btn icon ghost" href="${dayHref(addDays(date, -1))}" aria-label="Dia anterior">${icon('left')}</a>
-      <div class="d"><small>${esc(dayWord(date))}${idx >= 0 ? ` · Day ${idx + 1}${idx < LAUNCH_DAYS ? ' of 90' : ''}` : ''}</small><b>${esc(fmtDate(date, { weekday: 'short', month: 'short', day: 'numeric' }))}</b></div>
-      <a class="btn icon ghost" href="${dayHref(addDays(date, 1))}" aria-label="Next day">${icon('right')}</a></div>${checkin}</div>`;
+      <div class="d"><small>${esc(dayWord(date))}${idx >= 0 ? ` · Dia ${idx + 1}${idx < LAUNCH_DAYS ? ' de 90' : ''}` : ''}</small><b>${esc(fmtDate(date, { weekday: 'short', month: 'short', day: 'numeric' }))}</b></div>
+      <a class="btn icon ghost" href="${dayHref(addDays(date, 1))}" aria-label="Próximo dia">${icon('right')}</a></div>${checkin}</div>`;
   const frac = idx < 0 ? 0 : Math.min(1, (idx + 1) / (idx < LAUNCH_DAYS ? LAUNCH_DAYS : 91));
-  const bar = `<div class="ph-cyc" title="${idx >= 0 ? `Day ${idx + 1}` : 'Before Day 1'}"><i style="width:${frac * 100}%"></i></div>`;
+  const bar = `<div class="ph-cyc" title="${idx >= 0 ? `Dia ${idx + 1}` : 'Antes do Dia 1'}"><i style="width:${frac * 100}%"></i></div>`;
   const weighed = S.weights.some(x => x.d === t); const last = sortedWeights().slice(-1)[0];
   const prompt = date === t && !weighed ? `<button type="button" class="ph-prompt" data-act="weigh-sheet">${icon('scale')}<span><b>Registrar o peso desta manhã</b><small class="num">${last ? `Último: ${fmt(last.w, 1)} kg em ${esc(fmtDate(last.d, { weekday: 'short' }))}` : 'Sua primeira pesagem inicia a linha de tendência'}</small></span><span class="go">Registrar</span></button>` : '';
   if (!inPlan(date)) {
     const before = date < st.startDate;
     return head + bar + prompt + `<div class="card empty-state">${icon('cal')}<h2 style="margin:8px 0 4px">${before ? `Your plan starts ${esc(fmtDate(st.startDate, { weekday: 'long', month: 'long', day: 'numeric' }))}` : 'That day isn’t in the plan'}</h2>
-      <a class="btn primary" href="${dayHref(before ? st.startDate : t)}">${before ? 'See Day 1' : 'Back to today'}</a></div><div style="height:16px"></div>${progressCardHTML()}`;
+      <a class="btn primary" href="${dayHref(before ? st.startDate : t)}">${before ? 'Ver Dia 1' : 'Voltar para hoje'}</a></div><div style="height:16px"></div>${progressCardHTML()}`;
   }
   const A = computeAll(); const day = A.days[date];
   const panels = { workout: todayWorkoutHTML(date), progress: progressCardHTML(), nutrition: todayMacroHTML(day), meals: todayMealsHTML(date, day, A), week: todayWeekHTML(date, A), gym: gymPanelHTML() };
   const vis = dashOrder('today').filter(id => !dashHidden(id, 'today') && panels[id]); const nHid = dashOrder('today').filter(id => dashHidden(id, 'today')).length;
   return head + bar + `<div class="ph-stack">${syncInviteNote()}${bfEstimateNote()}${prompt}${vis.map(id => `<section class="ph-p" data-panel="${id}">${panels[id]}</section>`).join('')}
-    <div class="ph-cust"><button type="button" class="btn sm ghost" data-act="dash-edit" data-l="today">${icon('grid')}Customize Today</button>${nHid ? `<span class="tiny muted">${nHid} panel${nHid === 1 ? '' : 's'} hidden</span>` : ''}</div></div>`;
+    <div class="ph-cust"><button type="button" class="btn sm ghost" data-act="dash-edit" data-l="today">${icon('grid')}Personalizar Hoje</button>${nHid ? `<span class="tiny muted">${nHid} panel${nHid === 1 ? '' : 's'} hidden</span>` : ''}</div></div>`;
 }
 function todayWorkoutHTML(date) {
   const e = S.plan[date]; const t0 = todayISO();
-  if (!e.w) return `<div class="card ph-rest"><span class="pill">Rest day</span><h2>Walk 8–10k steps</h2><p class="muted small">No lifting today. Get 7–9 hours of sleep and keep protein on target; calories are ~${fmt(S.settings.sessionKcal)} kcal lower and portions resize to match.</p>
-      <button type="button" class="btn sm" data-act="qe" data-d="${date}" data-f="wo">${icon('plus')}Add a session</button></div>`;
+  if (!e.w) return `<div class="card ph-rest"><span class="pill">Dia de descanso</span><h2>Caminhe 8–10 mil passos</h2><p class="muted small">Hoje não há treino de força. Durma 7–9 horas e mantenha a proteína na meta; as calorias ficam ~${fmt(S.settings.sessionKcal)} kcal menores e as porções são ajustadas automaticamente.</p>
+      <button type="button" class="btn sm" data-act="qe" data-d="${date}" data-f="wo">${icon('plus')}Adicionar sessão</button></div>`;
   const t = TEMPLATES[e.w.t]; const rows = sessionRows(e.w); const c = loggedSets(date, rows);
   const groups = [...new Set(rows.map(r => exGroupOf(r.ex)).filter(Boolean))].slice(0, 4);
-  const lbl = S.done[date] ? 'Workout done — view' : c.done ? 'Resume workout' : date > t0 ? 'Preview workout' : 'Start workout';
-  const kind = { push: 'Push', pull: 'Pull', legs: 'Legs', deload: 'Deload', test: 'PR test', upper: 'Upper', lower: 'Lower', full: 'Full body', mixed: 'Mixed' }[t.kind] || t.short;
-  return `<div class="card ph-wo"><div class="row" style="gap:8px"><span class="pill" style="background:${KIND_VAR(t.kind)};color:#fff">${esc(kind)}</span><span class="muted small">${rows.length} exercises · ${c.total} sets · ~${estMinutes(rows)} min</span>${S.done[date] ? `<span class="pill acc">${icon('check')}Done</span>` : ''}</div>
+  const lbl = S.done[date] ? 'Treino concluído — ver' : c.done ? 'Retomar treino' : date > t0 ? 'Pré-visualizar treino' : 'Iniciar treino';
+  const kind = { push: 'Push', pull: 'Pull', legs: 'Legs', deload: 'Deload', test: 'Teste de recorde', upper: 'Superior', lower: 'Inferior', full: 'Corpo inteiro', mixed: 'Misto' }[t.kind] || t.short;
+  return `<div class="card ph-wo"><div class="row" style="gap:8px"><span class="pill" style="background:${KIND_VAR(t.kind)};color:#fff">${esc(kind)}</span><span class="muted small">${rows.length} exercícios · ${c.total} séries · ~${estMinutes(rows)} min</span>${S.done[date] ? `<span class="pill acc">${icon('check')}Concluído</span>` : ''}</div>
     <h2>${esc(t.name)}</h2>${groups.length ? `<div class="row wrap" style="gap:6px">${groups.map(g => `<span class="pill">${esc(g)}</span>`).join('')}</div>` : ''}
-    <div class="ph-prog"><div class="track"><i style="width:${c.total ? c.done / c.total * 100 : 0}%"></i></div><span class="num small muted">${c.done}/${c.total} sets</span></div>
+    <div class="ph-prog"><div class="track"><i style="width:${c.total ? c.done / c.total * 100 : 0}%"></i></div><span class="num small muted">${c.done}/${c.total} séries</span></div>
     <button type="button" class="btn primary block big" data-act="wo-open" data-d="${date}">${icon('play')}${lbl}</button>
-    <div class="row wrap ph-wo-links"><button type="button" class="btn sm ghost" data-act="qe" data-d="${date}" data-f="wo">${icon('edit')}Change session</button>${date <= t0 && !S.done[date] && c.done ? `<button type="button" class="btn sm ghost" data-act="toggle-done" data-date="${date}">${icon('check')}Mark complete</button>` : ''}</div></div>`;
+    <div class="row wrap ph-wo-links"><button type="button" class="btn sm ghost" data-act="qe" data-d="${date}" data-f="wo">${icon('edit')}Alterar sessão</button>${date <= t0 && !S.done[date] && c.done ? `<button type="button" class="btn sm ghost" data-act="toggle-done" data-date="${date}">${icon('check')}Marcar como concluído</button>` : ''}</div></div>`;
 }
 // the summary on Today and You — one tap to the Progress page
 function progressCardHTML() {
@@ -165,21 +165,21 @@ function progressCardHTML() {
     <span class="pc-foot"><span class="pc-pr">${icon('trophy')}<span>${pr ? `${esc(EX[pr.ex].name)} ${fmt(+pr.set.w || 0, (+pr.set.w || 0) % 1 ? 1 : 0)} kg × ${pr.set.r} rep. · ${esc(fmtDate(pr.d, { weekday: 'short' }))}` : 'Registre séries para iniciar seu painel de recordes'}</span></span>${wk.length ? `<span class="wkdots">${wk.map(d => `<i class="${S.done[d] ? 'done' : ''}"></i>`).join('')}<span class="num">${done}/${wk.length} nesta semana</span></span>` : ''}</span></a>`;
 }
 function todayMacroHTML(day) {
-  return `<div class="card ph-macro"><div class="kc"><b class="num">${fmt(day.totals.k)}</b><small>of ${fmt(day.tg.kcal)} kcal${(day.extras || []).length ? ' · incl. added food' : ''}</small><span class="pill ${day.isTrain ? 'acc' : ''}">${day.isTrain ? 'Training' : 'Rest'} day</span></div><div class="mb">${macroBars(day.totals, day.tg)}</div></div>`;
+  return `<div class="card ph-macro"><div class="kc"><b class="num">${fmt(day.totals.k)}</b><small>de ${fmt(day.tg.kcal)} kcal${(day.extras || []).length ? ' · incl. alimento adicionado' : ''}</small><span class="pill ${day.isTrain ? 'acc' : ''}">${day.isTrain ? 'Treino' : 'Descanso'}</span></div><div class="mb">${macroBars(day.totals, day.tg)}</div></div>`;
 }
 function todayMealsHTML(date, day, A) {
   const rows = MEAL_SLOTS.map(slot => {
     const m = day.meals.find(x => x.slot === slot); const b = A.batches.info[date + '|' + slot];
-    const swp = `<button type="button" class="ph-swp" data-act="meal-swap" data-d="${date}" data-slot="${slot}" aria-label="Swap ${esc(SLOT_LABEL[slot].toLowerCase())}" title="Swap">${icon('loop')}</button>`;
-    if (!m) return `<div class="ph-meal empty"><button type="button" class="ph-mb" data-act="meal-swap" data-d="${date}" data-slot="${slot}"><span class="em">+</span><span class="t"><span class="slot">${SLOT_LABEL[slot]}</span><b class="muted">Nothing planned — pick a meal</b></span></button></div>${extrasHTML(day, slot)}`;
+    const swp = `<button type="button" class="ph-swp" data-act="meal-swap" data-d="${date}" data-slot="${slot}" aria-label="Trocar ${esc(SLOT_LABEL[slot].toLowerCase())}" title="Trocar">${icon('loop')}</button>`;
+    if (!m) return `<div class="ph-meal empty"><button type="button" class="ph-mb" data-act="meal-swap" data-d="${date}" data-slot="${slot}"><span class="em">+</span><span class="t"><span class="slot">${SLOT_LABEL[slot]}</span><b class="muted">Nada planejado — escolha uma refeição</b></span></button></div>${extrasHTML(day, slot)}`;
     return `<div class="ph-meal"><button type="button" class="ph-mb" data-act="recipe" data-rid="${m.r.id}"><span class="em">${esc(m.r.emoji)}</span><span class="t"><span class="slot">${SLOT_LABEL[slot]} ${batchBadge(b)}${shareBadge(date, slot)}</span><b>${esc(m.r.name)}</b><small class="num">${fmt(m.m.k)} kcal · ${fmt(m.m.p)} g de proteína</small></span></button>${swp}</div>${extrasHTML(day, slot)}`;
   }).join('');
-  return `<div class="ph-sec"><h2>Meals</h2><span class="spacer"></span>${canScan() ? `<button type="button" class="btn icon ghost" data-act="scan" data-v="today" data-d="${date}" aria-label="Scan food" title="Scan food">${icon('scan')}</button>` : ''}<button type="button" class="btn sm ghost" data-act="qa-pick" data-d="${date}">${icon('plus')}Add food</button></div>
-    <div class="card pad0 ph-meals">${rows}</div><div class="tiny muted ph-hint">Tap a meal for the recipe and this day’s portions. ${icon('loop')} swaps it.</div>`;
+  return `<div class="ph-sec"><h2>Refeições</h2><span class="spacer"></span>${canScan() ? `<button type="button" class="btn icon ghost" data-act="scan" data-v="today" data-d="${date}" aria-label="Escanear alimento" title="Escanear alimento">${icon('scan')}</button>` : ''}<button type="button" class="btn sm ghost" data-act="qa-pick" data-d="${date}">${icon('plus')}Adicionar alimento</button></div>
+    <div class="card pad0 ph-meals">${rows}</div><div class="tiny muted ph-hint">Toque em uma refeição para ver a receita e as porções deste dia. ${icon('loop')} faz a troca.</div>`;
 }
 function todayWeekHTML(date, A) {
   const t = todayISO(); const days = Array.from({ length: 7 }, (_, k) => addDays(date, k - 3));
-  return `<div class="ph-sec"><h2>This week</h2><span class="spacer"></span><a class="btn sm ghost" href="#/calendar">Calendar ${icon('right')}</a></div><div class="ph-week">${days.map(d => {
+  return `<div class="ph-sec"><h2>Esta semana</h2><span class="spacer"></span><a class="btn sm ghost" href="#/calendar">Calendário ${icon('right')}</a></div><div class="ph-week">${days.map(d => {
     const e = inPlan(d) ? S.plan[d] : null; const tp = e && e.w ? TEMPLATES[e.w.t] : null; const dd = parseISO(d);
     return `<a class="w7 ${d === date ? 'on' : ''} ${d === t ? 'today' : ''} ${inPlan(d) ? '' : 'off'}" href="${dayHref(d)}" aria-label="${esc(fmtDate(d, { weekday: 'long', month: 'short', day: 'numeric' }))}${tp ? ' · ' + esc(tp.short) : ''}"><small>${DOW[dd.getDay()]}</small><b class="num">${dd.getDate()}</b><i style="${tp ? `background:${KIND_VAR(tp.kind)}` : ''}"></i>${S.done[d] ? '<span class="dn">' + icon('check') + '</span>' : ''}</a>`; }).join('')}</div>`;
 }
@@ -203,12 +203,12 @@ function groceryPhoneHTML(G) {
     ${syncGroceryNote(G.wd, G.A)}
     <div class="pg-chips" role="group" aria-label="Mostrar">${[['buy', 'Comprar'], ['cart', 'No carrinho'], ['home', 'Em casa']].map(([k, l]) => `<button type="button" class="chipb ${tab === k ? 'on' : ''}" data-act="gro-tab" data-v="${k}" aria-pressed="${tab === k}">${l}<span class="n num">${n[k]}</span></button>`).join('')}</div>
     ${all ? `<div class="ph-prog"><div class="track"><i style="width:${(n.cart + n.home) / all * 100}%"></i></div><span class="num small muted">${n.cart + n.home} de ${all} organizados</span></div>
-      <div class="row pg-all"><button type="button" class="btn sm ghost" data-act="gro-all" data-v="1" ${n.buy ? '' : 'disabled'}>${icon('check')}Check all</button><button type="button" class="btn sm ghost" data-act="gro-all" data-v="0" ${n.cart + n.home ? '' : 'disabled'}>${icon('x')}Uncheck all</button></div>` : ''}
+      <div class="row pg-all"><button type="button" class="btn sm ghost" data-act="gro-all" data-v="1" ${n.buy ? '' : 'disabled'}>${icon('check')}Marcar tudo</button><button type="button" class="btn sm ghost" data-act="gro-all" data-v="0" ${n.cart + n.home ? '' : 'disabled'}>${icon('x')}Desmarcar tudo</button></div>` : ''}
     ${GL.note}
     ${tab === 'home' && n.home ? `<div class="tiny muted" style="margin:0 2px 10px">Sua despensa já cobre estes itens, então eles aparecem marcados. Toque em <b>Preciso comprar</b> se a despensa estiver desatualizada.</div>` : ''}
     ${list || `<div class="card empty-state">${icon('cart')}<div>${empty}</div></div>`}
     <div class="tiny muted" style="margin-top:12px">Arroz e quinoa aparecem em peso cru (~⅓ do peso cozido). Temperos, alho, limão e spray culinário não aparecem na lista.</div>
-    ${n.cart ? `<div class="pg-dock"><button type="button" class="btn primary big block" data-act="gro-pantry">${icon('box')}Put ${n.cart} item${n.cart === 1 ? '' : 's'} in the pantry</button></div>` : ''}`;
+    ${n.cart ? `<div class="pg-dock"><button type="button" class="btn primary big block" data-act="gro-pantry">${icon('box')}Colocar ${n.cart} item${n.cart === 1 ? '' : 'ns'} na despensa</button></div>` : ''}`;
 }
 function viewPrep() {
   const G = groceryWeek();
@@ -233,15 +233,15 @@ function settingsGroupHTML(g) {
 }
 function viewYou() {
   const st = S.settings; const u = AUTH.user; const srv = AUTH.mode === 'server';
-  const name = (u && u.name) || (S.profile && (S.profile.nick || S.profile.first)) || 'You';
+  const name = (u && u.name) || (S.profile && (S.profile.nick || S.profile.first)) || 'Você';
   const cur = latestStats(); const tT = targetsFor(cur.w, cur.bf, true), tR = targetsFor(cur.w, cur.bf, false);
   const row = (ic, l, sub, attrs) => `<a class="yrow" ${attrs}><span class="yi">${icon(ic)}</span><span class="t"><b>${l}</b><small>${sub}</small></span>${icon('right')}</a>`;
   const group = (title, rows) => rows.filter(Boolean).length ? `<section class="ygroup"><h3>${title}</h3><div class="card pad0">${rows.filter(Boolean).join('')}</div></section>` : '';
   const seen = new Set(); const prs = recentPRs(20).filter(p => !seen.has(p.ex) && seen.add(p.ex)).slice(0, 3);
   const cards = gymCards();
-  return `<div class="you-top"><div class="me">${avatarHTML(u || { name })}<div><b>${esc(name)}</b><div class="tiny muted">${srv && u ? (u.role === 'admin' ? 'Administrator · ' : '') + esc(u.email || '') : 'Saved in this browser'}${syncActive() ? ` · meals synced with ${esc(syncName())}` : ''}</div></div></div>${srv && u ? `<button type="button" class="btn icon ghost" data-act="logout" aria-label="Sign out" title="Sign out">${icon('logout')}</button>` : ''}</div>
+  return `<div class="you-top"><div class="me">${avatarHTML(u || { name })}<div><b>${esc(name)}</b><div class="tiny muted">${srv && u ? (u.role === 'admin' ? 'Administrador · ' : '') + esc(u.email || '') : 'Salvo neste navegador'}${syncActive() ? ` · refeições sincronizadas com ${esc(syncName())}` : ''}</div></div></div>${srv && u ? `<button type="button" class="btn icon ghost" data-act="logout" aria-label="Sair" title="Sair">${icon('logout')}</button>` : ''}</div>
     ${progressCardHTML()}
-    <section class="ygroup"><div class="ph-sec"><h2>Recent PRs</h2><span class="spacer"></span><a class="btn sm ghost" href="#/progress">All progress ${icon('right')}</a></div>
+    <section class="ygroup"><div class="ph-sec"><h2>Recordes recentes</h2><span class="spacer"></span><a class="btn sm ghost" href="#/progress">Todo o progresso ${icon('right')}</a></div>
       ${prs.length ? `<div class="card pad0">${prs.map(p => `<a class="yrow" href="#/progress"><span class="yi pr">${icon('trophy')}</span><span class="t"><b>${esc(EX[p.ex].name)}</b><small class="num">${fmt(+p.set.w || 0, (+p.set.w || 0) % 1 ? 1 : 0)} kg × ${p.set.r} rep. · ${esc(fmtDate(p.d))}</small></span>${icon('right')}</a>`).join('')}</div>` : `<div class="card empty-state">${icon('trophy')}<div>Registre suas séries em um treino para exibir os recordes pessoais aqui.</div></div>`}</section>
     <section class="ygroup"><div class="ph-sec"><h2>Cartões da academia</h2><span class="spacer"></span><a class="btn sm ghost" href="#/settings/gym">Gerenciar</a></div>
       ${cards.length ? `<div class="card pad0">${cards.map(c => `<button type="button" class="yrow" data-act="gym-full" data-id="${c.id}"><span class="gcy ${c.fmt === 'qr' ? 'qr' : ''}">${barcodeSVG(c.code, c.fmt, { h: 40 })}</span><span class="t"><b>${esc(c.name)}</b><small class="num">${esc(gymHuman(c))}</small></span>${icon('expand')}</button>`).join('')}</div>`
@@ -250,13 +250,13 @@ function viewYou() {
       row('target', 'Metas e ritmo de perda', `${fmt(st.rate, 2)} kg/sem. · ${fmt(tT.kcal)} / ${fmt(tR.kcal)} kcal`, 'href="#/settings/targets"'), row('scale', 'Corpo e objetivos', `Meta: ${st.goalWeight} kg · GC ${st.goalBF}%`, 'href="#/settings/body"')])}
     ${group('Alimentação', [row('food', 'Preferências alimentares', esc(fpCountText()), 'href="#/settings/food"'), row('book', 'Alimentos e macros', `${Object.keys(ING).length} alimentos`, 'href="#/foods" data-act="go-foods" data-v="foods"'), row('flame', 'Economia', st.shareIngredients !== false ? 'Ativada · receitas compartilham ingredientes' : 'Desativada', 'href="#/settings/money"')])}
     ${group('Aplicativo', [row(effTheme() === 'light' ? 'sun' : 'moon', 'Aparência e dados', `${{ dark: 'Tema escuro', light: 'Tema claro', system: 'Tema do sistema' }[st.theme] || st.theme} · backup e restauração`, 'href="#/settings/app"'), srv ? row('users', 'Sincronização de refeições', syncActive() ? `Sincronizado com ${esc(syncName())}` : 'Compartilhe refeições e a lista de compras com alguém', 'href="#/account" data-act="go-acc-sync"') : '', srv && isAdmin() ? row('link', 'Conexões de API', 'Importação de receitas do Mealie', 'href="#/settings/api"') : ''])}
-    ${srv ? group('Account', [row('user', 'Profile & password', esc((u && u.email) || ''), 'href="#/account"'), isAdmin() ? row('shield', 'Painel administrativo', 'Usuários, e-mail e segurança', 'href="#/admin"') : '']) : ''}
-    <div class="you-foot"><button type="button" class="btn sm ghost" data-act="theme-toggle">${icon(effTheme() === 'light' ? 'moon' : 'sun')}${effTheme() === 'light' ? 'Dark' : 'Light'} mode</button>${settingsFootHTML()}</div>`;
+    ${srv ? group('Conta', [row('user', 'Perfil e senha', esc((u && u.email) || ''), 'href="#/account"'), isAdmin() ? row('shield', 'Painel administrativo', 'Usuários, e-mail e segurança', 'href="#/admin"') : '']) : ''}
+    <div class="you-foot"><button type="button" class="btn sm ghost" data-act="theme-toggle">${icon(effTheme() === 'light' ? 'moon' : 'sun')}${effTheme() === 'light' ? 'Modo escuro' : 'Modo claro'}</button>${settingsFootHTML()}</div>`;
 }
 function copyListPhone() {
   const G = GRO_ROWS; if (!G) return; const got = groGot();
   const txt = G.rows.map(r => { const g = groceryText(r.id, r.total); return `${groStateOf(r, got) === 'buy' ? '[ ]' : '[x]'} ${g.name} — ${g.qty}`; }).join('\n');
-  (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Shopping list copied'), () => toast('Copy isn’t available in this browser'));
+  (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Lista de compras copiada'), () => toast('A cópia não está disponível neste navegador'));
 }
 
 Object.assign(ACT, {
@@ -271,7 +271,7 @@ Object.assign(ACT, {
   'gro-tab': el => { UI.groTab = el.dataset.v; saveUI(); render(); },
   'gro-tap': el => { const G = GRO_ROWS; if (!G) return; const r = G.rows.find(x => x.id === el.dataset.id); if (!r) return; const st = groRowState(r, groGot());
     groSetMany([[r.id, st.covered ? (st.checked ? 0 : null) : (st.checked ? null : 1)]]); },
-  'gro-need': el => { groSetMany([[el.dataset.id, 0]]); toast('Moved to To buy'); },
+  'gro-need': el => { groSetMany([[el.dataset.id, 0]]); toast('Movido para Comprar'); },
   'copy-list-ph': () => copyListPhone(),
   'go-foods': el => { UI.foodsTab = el.dataset.v; saveUI(); location.hash = '#/foods'; render(); },
   'go-acc-sync': () => { UI._scrollTo = 'acc-sync'; location.hash = '#/account'; }

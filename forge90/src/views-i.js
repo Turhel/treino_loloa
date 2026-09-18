@@ -141,7 +141,7 @@ const pantryName = id => { const g = ING[id]; return !g ? 'Alimento removido' : 
 const canScan = () => AUTH.mode === 'server';
 const scanBtnHTML = (mode = 'today', cls = '', date = '') => canScan() ? `<button class="btn ${cls}" data-act="scan" data-v="${mode}" ${date ? `data-d="${date}"` : ''} title="${mode === 'pantry' ? 'Escanear compras para a despensa' : `Escanear um código de barras para adicionar em ${date && date !== todayISO() ? fmtDate(date) : 'hoje'}`}">${icon('scan')}Escanear</button>` : '';
 // "Add food" — pick any food or scanned product to add to a day (works without a camera)
-const addFoodBtnHTML = (date = '', cls = '') => `<button class="btn ${cls}" data-act="qa-pick" ${date ? `data-d="${date}"` : ''} title="Adicionar um lanche ou alimento em ${date && date !== todayISO() ? fmtDate(date) : 'hoje'}">${icon('plus')}Add food</button>`;
+const addFoodBtnHTML = (date = '', cls = '') => `<button class="btn ${cls}" data-act="qa-pick" ${date ? `data-d="${date}"` : ''} title="Adicionar um lanche ou alimento em ${date && date !== todayISO() ? fmtDate(date) : 'hoje'}">${icon('plus')}Adicionar alimento</button>`;
 
 /* ---------- scanner ---------- */
 let SCN = null;           // { mode, stream, timer, busy, last, lastAt, added: [] }
@@ -154,7 +154,7 @@ function openScanner(mode, date, draft) {
     <div class="scan-view" id="scan-view"><video id="scan-video" playsinline muted></video><div class="scan-guide"></div><div class="scan-msg" id="scan-msg">Iniciando a câmera…</div>
       <button type="button" class="btn sm scan-torch hidden" id="scan-torch" data-act="scan-torch">${icon('bolt')}Light</button></div>
     ${gym ? `<div class="row wrap" style="gap:8px;margin-top:10px"><button type="button" class="btn" data-act="gym-type">${icon('edit')}Type the number instead</button></div>` : `<form class="row" data-form="scan-code" style="gap:8px;margin-top:10px"><input class="inp" id="scan-code" inputmode="numeric" pattern="[0-9 ]*" placeholder="Ou digite o número do código de barras" autocomplete="off" style="flex:1"><button class="btn" type="submit">Buscar</button></form>
-      <div class="row" style="margin-top:8px"><button type="button" class="btn sm ghost" style="flex:1" data-act="food-by-name" data-v="${mode}" data-d="${esc(date || todayISO())}">${icon('search')}Search by name instead</button></div>`}
+      <div class="row" style="margin-top:8px"><button type="button" class="btn sm ghost" style="flex:1" data-act="food-by-name" data-v="${mode}" data-d="${esc(date || todayISO())}">${icon('search')}Buscar pelo nome</button></div>`}
     <label class="btn sm ghost scan-photo">${icon('upload')}<span class="scan-photo-t">Usar uma foto</span><input type="file" accept="image/*" capture="environment" data-input="scan-photo" hidden></label>
     ${mode === 'pantry' ? `<div class="scan-added" id="scan-added">${scanAddedHTML()}</div>` : ''}</div>`, 'scan-modal');
   scanStart();
@@ -167,7 +167,7 @@ function scanAddedHTML() {
     <div class="qstep">${scanStepHTML(e, 'scan')}</div></div>`).join('');
   const n = SCN.added.reduce((a, e) => a + e.n, 0);
   return `<div class="tiny muted">Adicionado nesta sessão</div>${rows}${SCN.added.length > 12 ? `<div class="tiny muted">…and ${SCN.added.length - 12} more</div>` : ''}
-    <button type="button" class="btn sm primary scan-rev" data-act="scan-review">${icon('list')}Review ${n} item${n === 1 ? '' : 's'}</button>`;
+    <button type="button" class="btn sm primary scan-rev" data-act="scan-review">${icon('list')}Revisar ${n} item${n === 1 ? '' : 'ns'}</button>`;
 }
 const scanStepHTML = (e, ns) => `<button type="button" class="btn icon sm" data-act="${ns}-less" data-f="${esc(e.food)}" aria-label="Diminuir um">${icon('minus')}</button><b class="qn">${e.n}</b><button type="button" class="btn icon sm" data-act="${ns}-more" data-f="${esc(e.food)}" aria-label="Adicionar um">${icon('plus')}</button>`;
 function scanPaint() { const el = $('#scan-added'); if (el) el.innerHTML = scanAddedHTML(); }
@@ -519,14 +519,14 @@ async function pantrySyncReconcile() {
   if (shared && S.pantryShareSid !== SY.data.id) {            // just joined a shared pantry: bring my items in
     S.pantryShareSid = SY.data.id; const mine = (S.pantry || []).filter(x => x.qty > 0);
     S.pantry = []; S.pantrySharedRev = null; saveState();
-    if (mine.length) { SY.data.pantry.items = (SY.data.pantry.items || []).concat(mine); await pantryOps(mine.map(item => ({ op: 'add', item }))); toast(`Moved ${mine.length} pantry item${mine.length > 1 ? 's' : ''} into the shared pantry`); }
+    if (mine.length) { SY.data.pantry.items = (SY.data.pantry.items || []).concat(mine); await pantryOps(mine.map(item => ({ op: 'add', item }))); toast(`${mine.length} item${mine.length === 1 ? '' : 'ns'} da despensa movido${mine.length === 1 ? '' : 's'} para a despensa compartilhada`); }
     return;
   }
   if (shared) { if (S.pantrySharedRev !== SY.data.pantry.rev) { S.pantrySharedCopy = SY.data.pantry.items; S.pantrySharedRev = SY.data.pantry.rev; saveState(); } return; }
   if (S.pantryShareSid) {                                     // sharing stopped (or the sync ended): keep a copy of what was in it
     const copy = (S.pantrySharedCopy || []).filter(x => x.qty > 0).map(x => ({ id: pid(), food: x.food, qty: x.qty, exp: x.exp || null, added: x.added || todayISO() }));
     S.pantry = (S.pantry || []).concat(copy); delete S.pantryShareSid; delete S.pantrySharedCopy; delete S.pantrySharedRev; saveState();
-    if (copy.length) toast('The pantry isn’t shared any more — you kept a copy of its items');
+    if (copy.length) toast('A despensa não é mais compartilhada — você manteve uma cópia dos itens');
   }
 }
 // what's na despensa at the start of `date`, after the planned days from today until then
@@ -567,7 +567,7 @@ function viewPantry() {
       ${soon.map(x => `<div class="pan-srow ${daysLeft(x.exp) < 0 ? 'bad' : ''}"><b>${esc(pantryName(x.food))}</b><span class="num tiny">${esc(pantryQtyText(x.food, x.qty))}</span><span class="tiny">${esc(expText(x.exp))}</span><button type="button" class="btn sm ghost" data-act="pan-del" data-id="${x.id}">Acabou</button></div>`).join('')}
       <div class="tiny muted" style="margin-top:6px">Anything within ${PANTRY_SOON} days of its use-by date shows here.</div></div>` : '';
   return `<div class="page-head"><div class="t"><h1>Despensa</h1><p>O que você já tem em casa. A lista de compras marca o que está disponível, e as refeições planejadas descontam os itens da despensa automaticamente conforme os dias passam${shared ? ` — shared with ${esc(syncName())}` : ''}.</p></div>
-      <div class="row wrap">${scanBtnHTML('pantry', 'primary')}<button class="btn ${canScan() ? '' : 'primary'}" data-act="pan-add">${icon('plus')}Add item</button></div></div>
+      <div class="row wrap">${scanBtnHTML('pantry', 'primary')}<button class="btn ${canScan() ? '' : 'primary'}" data-act="pan-add">${icon('plus')}Adicionar item</button></div></div>
     ${soonCard}${soon.length ? '<div style="height:16px"></div>' : ''}
     <div class="card"><div class="card-h"><h2>Na despensa</h2><span class="pill">${foods.length < all.length ? `${foods.length} of ${all.length}` : all.length} food${all.length === 1 ? '' : 's'}</span>${shared ? `<span class="pill acc">${icon('users')}Compartilhada</span>` : ''}</div>
       ${tools}${all.length && !foods.length ? `<div class="muted small" style="padding:10px 2px">Nothing na despensa matches “${esc(String(UI.panQ || '').trim())}”.</div>` : ''}
@@ -587,7 +587,7 @@ function pantryItemModal(itemId, foodId) {
       <div class="field"><label>Alimento</label>${it ? `<b>${esc(pantryName(food))}${ING[food] && ING[food].brand ? ' · ' + esc(ING[food].brand) : ''}</b>` : `<input class="inp" list="pan-foods" name="foodq" data-input="pan-foodq" value="${food && ING[food] ? esc(foodLabel(food)) : ''}" placeholder="Buscar alimentos…" required autocomplete="off"><datalist id="pan-foods">${Object.values(ING).sort((a, b) => (isFavFood(b.id) - isFavFood(a.id)) || a.n.localeCompare(b.n)).map(g => `<option value="${esc(foodLabel(g.id))}">`).join('')}</datalist>`}</div>
       <div class="grid g2" style="gap:12px"><div class="field"><label>Quantidade <span class="muted" id="pan-unit" style="font-weight:500">${esc(panUnit(food))}</span></label><input class="inp" type="number" min="0" step="1" inputmode="numeric" name="qty" value="${it ? panToShown(food, it.qty) : ''}" placeholder="${it ? '' : 'uma embalagem se ficar em branco'}"></div>
         <div class="field"><label>Validade</label><input class="inp" type="date" name="exp" value="${it && it.exp ? it.exp : ''}"><span class="tiny muted">${it ? '' : 'Em branco = validade típica'}</span></div></div>
-      <div class="row wrap" style="justify-content:flex-end;gap:8px">${it ? `<button type="button" class="btn danger" data-act="pan-del" data-id="${it.id}" style="margin-right:auto">${icon('trash')}Remove</button>` : ''}<button type="button" class="btn" data-act="close-modal">Cancelar</button><button class="btn primary" type="submit">${it ? 'Salvar' : 'Adicionar'}</button></div></form></div>`, 'sm');
+      <div class="row wrap" style="justify-content:flex-end;gap:8px">${it ? `<button type="button" class="btn danger" data-act="pan-del" data-id="${it.id}" style="margin-right:auto">${icon('trash')}Remover</button>` : ''}<button type="button" class="btn" data-act="close-modal">Cancelar</button><button class="btn primary" type="submit">${it ? 'Salvar' : 'Adicionar'}</button></div></form></div>`, 'sm');
 }
 function pantrySubmit(form) {
   const fd = new FormData(form); const itemId = form.dataset.id; const qs = String(fd.get('qty') || '').trim();
@@ -638,7 +638,7 @@ function groToolsRefresh() {
   const G = GRO_ROWS; if (!G) return; const T = groTools(G.rows, groGot()); const n = G.rows.length;
   const all = $('[data-act="gro-all"][data-v="1"]'), none = $('[data-act="gro-all"][data-v="0"]'), add = $('[data-act="gro-pantry"]');
   if (all) all.disabled = T.checked === n; if (none) none.disabled = !T.checked;
-  if (add) { add.disabled = !T.add; add.innerHTML = `${icon('box')}Add checked to pantry${T.add ? ` (${T.add})` : ''}`; }
+  if (add) { add.disabled = !T.add; add.innerHTML = `${icon('box')}Adicionar marcados à despensa${T.add ? ` (${T.add})` : ''}`; }
 }
 function groAll(on) {
   const G = GRO_ROWS; if (!G) return; const got = groGot(); const ch = [];
