@@ -474,9 +474,9 @@ function settingsFootHTML() { return `<div class="tiny muted" style="margin-top:
 /* ---------------- router ---------------- */
 const NAV = [['', 'Painel', 'grid'], ['calendar', 'Calendário', 'cal'], ['workouts', 'Plano de treino', 'dumbbell'], ['diet', 'Plano alimentar', 'food'], ['foods', 'Alimentos e receitas', 'book'], ['grocery', 'Compras e preparo', 'cart'], ['pantry', 'Despensa', 'box'], ['progress', 'Progresso', 'trend'], ['settings', 'Configurações', 'sliders']];
 function shell() {
-  document.body.innerHTML = `<div id="bg" aria-hidden="true"><div class="bg-layer"></div><div class="bg-layer"></div></div><div class="app"><aside class="side"><div class="brand"><a class="brand-link" href="#/" title="FORGE 90 — Dashboard">${LOGO}<b class="wm">FORGE<em>90</em></b></a><button class="side-toggle" data-act="nav-toggle" id="side-toggle"></button></div>
+  document.body.innerHTML = `<div id="bg" aria-hidden="true"><div class="bg-layer"></div><div class="bg-layer"></div></div><div class="app"><aside class="side"><div class="brand"><a class="brand-link" href="#/" title="FORGE 90 — Painel">${LOGO}<b class="wm">FORGE<em>90</em></b></a><button class="side-toggle" data-act="nav-toggle" id="side-toggle"></button></div>
     <nav class="nav">${navItems().map(([k, l, i]) => `<a href="#/${k}" data-nav="${k}" title="${l}">${icon(i)}<span>${l}</span></a>`).join('')}</nav><div class="side-foot" id="side-foot"></div></aside>
-    <main class="main" id="view"></main></div><nav class="tabbar" id="tabbar" aria-label="Main"></nav><div id="wo-root"></div><div id="tip"></div><div id="toast"></div>`;
+    <main class="main" id="view"></main></div><nav class="tabbar" id="tabbar" aria-label="Principal"></nav><div id="wo-root"></div><div id="tip"></div><div id="toast"></div>`;
 }
 function sideFoot() {
   const t = todayISO(); const i = planIndex(t); const d = Math.max(0, i + 1);
