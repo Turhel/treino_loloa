@@ -7,15 +7,15 @@
 
 /* ---------------- section backgrounds (Unsplash License photos) ---------------- */
 const SECTION_BG = {
-  dashboard: { id: '1517836357463-d25dfeac3438', who: 'Victor Freitas', slug: 'WvDYdXDzkhs', alt: 'Athlete setting up for a barbell lift', label: 'Dashboard' },
-  calendar: { id: '1758922769578-68c5ba000d87', who: 'Jorge Alberto Vega Barrera', slug: '1J6oEUhEWU4', alt: 'Runner on a track at sunrise', label: 'Calendar' },
-  day: { id: '1764426445439-681ca4a15c1d', who: 'Mina Rad', slug: 'KI13sHKszxg', alt: 'Man training on a cable machine', label: 'Day detail' },
-  workouts: { id: '1744551154623-4b5336e95c28', who: 'Shan A. Rajpoot', slug: 'yqI0r1AMSsQ', alt: 'Muscular man lifting dumbbells', label: 'Workout plan' },
-  diet: { id: '1760888548654-b75cced14d9d', who: 'Rodrigo Rodrigues', slug: '6dBK-bL8Eyg', alt: 'High-protein chicken salad', label: 'Diet plan' },
-  foods: { id: '1556911220-dabc1f02913a', who: 'Jason Briscoe', slug: '5IGprlBT5g4', alt: 'Man chopping vegetables in a kitchen', label: 'Foods & recipes' },
-  grocery: { id: '1753354868656-53671f69602a', who: 'Vitaly Gariev', slug: 'eJM7swj-D4g', alt: 'Woman shopping for fresh produce', label: 'Grocery & prep' },
-  progress: { id: '1545346315-f4c47e3e1b55', who: 'Jakob Owens', slug: 'qkQwDvRqQY8', alt: 'Muscular man flexing', label: 'Progress' },
-  settings: { id: '1651786039465-d0580bb22ab7', who: 'Alina Rubo', slug: 'TaxQjdfhGQM', alt: 'Person stretching on a yoga mat', label: 'Settings' }
+  dashboard: { id: '1517836357463-d25dfeac3438', who: 'Victor Freitas', slug: 'WvDYdXDzkhs', alt: 'Atleta se preparando para levantar uma barra', label: 'Painel' },
+  calendar: { id: '1758922769578-68c5ba000d87', who: 'Jorge Alberto Vega Barrera', slug: '1J6oEUhEWU4', alt: 'Corredor em uma pista ao nascer do sol', label: 'Calendário' },
+  day: { id: '1764426445439-681ca4a15c1d', who: 'Mina Rad', slug: 'KI13sHKszxg', alt: 'Homem treinando em uma máquina de cabos', label: 'Detalhes do dia' },
+  workouts: { id: '1744551154623-4b5336e95c28', who: 'Shan A. Rajpoot', slug: 'yqI0r1AMSsQ', alt: 'Homem musculoso levantando halteres', label: 'Plano de treino' },
+  diet: { id: '1760888548654-b75cced14d9d', who: 'Rodrigo Rodrigues', slug: '6dBK-bL8Eyg', alt: 'Salada de frango rica em proteína', label: 'Plano alimentar' },
+  foods: { id: '1556911220-dabc1f02913a', who: 'Jason Briscoe', slug: '5IGprlBT5g4', alt: 'Homem cortando vegetais em uma cozinha', label: 'Alimentos e receitas' },
+  grocery: { id: '1753354868656-53671f69602a', who: 'Vitaly Gariev', slug: 'eJM7swj-D4g', alt: 'Mulher comprando hortifruti fresco', label: 'Compras e preparo' },
+  progress: { id: '1545346315-f4c47e3e1b55', who: 'Jakob Owens', slug: 'qkQwDvRqQY8', alt: 'Homem musculoso flexionando os músculos', label: 'Progresso' },
+  settings: { id: '1651786039465-d0580bb22ab7', who: 'Alina Rubo', slug: 'TaxQjdfhGQM', alt: 'Pessoa se alongando em um tapete de yoga', label: 'Configurações' }
 };
 // Fallbacks shown if a photo can't load (offline): tinted gradients per section
 const BG_FALLBACK = {
@@ -131,7 +131,7 @@ function setFoodPref(k, on, wasPartial) {
   invalidate();
   const n = off ? substitutePlan(maxISO(todayISO(), S.settings.startDate)) : 0;
   saveState(); refreshFoodPrefs();
-  toast(`${label} ${on ? 'on' : 'off'}${n ? ` — swapped ${n} upcoming meal${n === 1 ? '' : 's'}` : ''}`);
+  toast(`${label} ${on ? 'ativado' : 'desativado'}${n ? ` — ${n} refeição${n === 1 ? '' : 'ões'} futura${n === 1 ? '' : 's'} substituída${n === 1 ? '' : 's'}` : ''}`);
 }
 document.addEventListener('change', e => { const t = e.target; if (t && t.dataset && t.dataset.fp) setFoodPref(t.dataset.fp, t.checked, t.dataset.ind === '1'); });
 document.addEventListener('input', e => { const t = e.target; if (t && t.dataset && t.dataset.input === 'fpq') { UI.fpQ = t.value; $$('[data-fp-tree]').forEach(el => { el.innerHTML = fpTreeHTML(); }); fpAfter(); } });
@@ -160,16 +160,16 @@ function sortRecipes(list) {
 }
 function recipeSortHTML() {
   const key = UI.recSort || 'default', asc = UI.recDir === 'asc';
-  const lbl = key === 'name' ? (asc ? 'A → Z' : 'Z → A') : (asc ? 'Low → high' : 'High → low');
-  return `<div class="sortbar"><span class="tiny muted">Sort</span><select class="inp sm" data-input="rec-sort" aria-label="Sort recipes">${REC_SORTS.map(([v, l]) => `<option value="${v}" ${key === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
-    ${key === 'default' ? '' : `<button type="button" class="btn sm sort-dir" data-act="rec-dir" title="Switch to ${asc ? 'descending' : 'ascending'}" aria-label="Sort direction: ${asc ? 'ascending' : 'descending'}">${icon(asc ? 'arrowUp' : 'arrowDown')}${lbl}</button>`}</div>`;
+  const lbl = key === 'name' ? (asc ? 'A → Z' : 'Z → A') : (asc ? 'Menor → maior' : 'Maior → menor');
+  return `<div class="sortbar"><span class="tiny muted">Ordenar</span><select class="inp sm" data-input="rec-sort" aria-label="Ordenar receitas">${REC_SORTS.map(([v, l]) => `<option value="${v}" ${key === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    ${key === 'default' ? '' : `<button type="button" class="btn sm sort-dir" data-act="rec-dir" title="Mudar para ordem ${asc ? 'decrescente' : 'crescente'}" aria-label="Direção da ordenação: ${asc ? 'crescente' : 'decrescente'}">${icon(asc ? 'arrowUp' : 'arrowDown')}${lbl}</button>`}</div>`;
 }
-const recFilterLabel = c => c === 'fav' ? '★ Favorites' : c[0].toUpperCase() + c.slice(1);
+const recFilterLabel = c => c === 'fav' ? '★ Favoritos' : c[0].toUpperCase() + c.slice(1);
 const linkHost = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } };
 function linksBlockHTML(r) {
   const ls = (r.links || []).filter(l => l && l.url);
-  return `<h3 style="margin-top:16px">Recipe links</h3>${ls.length ? `<div class="link-list">${ls.map(l => `<a class="link-card" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer"><span class="lk-ic">${icon('link')}</span><span class="lk-t"><b>${esc(l.title || linkHost(l.url))}</b><small>${esc(l.site || linkHost(l.url))}</small></span>${icon('ext')}</a>`).join('')}</div>` : `<div class="tiny muted">No links yet — add some with Edit on the Foods & recipes page.</div>`}
-    <div class="tiny muted" style="margin-top:6px">Links open the original recipe; FORGE 90’s version above is scaled to your macros.</div>`;
+  return `<h3 style="margin-top:16px">Links da receita</h3>${ls.length ? `<div class="link-list">${ls.map(l => `<a class="link-card" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer"><span class="lk-ic">${icon('link')}</span><span class="lk-t"><b>${esc(l.title || linkHost(l.url))}</b><small>${esc(l.site || linkHost(l.url))}</small></span>${icon('ext')}</a>`).join('')}</div>` : `<div class="tiny muted">Nenhum link ainda — adicione usando Editar na página Alimentos e receitas.</div>`}
+    <div class="tiny muted" style="margin-top:6px">Os links abrem a receita original; a versão do FORGE 90 acima é ajustada aos seus macros.</div>`;
 }
 function linkChipsHTML(r) { const ls = (r.links || []).filter(l => l && l.url); if (!ls.length) return '';
   return `<div class="rec-links">${icon('link')}${ls.map(l => `<a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" title="${esc(l.title || '')}">${esc(l.site || linkHost(l.url))}</a>`).join('<span>·</span>')}</div>`; }
@@ -177,18 +177,18 @@ function linkChipsHTML(r) { const ls = (r.links || []).filter(l => l && l.url); 
 /* ---------------- Foods & recipes page ---------------- */
 function viewFoods() {
   const tab = UI.foodsTab || 'recipes';
-  const head = `<div class="page-head"><div class="t"><h1>Foods & recipes</h1><p>Edit the macros of any food, add your own foods and recipes, and choose which food groups the plan can use.</p></div>
-    <div class="row wrap">${scanBtnHTML('today')}${AUTH.mode === 'server' ? `<button class="btn" data-act="imp-open">${icon('download')}Import recipe</button>` : ''}<button class="btn primary" data-act="recipe-new">${icon('plus')}New recipe</button><button class="btn" data-act="food-by-name" data-v="foods">${icon('search')}Find a food</button><button class="btn" data-act="food-new">${icon('plus')}Add food</button></div></div>
-    <div class="seg" style="margin-bottom:16px">${[['recipes', 'Recipes'], ['foods', 'Foods & macros'], ['prefs', 'Food preferences']].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-act="foods-tab" data-v="${k}">${l}</button>`).join('')}</div>`;
-  if (tab === 'prefs') return head + `<div class="card"><div class="card-h"><h2>Food preferences</h2></div>${foodPrefsHTML()}</div>`;
+  const head = `<div class="page-head"><div class="t"><h1>Alimentos e receitas</h1><p>Edite os macros de qualquer alimento, adicione seus próprios alimentos e receitas e escolha quais grupos o plano pode usar.</p></div>
+    <div class="row wrap">${scanBtnHTML('today')}${AUTH.mode === 'server' ? `<button class="btn" data-act="imp-open">${icon('download')}Importar receita</button>` : ''}<button class="btn primary" data-act="recipe-new">${icon('plus')}Nova receita</button><button class="btn" data-act="food-by-name" data-v="foods">${icon('search')}Encontrar alimento</button><button class="btn" data-act="food-new">${icon('plus')}Adicionar alimento</button></div></div>
+    <div class="seg" style="margin-bottom:16px">${[['recipes', 'Receitas'], ['foods', 'Alimentos e macros'], ['prefs', 'Preferências alimentares']].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-act="foods-tab" data-v="${k}">${l}</button>`).join('')}</div>`;
+  if (tab === 'prefs') return head + `<div class="card"><div class="card-h"><h2>Preferências alimentares</h2></div>${foodPrefsHTML()}</div>`;
   if (tab === 'foods') return head + foodsTableHTML();
   const f = UI.recFilter || 'all';
   const words = String(UI.recQ || '').toLowerCase().split(/\s+/).filter(Boolean);
   const hay = r => [r.name, r.cat, (r.tags || []).join(' '), r.ing.map(([id]) => ING[id] ? ING[id].n : '').join(' ')].join(' ').toLowerCase();
   const rs = sortRecipes(RECIPES.filter(r => (f === 'all' || (f === 'fav' ? isFav(r.id) : r.cat === f)) && (!words.length || words.every(w => hay(r).includes(w)))));
   const cards = rs.map(r => { const m = RPS(r.id); const ok = recipeAllowed(r); const bl = blockedBy(r); const g = RECIPE_GRAD[r.cat];
-    const badges = [r.custom ? '<span class="pill acc">Custom</span>' : '', r.edited ? '<span class="pill">Edited</span>' : '', S.recipeOff[r.id] ? '<span class="pill">Turned off</span>' : '', bl.length ? `<span class="pill warn-pill" data-tip="Blocked by food preferences: ${esc(bl.join(', '))}">Blocked · ${esc(bl[0])}${bl.length > 1 ? ' +' + (bl.length - 1) : ''}</span>` : ''].join('');
-    return `<div class="card recipe-row clickable ${ok ? '' : 'dim'} ${isFav(r.id) ? 'is-fav' : ''}" data-act="recipe" data-rid="${r.id}" title="Show recipe details"><div class="art sm" style="--g1:${g[0]};--g2:${g[1]}">${esc(r.emoji || '🍽️')}</div>
+    const badges = [r.custom ? '<span class="pill acc">Personalizada</span>' : '', r.edited ? '<span class="pill">Editada</span>' : '', S.recipeOff[r.id] ? '<span class="pill">Desativada</span>' : '', bl.length ? `<span class="pill warn-pill" data-tip="Bloqueada pelas preferências alimentares: ${esc(bl.join(', '))}">Bloqueada · ${esc(bl[0])}${bl.length > 1 ? ' +' + (bl.length - 1) : ''}</span>` : ''].join('');
+    return `<div class="card recipe-row clickable ${ok ? '' : 'dim'} ${isFav(r.id) ? 'is-fav' : ''}" data-act="recipe" data-rid="${r.id}" title="Mostrar detalhes da receita"><div class="art sm" style="--g1:${g[0]};--g2:${g[1]}">${esc(r.emoji || '🍽️')}</div>
       <div class="rr-t" style="flex:1;min-width:0"><div class="tiny muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.08em">${r.cat} · makes ${r.yield}</div><b>${esc(r.name)}</b>
         <div class="mac small"><span><b>${fmt(m.k)}</b> kcal</span> <span style="color:var(--prot)">${fmt(m.p)}P</span> <span style="color:var(--carb)">${fmt(m.c)}C</span> <span style="color:var(--fat)">${fmt(m.f)}F</span></div>
         ${linkChipsHTML(r)}<div class="row wrap" style="gap:4px;margin-top:4px">${badges}</div></div>
@@ -210,10 +210,10 @@ function foodsTableHTML() {
   const roleName = { P: 'Protein', C: 'Carb', F: 'Fat', V: 'Fixed' };
   const rows = FOOD_CATS.map(c => { const fs = foods.filter(g => SUB_CAT[g.sub] === c.id).sort((a, b) => a.n.localeCompare(b.n)); if (!fs.length) return '';
     return `<tr class="grp"><td colspan="9">${c.icon} ${esc(c.name)}</td></tr>` + fs.map(g => { const used = RECIPES.filter(r => r.ing.some(([id]) => id === g.id)).length;
-      return `<tr class="${foodAllowed(g.id) ? '' : 'dim'}"><td><b>${esc(g.n)}</b> ${g.custom ? '<span class="pill acc">Custom</span>' : ''}${g.shared ? `<span class="pill acc" title="On the shared food list${g.byName ? ' — added by ' + esc(g.byName) : ''}">${icon('scan')}Scanned</span>` : ''}${g.edited ? '<span class="pill">Edited</span>' : ''}<div class="tiny muted">${g.brand ? esc(g.brand) + ' · ' : ''}${esc(SUB_LABEL[g.sub] || g.sub)} · in ${used} recipe${used === 1 ? '' : 's'}</div></td>
+      return `<tr class="${foodAllowed(g.id) ? '' : 'dim'}"><td><b>${esc(g.n)}</b> ${g.custom ? '<span class="pill acc">Personalizada</span>' : ''}${g.shared ? `<span class="pill acc" title="Na lista compartilhada de alimentos${g.byName ? ' — adicionado por ' + esc(g.byName) : ''}">${icon('scan')}Scanned</span>` : ''}${g.edited ? '<span class="pill">Editada</span>' : ''}<div class="tiny muted">${g.brand ? esc(g.brand) + ' · ' : ''}${esc(SUB_LABEL[g.sub] || g.sub)} · in ${used} recipe${used === 1 ? '' : 's'}</div></td>
         <td class="muted small">${g.u ? `per ${esc(g.u)} (${g.g || '?'} g)` : g.ml ? 'per 100 ml' : 'per 100 g'}</td><td class="num"><b>${fmt(g.k)}</b></td><td class="num" style="color:var(--prot)">${fmt(g.p, 1)}</td><td class="num" style="color:var(--carb)">${fmt(g.c, 1)}</td><td class="num" style="color:var(--fat)">${fmt(g.f, 1)}</td>
         <td><span class="pill">${roleName[g.r] || g.r}</span></td><td style="text-align:right"><div class="food-acts">${favFoodBtnHTML(g.id)}${addOk ? `<button class="btn sm ghost" data-act="qa-food" data-id="${g.id}" title="Add to today">${icon('plus')}Today</button>` : ''}<button class="btn sm" data-act="food-edit" data-id="${g.id}">${g.shared && !(AUTH.user && (g.by === AUTH.user.id || isAdmin())) ? 'View' : 'Edit'}</button></div></td></tr>`; }).join(''); }).join('');
-  return `<div class="card"><div class="row wrap" style="margin-bottom:12px"><input class="inp" type="search" style="max-width:260px" placeholder="Search foods, brands or barcodes…" data-input="foodq" value="${esc(UI.foodQ || '')}">
+  return `<div class="card"><div class="row wrap" style="margin-bottom:12px"><input class="inp" type="search" style="max-width:260px" placeholder="Buscar alimentos, marcas ou códigos de barras…" data-input="foodq" value="${esc(UI.foodQ || '')}">
       <select class="inp" style="max-width:220px" data-input="foodcat"><option value="all">All categories</option><option value="fav" ${cf === 'fav' ? 'selected' : ''}>★ Favorite foods</option>${AUTH.mode === 'server' ? `<option value="shared" ${cf === 'shared' ? 'selected' : ''}>Scanned products</option>` : ''}${FOOD_CATS.map(c => `<option value="${c.id}" ${cf === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>
       <span class="tiny muted">${foods.length} foods · macros are per 100 g unless noted. “Scaling” is how portions flex each day.</span></div>
     <div class="scroll-x"><table class="tbl foods"><thead><tr><th>Food</th><th>Basis</th><th>kcal</th><th>Protein</th><th>Carbs</th><th>Fat</th><th>Scaling</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="9" class="muted">No foods match.</td></tr>'}</tbody></table></div></div>`;
@@ -226,7 +226,7 @@ function foodDefaults(id) {
   const b = BASE_ING[id]; if (!b) return null; const sub = BASE_SUB[id] || 'sauces';
   return { n: b.n, sub, a: b.a, basis: b.u ? 'u' : b.ml ? 'ml' : 'g', u: b.u || '', g: b.g || '', k: b.k, p: b.p, c: b.c, f: b.f, r: b.r, pk: defaultPack(id, sub, b) };
 }
-const FE_ROLE = { P: 'Protein source', C: 'Carb source', F: 'Fat source', V: 'Fixed' };
+const FE_ROLE = { P: 'Fonte de proteína', C: 'Fonte de carboidratos', F: 'Fonte de gorduras', V: 'Fixed' };
 function foodEditor(id) {
   const g = id ? ING[id] : { n: '', sub: 'chicken_white', a: 'Meat & Seafood', r: 'P', k: '', p: '', c: '', f: '' };
   const basis = g.u ? 'u' : g.ml ? 'ml' : 'g';
@@ -234,7 +234,7 @@ function foodEditor(id) {
   const def = id && g.base ? foodDefaults(id) : null;
   const hint = k => def ? `<span class="fe-def tiny" data-def="${k}" hidden></span>` : '';
   const unitLbl = basis === 'u' ? (g.u ? g.u + 's' : 'items') : basis === 'ml' ? 'ml' : 'g';
-  modal(`<div class="row"><h2 style="flex:1">${id ? 'Edit food' : 'Add a food'}</h2><button class="btn icon ghost" data-act="close-modal">${icon('x')}</button></div>
+  modal(`<div class="row"><h2 style="flex:1">${id ? 'Editar alimento' : 'Adicionar alimento'}</h2><button class="btn icon ghost" data-act="close-modal">${icon('x')}</button></div>
     ${def ? `<div class="note" style="margin:10px 0">${icon('info')}<span>Built-in food — changes apply everywhere it’s used. <b>Reset to defaults</b> (bottom left) restores the original values; fields you’ve changed show their default underneath.</span></div>` : ''}
     <form data-form="food" data-id="${id || ''}" class="grid g2" style="gap:12px;margin-top:12px">
       <div class="field" style="grid-column:1/-1"><label>Name</label><input class="inp" name="n" value="${esc(g.n)}" required placeholder="e.g. Chicken sausage">${hint('n')}</div>
@@ -242,16 +242,16 @@ function foodEditor(id) {
       <div class="field"><label>Grocery aisle</label><select class="inp" name="a">${AISLES.map(a => `<option ${g.a === a ? 'selected' : ''}>${a}</option>`).join('')}</select>${hint('a')}</div>
       <div class="field"><label>Macros are for</label><select class="inp" name="basis" data-input="fe-basis"><option value="g" ${basis === 'g' ? 'selected' : ''}>100 g</option><option value="ml" ${basis === 'ml' ? 'selected' : ''}>100 ml</option><option value="u" ${basis === 'u' ? 'selected' : ''}>1 item (egg, bar, slice…)</option></select>${hint('basis')}</div>
       <div class="field fe-unit ${basis === 'u' ? '' : 'hidden'}"><label>Item name & weight</label><div class="row" style="gap:6px"><input class="inp" name="u" value="${esc(g.u || '')}" placeholder="bar" style="width:50%"><input class="inp" type="number" step="1" min="1" name="g" value="${esc(g.g || '')}" placeholder="grams" style="width:50%"></div>${hint('u')}</div>
-      <div class="field"><label>Calories (kcal)</label><div class="row" style="gap:6px"><input class="inp" type="number" step="0.1" min="0" name="k" value="${esc(g.k)}" required><button type="button" class="btn sm" data-act="fe-calc" data-tip="Protein×4 + Carbs×4 + Fat×9">Calc</button></div>${hint('k')}</div>
+      <div class="field"><label>Calories (kcal)</label><div class="row" style="gap:6px"><input class="inp" type="number" step="0.1" min="0" name="k" value="${esc(g.k)}" required><button type="button" class="btn sm" data-act="fe-calc" data-tip="Proteína×4 + Carboidratos×4 + Gorduras×9">Calc</button></div>${hint('k')}</div>
       <div class="field"><label>Protein (g)</label><input class="inp" type="number" step="0.1" min="0" name="p" value="${esc(g.p)}" required>${hint('p')}</div>
       <div class="field"><label>Carbs (g)</label><input class="inp" type="number" step="0.1" min="0" name="c" value="${esc(g.c)}" required>${hint('c')}</div>
       <div class="field"><label>Fat (g)</label><input class="inp" type="number" step="0.1" min="0" name="f" value="${esc(g.f)}" required>${hint('f')}</div>
-      <div class="field" style="grid-column:1/-1"><label>Portion scaling</label><select class="inp" name="r">${[['P', 'Protein source — scaled to hit your protein target'], ['C', 'Carb source — scaled to hit calories'], ['F', 'Fat source — scaled to hit calories'], ['V', 'Fixed — vegetables, sauces, seasonings']].map(([v, l]) => `<option value="${v}" ${g.r === v ? 'selected' : ''}>${l}</option>`).join('')}</select><span class="tiny muted" id="fe-suggest"></span>${hint('r')}</div>
+      <div class="field" style="grid-column:1/-1"><label>Portion scaling</label><select class="inp" name="r">${[['P', 'Fonte de proteína — ajustada para atingir sua meta de proteína'], ['C', 'Fonte de carboidratos — ajustada para atingir as calorias'], ['F', 'Fonte de gorduras — ajustada para atingir as calorias'], ['V', 'Fixed — vegetables, sauces, seasonings']].map(([v, l]) => `<option value="${v}" ${g.r === v ? 'selected' : ''}>${l}</option>`).join('')}</select><span class="tiny muted" id="fe-suggest"></span>${hint('r')}</div>
       <div class="field" style="grid-column:1/-1"><label>Typical package size <span class="muted" style="font-weight:500">— used by the money-saving meal planner and the grocery list</span></label>
         <div class="row" style="gap:8px"><input class="inp" type="number" step="1" min="1" name="pk" value="${esc(pk)}" placeholder="${id ? '' : 'e.g. 680'}" style="max-width:140px"><span class="small muted" id="fe-pk-unit">${unitLbl} per package</span></div>${hint('pk')}</div>
       <div class="row" style="grid-column:1/-1;justify-content:flex-end;margin-top:6px">
         ${id && g.custom ? `<button type="button" class="btn danger" data-act="food-del" data-id="${id}" style="margin-right:auto">${icon('trash')}Delete</button>` : ''}
-        ${def ? `<button type="button" class="btn" data-act="food-reset" data-id="${id}" id="fe-reset" style="margin-right:auto" title="Restore this food’s original built-in values">${icon('undo')}Reset to defaults</button>` : ''}
+        ${def ? `<button type="button" class="btn" data-act="food-reset" data-id="${id}" id="fe-reset" style="margin-right:auto" title="Restaurar os valores originais deste alimento">${icon('undo')}Reset to defaults</button>` : ''}
         <button type="button" class="btn" data-act="close-modal">Cancel</button><button class="btn primary" type="submit">Save food</button></div></form>`);
   feSuggest(); feDefHints();
 }
@@ -264,20 +264,20 @@ function feDefHints() {
   let dirty = false;
   $$('#modal .fe-def').forEach(el => { const k = el.dataset.def; let diff;
     if (k === 'u') diff = d.basis === 'u' && (!same('u', d.u) || !same('g', d.g)); else if (k === 'basis') diff = !same('basis', d.basis); else diff = !same(k, d[k]);
-    if (diff) dirty = true; el.hidden = !diff || !show[k]; el.textContent = `Default: ${show[k]}`; });
-  const rb = $('#fe-reset'); if (rb) { const on = dirty || !!ING[id].edited; rb.disabled = !on; rb.title = on ? 'Restore this food’s original built-in values' : 'Already using the built-in values'; }
+    if (diff) dirty = true; el.hidden = !diff || !show[k]; el.textContent = `Padrão: ${show[k]}`; });
+  const rb = $('#fe-reset'); if (rb) { const on = dirty || !!ING[id].edited; rb.disabled = !on; rb.title = on ? 'Restaurar os valores originais deste alimento' : 'Já usando os valores originais'; }
 }
 function feSuggest() {
   const f = $('#modal form[data-form="food"]'); if (!f) return;
   const v = n => +f.elements[n].value || 0; const r = suggestRole(v('k'), v('p'), v('c'), v('f'));
-  const el = $('#fe-suggest'); if (el) el.textContent = v('k') ? `Suggested from the macros: ${{ P: 'Protein source', C: 'Carb source', F: 'Fat source', V: 'Fixed' }[r]}` : '';
+  const el = $('#fe-suggest'); if (el) el.textContent = v('k') ? `Sugerido pelos macros: ${{ P: 'Fonte de proteína', C: 'Fonte de carboidratos', F: 'Fonte de gorduras', V: 'Fixo' }[r]}` : '';
 }
 function saveFood(form) {
   const fd = new FormData(form); const id = form.dataset.id;
   const num = k => Math.max(0, +fd.get(k) || 0);
   const basis = fd.get('basis');
   const rec = { n: String(fd.get('n')).trim(), sub: fd.get('sub'), a: fd.get('a'), r: fd.get('r'), k: num('k'), p: num('p'), c: num('c'), f: num('f'), pk: num('pk') || null };
-  if (!rec.n) { toast('Give the food a name'); return; }
+  if (!rec.n) { toast('Dê um nome ao alimento'); return; }
   if (basis === 'u') { rec.u = String(fd.get('u') || 'item').trim() || 'item'; rec.g = num('g') || 100; rec.ml = false; } else { rec.u = null; rec.g = null; rec.ml = basis === 'ml'; }
   if (id && ING[id] && ING[id].base) {
     const b = BASE_ING[id]; const o = {};
@@ -290,8 +290,8 @@ function saveFood(form) {
   }
   const newId = id || Object.keys(S.customFoods).find(k => S.customFoods[k] === rec);
   rebuildCatalog(); saveState();
-  if (UI.returnToRecipe && RE) { UI.returnToRecipe = false; if (!id) RE.ing.push([newId, ING[newId].u ? 1 : 100]); render(); renderRecipeEditor(); toast(`${rec.n} added to the recipe`); return; }
-  closeModal(); render(); toast(`${rec.n} saved — every recipe using it is updated`);
+  if (UI.returnToRecipe && RE) { UI.returnToRecipe = false; if (!id) RE.ing.push([newId, ING[newId].u ? 1 : 100]); render(); renderRecipeEditor(); toast(`${rec.n} adicionado à receita`); return; }
+  closeModal(); render(); toast(`${rec.n} salvo — todas as receitas que o utilizam foram atualizadas`);
 }
 
 /* ---------- recipe editor ---------- */
@@ -307,13 +307,13 @@ function recipeEditor(rid, dup) {
 function foodSelect(sel, i, sugg) {
   const bySub = {}; Object.values(ING).forEach(g => (bySub[g.sub] = bySub[g.sub] || []).push(g));
   const sg = (sugg || []).filter(id => ING[id]); const inSg = sg.includes(sel);
-  return `<select class="inp" data-re="ing-id" data-i="${i}">${ING[sel] ? '' : `<option value="" selected disabled>Choose a food…</option>`}${sg.length ? `<optgroup label="Best matches">${sg.map(id => `<option value="${id}" ${sel === id ? 'selected' : ''}>${esc(ING[id].n)}${foodAllowed(id) ? '' : ' (off)'}</option>`).join('')}</optgroup>` : ''}${FOOD_CATS.map(c => c.subs.map(([sid, l]) => { const fs = (bySub[sid] || []).sort((a, b) => a.n.localeCompare(b.n));
-    return fs.length ? `<optgroup label="${esc(c.icon + ' ' + c.name + ' · ' + l)}">${fs.map(g => `<option value="${g.id}" ${sel === g.id && !inSg ? 'selected' : ''}>${esc(g.n)}${foodAllowed(g.id) ? '' : ' (off)'}</option>`).join('')}</optgroup>` : ''; }).join('')).join('')}</select>`;
+  return `<select class="inp" data-re="ing-id" data-i="${i}">${ING[sel] ? '' : `<option value="" selected disabled>Choose a food…</option>`}${sg.length ? `<optgroup label="Best matches">${sg.map(id => `<option value="${id}" ${sel === id ? 'selected' : ''}>${esc(ING[id].n)}${foodAllowed(id) ? '' : ' (desativado)'}</option>`).join('')}</optgroup>` : ''}${FOOD_CATS.map(c => c.subs.map(([sid, l]) => { const fs = (bySub[sid] || []).sort((a, b) => a.n.localeCompare(b.n));
+    return fs.length ? `<optgroup label="${esc(c.icon + ' ' + c.name + ' · ' + l)}">${fs.map(g => `<option value="${g.id}" ${sel === g.id && !inSg ? 'selected' : ''}>${esc(g.n)}${foodAllowed(g.id) ? '' : ' (desativado)'}</option>`).join('')}</optgroup>` : ''; }).join('')).join('')}</select>`;
 }
 /* food-only emoji dropdown */
 function emojiPickerHTML(cur) {
   return `<button type="button" class="inp emo-btn" data-act="emo-toggle" aria-haspopup="true" aria-expanded="false" title="Choose an emoji"><span class="emo-cur">${esc(cur || '🍽️')}</span>${icon('right')}</button>
-    <div class="emo-pop" role="dialog" aria-label="Food emoji"><input class="inp" type="search" placeholder="Search food emoji…" data-input="emoq" aria-label="Search emoji">
+    <div class="emo-pop" role="dialog" aria-label="Emoji do alimento"><input class="inp" type="search" placeholder="Buscar emoji de alimento…" data-input="emoq" aria-label="Buscar emoji">
       <div class="emo-groups">${FOOD_EMOJI.map(([g, list]) => `<div class="emo-g"><div class="emo-h">${esc(g)}</div><div class="emo-grid">${list.map(([em, name]) => `<button type="button" class="emo ${em === cur ? 'on' : ''}" data-act="emo-pick" data-e="${em}" data-n="${esc(name)}" title="${esc(name)}">${em}</button>`).join('')}</div></div>`).join('')}
       <div class="emo-none tiny muted">No food emoji match.</div></div></div>`;
 }
@@ -327,7 +327,7 @@ function tagChipsHTML() {
     return `<button type="button" class="tag-chip ${on ? 'on' : ''}" data-act="re-tag" data-t="${esc(t)}" aria-pressed="${on}">${icon(on ? 'check' : 'plus')}${esc(t)}<small>${n}</small></button>`; }).join('') || '<span class="tiny muted">No tags yet.</span>';
 }
 function reLinksHTML() {
-  return RE.links.map((l, i) => `<div class="re-link"><span class="lk-ic">${icon('link')}</span><input class="inp" data-re="link-title" data-i="${i}" value="${esc(l.title)}" placeholder="Title (optional)"><input class="inp" type="url" data-re="link-url" data-i="${i}" value="${esc(l.url)}" placeholder="https://…" inputmode="url">
+  return RE.links.map((l, i) => `<div class="re-link"><span class="lk-ic">${icon('link')}</span><input class="inp" data-re="link-title" data-i="${i}" value="${esc(l.title)}" placeholder="Título (opcional)"><input class="inp" type="url" data-re="link-url" data-i="${i}" value="${esc(l.url)}" placeholder="https://…" inputmode="url">
     ${/^https?:\/\//i.test(l.url) ? `<a class="btn icon ghost" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" title="Open link">${icon('ext')}</a>` : ''}<button type="button" class="btn icon ghost" data-act="re-link-rm" data-i="${i}" title="Remove link">${icon('x')}</button></div>`).join('') || '<div class="tiny muted">No links yet.</div>';
 }
 function cleanLinks(list) {
@@ -354,7 +354,7 @@ function renderRecipeEditor() {
       <div class="field ${im && (!(+e.yield >= 1) || +e.yield > 12) ? 'imp-need' : ''}"><label>Servings it makes</label><input class="inp" type="number" min="1" max="12" data-re="yield" value="${e.yield}" ${im ? 'placeholder="?"' : ''}></div>
       <div class="field"><label>Storage</label><select class="inp" data-re="storage">${[['fresh', 'Eat fresh'], ['fridge', 'Fridge (4 days)'], ['freezer', 'Freezes well']].map(([v, l]) => `<option value="${v}" ${e.storage === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
       <div class="field"><label>Prep (min)</label><input class="inp" type="number" min="0" data-re="time" value="${e.time}"></div>
-      <div class="field" style="grid-column:1/-1"><label>Tags (comma-separated)</label><input class="inp" data-re="tags" value="${esc(e.tags)}" placeholder="Type a new tag, or pick from the list below">
+      <div class="field" style="grid-column:1/-1"><label>Tags (comma-separated)</label><input class="inp" data-re="tags" value="${esc(e.tags)}" placeholder="Digite uma nova tag ou escolha na lista abaixo">
         <div class="tag-pick"><span class="tiny muted">Tags already in use — click to add or remove</span><div class="tag-chips" id="re-tag-chips">${tagChipsHTML()}</div></div></div></div>
     <h3 style="margin:16px 0 8px">Ingredients <span class="tiny muted" style="font-weight:500">— ${reAmtNote(e.yield)}</span></h3>
     <div id="re-ings">${e.ing.map((r, i) => { const [id, a, m] = r; const g = ING[id]; const st = m ? impRowState(r) : null;
@@ -380,22 +380,22 @@ function updateRecipePreview() {
     <div class="num"><span style="color:var(--prot)"><b>${fmt(ps.p)}</b>g protein</span> · <span style="color:var(--carb)"><b>${fmt(ps.c)}</b>g carbs</span> · <span style="color:var(--fat)"><b>${fmt(ps.f)}</b>g fat</span></div>
     <div class="tiny muted">${ps.k ? Math.round(ps.p * 4 / ps.k * 100) : 0}% of calories from protein</div></div>
     ${e.imp && e.imp.nut && e.imp.nut.k ? (() => { const n = e.imp.nut; const off = ps.k && n.k ? Math.abs(ps.k - n.k) / n.k : 0;
-      return `<div class="tiny ${off > .25 ? '' : 'muted'}" style="margin-top:6px">The source lists <b>${fmt(n.k)} kcal</b>${n.p ? ` and <b>${fmt(n.p)} g protein</b>` : ''} per serving${off > .25 && e.ing.every(r => ING[r[0]] && +r[1] > 0) ? ` — yours is ${fmt(off * 100)}% ${ps.k > n.k ? 'higher' : 'lower'}, so check the amounts and servings.` : '.'}</div>`; })() : ''}
+      return `<div class="tiny ${off > .25 ? '' : 'muted'}" style="margin-top:6px">The source lists <b>${fmt(n.k)} kcal</b>${n.p ? ` and <b>${fmt(n.p)} g protein</b>` : ''} por porção${off > .25 && e.ing.every(r => ING[r[0]] && +r[1] > 0) ? ` — yours is ${fmt(off * 100)}% ${ps.k > n.k ? 'higher' : 'lower'}, so check the amounts and servings.` : '.'}</div>`; })() : ''}
     ${blocked.length ? `<div class="note warn" style="margin-top:8px">${icon('info')}<span>Uses foods you’ve turned off (${esc(blocked.join(', '))}) — it won’t be scheduled until they’re back on.</span></div>` : ''}`;
 }
 function saveRecipe() {
   const e = RE; const name = e.name.trim();
-  if (!name) { toast('Give the recipe a name'); const n = $('#modal [data-re="name"]'); if (n) n.focus(); return; }
+  if (!name) { toast('Dê um nome à receita'); const n = $('#modal [data-re="name"]'); if (n) n.focus(); return; }
   if (e.imp && !impValidate()) return;
   const ing = e.ing.filter(([id, a]) => ING[id] && +a > 0).map(([id, a]) => [id, +a]);
-  if (!ing.length) { toast('Add at least one ingredient'); return; }
+  if (!ing.length) { toast('Adicione pelo menos um ingrediente'); return; }
   const cl = cleanLinks(e.links);
   const rec = { links: cl.links, name, emoji: e.emoji || '🍽️', cat: e.cat, yield: Math.max(1, Math.round(+e.yield || 1)), storage: e.storage, time: +e.time || 0,
     tags: (() => { const known = usedTags().map(([t]) => t); const out = []; e.tags.split(',').map(t => t.trim()).filter(Boolean).forEach(t => { t = known.find(k => k.toLowerCase() === t.toLowerCase()) || t; if (!out.some(o => o.toLowerCase() === t.toLowerCase())) out.push(t); }); return out; })(), fixed: !!e.fixed, rotate: !!e.rotate, ing, steps: e.steps.split('\n').map(s => s.trim()).filter(Boolean) };
   if (e.id && e.base) S.recipeOverrides[e.id] = rec;
   else { const id = e.id || 'cr_' + Date.now().toString(36) + (e.imp ? Math.random().toString(36).slice(2, 5) : ''); S.customRecipes[id] = Object.assign(rec, { id }); }
-  if (e.imp) { impRemember(); rebuildCatalog(); saveState(); if (IMPQ) { IMPQ.done++; toast(`${name} imported`); impNext(); return; } closeModal(); render(); toast(`${name} imported — find it in Foods & recipes and the calendar library`); return; }
-  rebuildCatalog(); saveState(); closeModal(); render(); toast(`${name} saved — find it in the calendar library${cl.bad ? ` · skipped ${cl.bad} link${cl.bad > 1 ? 's' : ''} that ${cl.bad > 1 ? 'aren’t web addresses' : 'isn’t a web address'}` : ''}`);
+  if (e.imp) { impRemember(); rebuildCatalog(); saveState(); if (IMPQ) { IMPQ.done++; toast(`${name} importada`); impNext(); return; } closeModal(); render(); toast(`${name} importada — encontre em Alimentos e receitas e na biblioteca do calendário`); return; }
+  rebuildCatalog(); saveState(); closeModal(); render(); toast(`${name} salva — encontre na biblioteca do calendário${cl.bad ? ` · skipped ${cl.bad} link${cl.bad > 1 ? 's' : ''} that ${cl.bad > 1 ? 'não são endereços da web' : 'não é um endereço da web'}` : ''}`);
 }
 function replaceRecipeEverywhere(rid) {
   const r = RECIPE[rid]; let n = 0; const cat = r ? r.cat : null;
@@ -437,9 +437,9 @@ Object.assign(ACT, {
   'recipe-new': () => recipeEditor(null),
   'recipe-edit': el => recipeEditor(el.dataset.rid),
   'recipe-dup': el => recipeEditor(el.dataset.rid, true),
-  'recipe-reset': el => confirmBox('Reset recipe?', `Restore the built-in version of <b>${esc(RECIPE[el.dataset.rid].name)}</b>?`, 'Reset', () => { delete S.recipeOverrides[el.dataset.rid]; rebuildCatalog(); saveState(); render(); toast('Recipe reset'); }),
-  'recipe-del': el => { const r = RECIPE[el.dataset.rid]; confirmBox('Delete recipe?', `Delete <b>${esc(r.name)}</b>? Any planned servings are swapped for another ${r.cat} recipe.`, 'Delete', () => { delete S.customRecipes[r.id]; const n = replaceRecipeEverywhere(r.id); rebuildCatalog(); saveState(); render(); toast(`Deleted${n ? ` — swapped ${n} planned meal${n === 1 ? '' : 's'}` : ''}`); }, true); },
-  'recipe-off': el => { const id = el.dataset.k; if (S.recipeOff[id]) delete S.recipeOff[id]; else S.recipeOff[id] = true; invalidate(); const n = S.recipeOff[id] ? substitutePlan(maxISO(todayISO(), S.settings.startDate)) : 0; saveState(); render(); toast(`${RECIPE[id].name} ${S.recipeOff[id] ? 'turned off' : 'turned on'}${n ? ` — swapped ${n} upcoming meal${n === 1 ? '' : 's'}` : ''}`); },
+  'recipe-reset': el => confirmBox('Redefinir receita?', `Restaurar a versão original de <b>${esc(RECIPE[el.dataset.rid].name)}</b>?`, 'Redefinir', () => { delete S.recipeOverrides[el.dataset.rid]; rebuildCatalog(); saveState(); render(); toast('Receita redefinida'); }),
+  'recipe-del': el => { const r = RECIPE[el.dataset.rid]; confirmBox('Excluir receita?', `Excluir <b>${esc(r.name)}</b>? As porções planejadas serão substituídas por outra receita da mesma categoria.`, 'Excluir', () => { delete S.customRecipes[r.id]; const n = replaceRecipeEverywhere(r.id); rebuildCatalog(); saveState(); render(); toast(`Excluída${n ? ` — ${n} refeição${n === 1 ? '' : 'ões'} planejada${n === 1 ? '' : 's'} substituída${n === 1 ? '' : 's'}` : ''}`); }, true); },
+  'recipe-off': el => { const id = el.dataset.k; if (S.recipeOff[id]) delete S.recipeOff[id]; else S.recipeOff[id] = true; invalidate(); const n = S.recipeOff[id] ? substitutePlan(maxISO(todayISO(), S.settings.startDate)) : 0; saveState(); render(); toast(`${RECIPE[id].name} ${S.recipeOff[id] ? 'desativada' : 'ativada'}${n ? ` — swapped ${n} upcoming meal${n === 1 ? '' : 's'}` : ''}`); },
   fav: el => toggleFav(el.dataset.rid),
   'rec-dir': () => { UI.recDir = UI.recDir === 'asc' ? 'desc' : 'asc'; saveUI(); render(); },
   're-link-add': () => { RE.links.push({ title: '', url: '', site: '' }); const w = $('#re-links'); if (w) { w.innerHTML = reLinksHTML(); const ins = w.querySelectorAll('[data-re="link-url"]'); if (ins.length) ins[ins.length - 1].focus(); } },
@@ -457,11 +457,11 @@ Object.assign(ACT, {
   'fe-calc': () => { const f = $('#modal form[data-form="food"]'); const v = n => +f.elements[n].value || 0; f.elements.k.value = Math.round(v('p') * 4 + v('c') * 4 + v('f') * 9); feSuggest(); },
   'food-reset': el => { const id = el.dataset.id; if (!BASE_ING[id]) return; const keep = UI.returnToRecipe, re = RE;
     delete S.foodOverrides[id]; rebuildCatalog(); saveState(); render(); foodEditor(id); UI.returnToRecipe = keep; RE = re;
-    toast(`${ING[id].n} reset to its default values — every recipe using it is updated`); },
+    toast(`${ING[id].n} restaurado aos valores padrão — todas as receitas que o utilizam foram atualizadas`); },
   'food-del': el => { const id = el.dataset.id; const used = RECIPES.filter(r => r.ing.some(([x]) => x === id));
-    confirmBox('Delete food?', used.length ? `It’s used in ${used.length} recipe${used.length > 1 ? 's' : ''} (${esc(used.map(r => r.name).join(', '))}); it will be removed from them.` : 'This can’t be undone.', 'Delete', () => {
+    confirmBox('Excluir alimento?', used.length ? `Ele é usado em ${used.length} receita${used.length > 1 ? 's' : ''} (${esc(used.map(r => r.name).join(', '))}); será removido delas.` : 'Esta ação não pode ser desfeita.', 'Excluir', () => {
       delete S.customFoods[id]; Object.values(S.customRecipes).forEach(r => r.ing = r.ing.filter(([x]) => x !== id)); Object.values(S.recipeOverrides).forEach(r => r.ing = r.ing.filter(([x]) => x !== id));
-      rebuildCatalog(); saveState(); render(); toast('Food deleted'); }, true); },
+      rebuildCatalog(); saveState(); render(); toast('Alimento excluído'); }, true); },
   'bg-reset': el => { delete S.bgCustom[el.dataset.sec]; bgCurrent = null; saveState(); render(); },
   'bg-url': el => { const sec = el.dataset.sec; modal(`<h2>Fundo de ${esc(SECTION_BG[sec].label)}</h2><p class="sub small">Cole um link direto para uma imagem .jpg, .png ou .webp, ou um endereço images.unsplash.com.</p><input class="inp" id="bg-url-in" style="width:100%" placeholder="https://…"><div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn" data-act="close-modal">Cancelar</button><button class="btn primary" id="bg-url-ok">Usar imagem</button></div>`, 'sm');
     $('#bg-url-ok').onclick = () => { const v = $('#bg-url-in').value.trim(); if (!/^https?:\/\//.test(v)) { toast('Informe um link http(s) completo'); return; } S.bgCustom[sec] = v; bgCurrent = null; saveState(); closeModal(); render(); toast('Fundo atualizado'); }; }
