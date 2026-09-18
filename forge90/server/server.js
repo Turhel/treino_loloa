@@ -230,7 +230,7 @@ async function sendReset(user, reason, req, extra = {}) {
   db.resets.push({ h: sha256(tok), userId: user.id, createdAt: now(), expiresAt, usedAt: null, reason, ip: clientIp(req) });
   saveDb();
   const link = `${baseUrl(req)}/reset?token=${tok}`;
-  const msg = MAIL.resetEmail({ name: user.name, link, minutos: RESET_MINUTES, expiresAt: new Date(expiresAt), reason, attempts: extra.attempts, ip: clientIp(req), ua: req.headers['user-agent'], appUrl: baseUrl(req), appName: db.settings.appName });
+  const msg = MAIL.resetEmail({ name: user.name, link, minutes: RESET_MINUTES, expiresAt: new Date(expiresAt), reason, attempts: extra.attempts, ip: clientIp(req), ua: req.headers['user-agent'], appUrl: baseUrl(req), appName: db.settings.appName });
   try { await deliver(user.email, user.name, msg); audit('reset_email_sent', { userId: user.id, actorId: extra.actorId || null, ip: clientIp(req), detail: reason }); return { sent: true }; }
   catch (e) { audit('reset_email_failed', { userId: user.id, actorId: extra.actorId || null, ip: clientIp(req), detail: `${reason}: ${e.message}` }); console.error('[email] reset to', user.email, 'failed:', e.message); return { sent: false, error: e.message }; }
 }
@@ -325,7 +325,7 @@ route('POST', '/api/forgot', { limit: 'auth' }, async (req, res, ctx) => {
     const recent = db.resets.find(r => r.userId === u.id && now() - r.createdAt < 60000);
     if (!recent) await sendReset(u, 'forgot', req);
   }
-  send(res, 200, { ok: true, minutos: RESET_MINUTES });           // same answer whether or not the account exists
+  send(res, 200, { ok: true, minutes: RESET_MINUTES });           // same answer whether or not the account exists
 });
 function findReset(tok) { const h = sha256(String(tok || '')); const r = db.resets.find(x => x.h === h); if (!r || r.usedAt || r.expiresAt < now()) return null; const u = userById(r.userId); return u && u.status !== 'disabled' ? { r, u } : null; }
 route('GET', '/api/reset/:token', async (req, res, ctx) => { const f = findReset(ctx.params.token); if (!f) err(410, 'Este link de redefinição expirou ou já foi usado. Solicite um novo.'); send(res, 200, { ok: true, email: maskEmail(f.u.email), expiresAt: f.r.expiresAt }); });
@@ -633,7 +633,7 @@ function cleanSharedFood(b, cur) {
 }
 route('GET', '/api/foods/shared', { auth: true }, async (req, res) => send(res, 200, sharedFoods));
 route('GET', '/api/barcode/:code', { auth: true }, async (req, res, ctx) => {
-  if (limited('barcode:' + ctx.me.u.id, 150, 10 * 60000)) err(429, 'Too many lookups. Wait a few minutos.');
+  if (limited('barcode:' + ctx.me.u.id, 150, 10 * 60000)) err(429, 'Consultas demais. Aguarde alguns minutos.');
   const code = PROD.normGtin(ctx.params.code); if (!code) err(400, 'Esse não é um número de código de barras válido.');
   const hit = Object.values(sharedFoods.foods).find(f => f.gtin === code);
   if (hit) return send(res, 200, { gtin: code, food: hit });
@@ -671,7 +671,7 @@ const IMP = require('./lib/recipe-import');
 if (!db.integrations || typeof db.integrations !== 'object' || Array.isArray(db.integrations)) db.integrations = {};
 const mealieCfg = () => { const m = db.integrations.mealie; return m && m.url && m.token ? m : null; };
 function mealieView(u) { const m = db.integrations.mealie || {}; return { configured: !!mealieCfg(), url: m.url || '', tokenSet: !!m.token, user: m.user || '', version: m.version || '', checkedAt: m.checkedAt || null, canEdit: u.role === 'admin' }; }
-function importLimit(ctx, kind) { if (limited(`import-${kind}:` + ctx.me.u.id, kind === 'search' ? 240 : 60, 10 * 60000)) err(429, 'Too many imports in a short time. Wait a few minutos and try again.'); }
+function importLimit(ctx, kind) { if (limited(`import-${kind}:` + ctx.me.u.id, kind === 'search' ? 240 : 60, 10 * 60000)) err(429, 'Importações demais em pouco tempo. Aguarde alguns minutos e tente novamente.'); }
 async function impCall(fn) { try { return await fn(); } catch (e) { if (e instanceof IMP.ImportErr) err(e.code, e.message, e.extra && e.extra.partial ? { partial: e.extra.partial } : undefined); throw e; } }
 function mealieInput(body) {
   const cur = db.integrations.mealie || {};
@@ -758,7 +758,7 @@ route('PATCH', '/api/admin/users/:id', { admin: true }, async (req, res, ctx) =>
     if (u.id === me.id && b.status !== 'active') err(400, 'Você não pode desativar sua própria conta.');
     const was = u.status; u.status = b.status; if (b.status !== 'active') revokeSessions(u.id);
     audit('status_changed', { userId: u.id, actorId: me.id, ip: clientIp(req), detail: `${was} → ${b.status}` }); log.push('status → ' + b.status);
-    if (was === 'pending' && b.status === 'active' && emailReady()) deliver(u.email, u.name, MAIL.simpleEmail({ title: 'Sua conta FORGE 90 está pronta', heading: 'Sua conta foi aprovada!', lines: [`Hi ${u.name.split(' ')[0]}, um administrador aprovou sua conta FORGE 90.`, 'Entre usando o e-mail e a senha cadastrados.'], buttonUrl: baseUrl(req), buttonLabel: 'Sign in', appUrl: baseUrl(req), appName: db.settings.appName })).catch(() => {});
+    if (was === 'pending' && b.status === 'active' && emailReady()) deliver(u.email, u.name, MAIL.simpleEmail({ title: 'Sua conta FORGE 90 está pronta', heading: 'Sua conta foi aprovada!', lines: [`Olá ${u.name.split(' ')[0]}, um administrador aprovou sua conta FORGE 90.`, 'Entre usando o e-mail e a senha cadastrados.'], buttonUrl: baseUrl(req), buttonLabel: 'Entrar', appUrl: baseUrl(req), appName: db.settings.appName })).catch(() => {});
   }
   if (b.name != null) { const n = String(b.name).trim().slice(0, 80); if (n && n !== u.name) { u.name = n; log.push('name'); } }
   if (b.email != null && normEmail(b.email) !== u.email) { const e = normEmail(b.email); if (!validEmail(e)) err(400, 'Enter a valid email address.'); if (findUser(e)) err(409, 'Outra conta já usa esse e-mail.'); audit('email_changed', { userId: u.id, actorId: me.id, ip: clientIp(req), detail: `${u.email} → ${e}` }); u.email = e; log.push('email'); }
@@ -766,7 +766,7 @@ route('PATCH', '/api/admin/users/:id', { admin: true }, async (req, res, ctx) =>
 });
 route('DELETE', '/api/admin/users/:id/avatar', { admin: true }, async (req, res, ctx) => { const u = target(ctx); ownerGuard(ctx, u); if (u.avatar) { removeAvatar(u); saveDb(); audit('avatar_changed', { userId: u.id, actorId: ctx.me.u.id, ip: clientIp(req), detail: 'removido pelo administrador' }); } send(res, 200, { user: adminUserRow(u) }); });
 route('POST', '/api/admin/users/:id/unlock', { admin: true }, async (req, res, ctx) => { const u = target(ctx); ownerGuard(ctx, u); u.failed = 0; u.lockedUntil = null; saveDb(); audit('unlocked', { userId: u.id, actorId: ctx.me.u.id, ip: clientIp(req) }); send(res, 200, { user: adminUserRow(u) }); });
-route('POST', '/api/admin/users/:id/send-reset', { admin: true }, async (req, res, ctx) => { const u = target(ctx); ownerGuard(ctx, u); if (u.status === 'disabled') err(400, 'Ative a conta primeiro.'); const r = await sendReset(u, 'admin', req, { actorId: ctx.me.u.id }); if (!r.sent) err(502, 'Não foi possível enviar o e-mail de redefinição: ' + r.error); send(res, 200, { ok: true, minutos: RESET_MINUTES }); });
+route('POST', '/api/admin/users/:id/send-reset', { admin: true }, async (req, res, ctx) => { const u = target(ctx); ownerGuard(ctx, u); if (u.status === 'disabled') err(400, 'Ative a conta primeiro.'); const r = await sendReset(u, 'admin', req, { actorId: ctx.me.u.id }); if (!r.sent) err(502, 'Não foi possível enviar o e-mail de redefinição: ' + r.error); send(res, 200, { ok: true, minutes: RESET_MINUTES }); });
 route('POST', '/api/admin/users/:id/temp-password', { admin: true }, async (req, res, ctx) => {
   const u = target(ctx); ownerGuard(ctx, u); adminChangeGuard(ctx, u); const pw = String(ctx.body.password || ''); const pp = pwProblem(pw, u.email); if (pp) err(400, pp);
   u.pw = await hashPw(pw); u.mustChange = true; u.failed = 0; u.lockedUntil = null; u.pwChangedAt = now(); const n = revokeSessions(u.id, u.id === ctx.me.u.id ? ctx.me.s.id : null);
@@ -874,7 +874,7 @@ async function handle(req, res) {
       if (req.headers['x-f90'] !== '1' || !/application\/json/i.test(req.headers['content-type'] || '')) err(403, 'Solicitação bloqueada');
       const origin = req.headers.origin; if (origin) { let oh = ''; try { oh = new URL(origin).host; } catch (e) { /* bad origin */ } if (oh !== req.headers.host) err(403, 'Solicitação entre sites bloqueada'); }
     }
-    if (r.opts.limit === 'auth' && limited('auth:' + ip, 40, 15 * 60000)) err(429, 'Too many attempts from this network. Wait a few minutos and try again.');
+    if (r.opts.limit === 'auth' && limited('auth:' + ip, 40, 15 * 60000)) err(429, 'Tentativas demais a partir desta rede. Aguarde alguns minutos e tente novamente.');
     const me = getSession(req);
     if ((r.opts.auth || r.opts.admin) && !me) err(401, 'Entre novamente.');
     if (me && me.u.mustChange && (r.opts.auth || r.opts.admin) && !r.opts.allowMustChange) err(403, 'Defina uma nova senha primeiro.', { mustChange: true });
