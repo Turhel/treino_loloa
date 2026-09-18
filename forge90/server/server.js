@@ -45,7 +45,7 @@ if (TP_MODE === 'list') TP_RAW.split(/[\s,]+/).filter(Boolean).forEach(x => {
   if (!fam || (bits != null && !(Number.isInteger(bits) && bits >= 0 && bits <= (fam === 6 ? 128 : 32)))) { TP_BAD.push(x); return; }
   if (bits == null) TP_LIST.addAddress(a, fam === 6 ? 'ipv6' : 'ipv4'); else TP_LIST.addSubnet(a, bits, fam === 6 ? 'ipv6' : 'ipv4');
 });
-if (TP_BAD.length) console.warn('  TRUST_PROXY: ignoring', TP_BAD.join(', '), '(not an IP address or CIDR range)');
+if (TP_BAD.length) console.warn('  TRUST_PROXY: ignorando', TP_BAD.join(', '), '(não é um endereço IP nem intervalo CIDR)');
 const RESET_MINUTES = 30;                        // password-reset links expire after 30 minutos
 const INVITE_DAYS = 7;                           // account invites expire after 7 days
 const VERSION = (() => { for (const f of [path.join(__dirname, 'VERSION'), path.join(__dirname, '..', 'VERSION')]) { try { return 'v' + fs.readFileSync(f, 'utf8').trim().replace(/^v/i, ''); } catch (e) { /* try next */ } } return 'v1.0'; })();
@@ -63,7 +63,7 @@ const DEFAULT_SETTINGS = () => ({
 });
 function deepMerge(base, over) { if (!over || typeof over !== 'object' || Array.isArray(over)) return over === undefined ? base : over; const out = Object.assign({}, base); for (const k of Object.keys(over)) out[k] = (base && typeof base[k] === 'object' && !Array.isArray(base[k])) ? deepMerge(base[k], over[k]) : over[k]; return out; }
 let db = { version: 1, users: [], sessions: [], resets: [], invites: [], syncs: [], audit: [], settings: {} };
-if (fs.existsSync(DBF)) { try { db = JSON.parse(fs.readFileSync(DBF, 'utf8')); } catch (e) { console.error('Could not read', DBF, e.message); process.exit(1); } }
+if (fs.existsSync(DBF)) { try { db = JSON.parse(fs.readFileSync(DBF, 'utf8')); } catch (e) { console.error('Não foi possível ler', DBF, e.message); process.exit(1); } }
 if (db.settings && db.settings.email && !db.settings.emailV2) { const p = db.settings.email.pass; db.settings.email = p ? { pass: p } : {}; }   // older builds copied .env into db.json
 db.settings = deepMerge(DEFAULT_SETTINGS(), db.settings || {}); db.settings.emailV2 = true; delete db.settings.registration;   // accounts are invite-only now
 ['users', 'sessions', 'resets', 'invites', 'syncs', 'audit'].forEach(k => { if (!Array.isArray(db[k])) db[k] = []; });
@@ -301,14 +301,14 @@ route('POST', '/api/login', { limit: 'auth' }, async (req, res, ctx) => {
   if (isLocked(u)) { const m = Math.max(1, Math.ceil((u.lockedUntil - now()) / 60000)); err(423, `Esta conta foi bloqueada após muitas tentativas de login. Tente novamente em ${m} minuto${m === 1 ? '' : 's'}, ou redefina sua senha${sec.autoResetOnLock ? ' usando o link enviado por e-mail' : ''}.`, { locked: true, until: u.lockedUntil }); }
   const ok = await verifyPw(String(b.password || ''), u.pw);
   if (!ok) {
-    u.failed = (u.failed || 0) + 1; audit('login_fail', { userId: u.id, ip, detail: `attempt ${u.failed}` });
+    u.failed = (u.failed || 0) + 1; audit('login_fail', { userId: u.id, ip, detail: `tentativa ${u.failed}` });
     if (u.failed >= sec.lockThreshold) {
-      const attempts = u.failed; u.lockedUntil = now() + sec.lockMinutes * 60000; u.failed = 0; audit('locked', { userId: u.id, ip, detail: `${attempts} failed attempts · ${sec.lockMinutes} min` }); saveDb();
+      const attempts = u.failed; u.lockedUntil = now() + sec.lockMinutes * 60000; u.failed = 0; audit('locked', { userId: u.id, ip, detail: `${attempts} tentativas com falha · ${sec.lockMinutes} min` }); saveDb();
       let sent = false; if (sec.autoResetOnLock && u.status !== 'disabled') sent = (await sendReset(u, 'lockout', req, { attempts })).sent;
       err(423, `Tentativas demais — esta conta ficará bloqueada por ${sec.lockMinutes} minutos.${sent ? ' Enviamos um link de redefinição de senha para o e-mail da conta.' : ''}`, { locked: true, until: u.lockedUntil, resetSent: sent });
     }
     saveDb(); const left = sec.lockThreshold - u.failed;
-    err(401, `O e-mail e a senha não correspondem.${left <= 2 ? ` ${left} attempt${left === 1 ? '' : 's'} left before the account is locked.` : ''}`);
+    err(401, `O e-mail e a senha não correspondem.${left <= 2 ? ` Restam ${left} tentativa${left === 1 ? '' : 's'} antes de a conta ser bloqueada.` : ''}`);
   }
   if (u.status === 'pending') err(403, 'Sua conta está aguardando aprovação de um administrador.');
   if (u.status === 'disabled') err(403, 'Esta conta foi desativada. Entre em contato com o administrador do FORGE 90.');
@@ -343,7 +343,7 @@ route('POST', '/api/reset', { limit: 'auth' }, async (req, res, ctx) => {
 route('GET', '/api/state', { auth: true }, async (req, res, ctx) => send(res, 200, readState(ctx.me.u.id)));
 route('PUT', '/api/state', { auth: true, limit: 'state' }, async (req, res, ctx) => {
   const cur = readState(ctx.me.u.id); const b = ctx.body;
-  if (!b.state || typeof b.state !== 'object') err(400, 'Missing state');
+  if (!b.state || typeof b.state !== 'object') err(400, 'Faltam os dados do plano');
   if (b.baseRev != null && +b.baseRev !== +cur.rev && !b.force) return send(res, 409, cur);
   const next = { rev: (cur.rev || 0) + 1, updatedAt: now(), state: b.state };
   writeAtomic(stateFile(ctx.me.u.id), JSON.stringify(next)); send(res, 200, { rev: next.rev, updatedAt: next.updatedAt });
@@ -359,12 +359,12 @@ route('PATCH', '/api/account', { auth: true, allowMustChange: true }, async (req
   const u = ctx.me.u, b = ctx.body; const changes = [];
   if (b.name != null) { const n = String(b.name).trim().slice(0, 80); if (!n) err(400, 'O nome de exibição não pode ficar vazio.'); if (n !== u.name) { u.name = n; changes.push('nome de exibição'); } }
   ['firstName', 'lastName'].forEach(k => { if (b[k] != null) { const v = String(b[k]).trim().slice(0, 40); if (v !== (u[k] || '')) { u[k] = v; changes.push(k === 'firstName' ? 'nome' : 'sobrenome'); } } });
-  if (b.notify && typeof b.notify === 'object') { u.notify = Object.assign({ passwordChange: true, newSignIn: false }, u.notify || {}, { passwordChange: !!b.notify.passwordChange, newSignIn: !!b.notify.newSignIn }); changes.push('notifications'); }
+  if (b.notify && typeof b.notify === 'object') { u.notify = Object.assign({ passwordChange: true, newSignIn: false }, u.notify || {}, { passwordChange: !!b.notify.passwordChange, newSignIn: !!b.notify.newSignIn }); changes.push('notificações'); }
   if (b.email != null && normEmail(b.email) !== u.email) {
     const e = normEmail(b.email); if (!validEmail(e)) err(400, 'Informe um endereço de e-mail válido.');
     if (!u.mustChange && !(await verifyPw(String(b.currentPassword || ''), u.pw))) err(403, 'Sua senha atual é necessária para alterar o e-mail — e a senha informada não corresponde.');
     if (findUser(e)) err(409, 'Outra conta já usa esse e-mail.');
-    const old = u.email; u.email = e; changes.push('email');
+    const old = u.email; u.email = e; changes.push('e-mail');
     audit('email_changed', { userId: u.id, ip: clientIp(req), detail: `${old} → ${e}` });
     if (emailReady() && !u.mustChange) deliver(old, u.name, MAIL.simpleEmail({ title: 'Seu endereço de e-mail do FORGE 90 foi alterado', heading: 'Seu e-mail de login foi alterado', lines: [`Sua conta FORGE 90 agora usa este e-mail para login: ${e}.`, 'Se você não fez essa alteração, entre em contato com o administrador imediatamente.'], appUrl: baseUrl(req), appName: db.settings.appName })).catch(() => {});
   }
@@ -384,7 +384,7 @@ function imageExt(buf) {
   return null;
 }
 route('PUT', '/api/account/avatar', { auth: true, maxBody: 1024 * 1024 }, async (req, res, ctx) => {
-  const u = ctx.me.u; if (limited('avatar:' + u.id, 30, 60 * 60000)) err(429, 'Too many picture changes. Try again later.');
+  const u = ctx.me.u; if (limited('avatar:' + u.id, 30, 60 * 60000)) err(429, 'Muitas alterações de foto em pouco tempo. Tente novamente mais tarde.');
   const m = String(ctx.body.data || '').match(/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/); if (!m) err(400, 'Envie uma imagem JPEG, PNG ou WebP.');
   const buf = Buffer.from(m[2], 'base64'); if (!buf.length) err(400, 'A imagem está vazia.'); if (buf.length > AVATAR_MAX) err(413, 'A imagem é grande demais (máximo de 512 KB).');
   const ext = imageExt(buf); if (!ext) err(400, 'O arquivo não é uma imagem JPEG, PNG ou WebP.');
@@ -392,16 +392,16 @@ route('PUT', '/api/account/avatar', { auth: true, maxBody: 1024 * 1024 }, async 
   writeAtomic(path.join(AVATAR_DIR, name), buf);
   const had = !!u.avatar; removeAvatar(u);                 // the old picture is deleted, not kept
   u.avatar = name; u.avatarV = v; saveDb();
-  audit('avatar_changed', { userId: u.id, ip: clientIp(req), detail: had ? 'replaced' : 'added' });
+  audit('avatar_changed', { userId: u.id, ip: clientIp(req), detail: had ? 'substituída' : 'adicionada' });
   send(res, 200, { user: pubUser(u) });
 });
 route('DELETE', '/api/account/avatar', { auth: true }, async (req, res, ctx) => {
-  const u = ctx.me.u; if (u.avatar) { removeAvatar(u); saveDb(); audit('avatar_changed', { userId: u.id, ip: clientIp(req), detail: 'removed' }); }
+  const u = ctx.me.u; if (u.avatar) { removeAvatar(u); saveDb(); audit('avatar_changed', { userId: u.id, ip: clientIp(req), detail: 'removida' }); }
   send(res, 200, { user: pubUser(u) });
 });
 route('GET', '/api/avatar/:id', { auth: true }, async (req, res, ctx) => {
-  const u = userById(ctx.params.id); const f = avatarPath(u); if (!f || (ctx.query.v && ctx.query.v !== u.avatarV)) err(404, 'No picture.');   // an old version's URL stops working once it's replaced
-  let buf; try { buf = fs.readFileSync(f); } catch (e) { err(404, 'No picture.'); }
+  const u = userById(ctx.params.id); const f = avatarPath(u); if (!f || (ctx.query.v && ctx.query.v !== u.avatarV)) err(404, 'Nenhuma foto encontrada.');   // an old version's URL stops working once it's replaced
+  let buf; try { buf = fs.readFileSync(f); } catch (e) { err(404, 'Nenhuma foto encontrada.'); }
   const type = AVATAR_TYPES[path.extname(f).slice(1)] || 'application/octet-stream';
   res.writeHead(200, Object.assign({}, SEC_HEADERS, { 'Content-Type': type, 'Content-Length': buf.length, 'Cache-Control': 'private, max-age=31536000, immutable', 'Content-Security-Policy': "default-src 'none'" }));
   res.end(buf);
@@ -412,15 +412,15 @@ route('POST', '/api/account/password', { auth: true, allowMustChange: true, limi
   const pp = pwProblem(b.next, u.email); if (pp) err(400, pp);
   if (await verifyPw(String(b.next), u.pw)) err(400, 'Escolha uma senha que você não tenha acabado de usar.');
   u.pw = await hashPw(b.next); u.mustChange = false; u.pwChangedAt = now();
-  const n = revokeSessions(u.id, ctx.me.s.id); audit('password_changed', { userId: u.id, ip: clientIp(req), detail: n ? `${n} other session(s) signed out` : '' });
+  const n = revokeSessions(u.id, ctx.me.s.id); audit('password_changed', { userId: u.id, ip: clientIp(req), detail: n ? `${n} outra${n === 1 ? '' : 's'} sessão${n === 1 ? '' : 'ões'} encerrada${n === 1 ? '' : 's'}` : '' });
   notifyPasswordChanged(u, req, 'user'); send(res, 200, { user: pubUser(u), signedOut: n });
 });
 route('DELETE', '/api/account/sessions/:id', { auth: true }, async (req, res, ctx) => {
-  const s = db.sessions.find(x => x.id === ctx.params.id && x.userId === ctx.me.u.id); if (!s) err(404, 'Session not found.');
+  const s = db.sessions.find(x => x.id === ctx.params.id && x.userId === ctx.me.u.id); if (!s) err(404, 'Sessão não encontrada.');
   db.sessions = db.sessions.filter(x => x !== s); saveDb(); audit('session_revoked', { userId: ctx.me.u.id, ip: clientIp(req) });
   if (s === ctx.me.s) setCookie(res, req, '', 0); send(res, 200, { ok: true, self: s === ctx.me.s });
 });
-route('POST', '/api/account/sessions/revoke-others', { auth: true }, async (req, res, ctx) => { const n = revokeSessions(ctx.me.u.id, ctx.me.s.id); audit('sessions_revoked', { userId: ctx.me.u.id, ip: clientIp(req), detail: `${n} session(s)` }); send(res, 200, { revoked: n }); });
+route('POST', '/api/account/sessions/revoke-others', { auth: true }, async (req, res, ctx) => { const n = revokeSessions(ctx.me.u.id, ctx.me.s.id); audit('sessions_revoked', { userId: ctx.me.u.id, ip: clientIp(req), detail: `${n} sessão${n === 1 ? '' : 'ões'}` }); send(res, 200, { revoked: n }); });
 route('DELETE', '/api/account', { auth: true, limit: 'auth' }, async (req, res, ctx) => {
   const u = ctx.me.u; if (!(await verifyPw(String(ctx.body.password || ''), u.pw))) err(403, 'Sua senha não corresponde.');
   if (isOwner(u)) err(400, 'Você é o proprietário deste servidor. Transfira a propriedade primeiro pela linha de comando do servidor: node server.js --make-owner <email>');
@@ -760,8 +760,8 @@ route('PATCH', '/api/admin/users/:id', { admin: true }, async (req, res, ctx) =>
     audit('status_changed', { userId: u.id, actorId: me.id, ip: clientIp(req), detail: `${was} → ${b.status}` }); log.push('status → ' + b.status);
     if (was === 'pending' && b.status === 'active' && emailReady()) deliver(u.email, u.name, MAIL.simpleEmail({ title: 'Sua conta FORGE 90 está pronta', heading: 'Sua conta foi aprovada!', lines: [`Olá ${u.name.split(' ')[0]}, um administrador aprovou sua conta FORGE 90.`, 'Entre usando o e-mail e a senha cadastrados.'], buttonUrl: baseUrl(req), buttonLabel: 'Entrar', appUrl: baseUrl(req), appName: db.settings.appName })).catch(() => {});
   }
-  if (b.name != null) { const n = String(b.name).trim().slice(0, 80); if (n && n !== u.name) { u.name = n; log.push('name'); } }
-  if (b.email != null && normEmail(b.email) !== u.email) { const e = normEmail(b.email); if (!validEmail(e)) err(400, 'Informe um endereço de e-mail válido.'); if (findUser(e)) err(409, 'Outra conta já usa esse e-mail.'); audit('email_changed', { userId: u.id, actorId: me.id, ip: clientIp(req), detail: `${u.email} → ${e}` }); u.email = e; log.push('email'); }
+  if (b.name != null) { const n = String(b.name).trim().slice(0, 80); if (n && n !== u.name) { u.name = n; log.push('nome'); } }
+  if (b.email != null && normEmail(b.email) !== u.email) { const e = normEmail(b.email); if (!validEmail(e)) err(400, 'Informe um endereço de e-mail válido.'); if (findUser(e)) err(409, 'Outra conta já usa esse e-mail.'); audit('email_changed', { userId: u.id, actorId: me.id, ip: clientIp(req), detail: `${u.email} → ${e}` }); u.email = e; log.push('e-mail'); }
   saveDb(); send(res, 200, { user: adminUserRow(u), changed: log });
 });
 route('DELETE', '/api/admin/users/:id/avatar', { admin: true }, async (req, res, ctx) => { const u = target(ctx); ownerGuard(ctx, u); if (u.avatar) { removeAvatar(u); saveDb(); audit('avatar_changed', { userId: u.id, actorId: ctx.me.u.id, ip: clientIp(req), detail: 'removido pelo administrador' }); } send(res, 200, { user: adminUserRow(u) }); });
@@ -770,9 +770,9 @@ route('POST', '/api/admin/users/:id/send-reset', { admin: true }, async (req, re
 route('POST', '/api/admin/users/:id/temp-password', { admin: true }, async (req, res, ctx) => {
   const u = target(ctx); ownerGuard(ctx, u); adminChangeGuard(ctx, u); const pw = String(ctx.body.password || ''); const pp = pwProblem(pw, u.email); if (pp) err(400, pp);
   u.pw = await hashPw(pw); u.mustChange = true; u.failed = 0; u.lockedUntil = null; u.pwChangedAt = now(); const n = revokeSessions(u.id, u.id === ctx.me.u.id ? ctx.me.s.id : null);
-  audit('temp_password_set', { userId: u.id, actorId: ctx.me.u.id, ip: clientIp(req), detail: `${n} session(s) signed out` }); notifyPasswordChanged(u, req, 'admin'); send(res, 200, { user: adminUserRow(u) });
+  audit('temp_password_set', { userId: u.id, actorId: ctx.me.u.id, ip: clientIp(req), detail: `${n} sessão${n === 1 ? '' : 'ões'} encerrada${n === 1 ? '' : 's'}` }); notifyPasswordChanged(u, req, 'admin'); send(res, 200, { user: adminUserRow(u) });
 });
-route('POST', '/api/admin/users/:id/revoke-sessions', { admin: true }, async (req, res, ctx) => { const u = target(ctx); ownerGuard(ctx, u); adminChangeGuard(ctx, u); const n = revokeSessions(u.id, u.id === ctx.me.u.id ? ctx.me.s.id : null); audit('sessions_revoked', { userId: u.id, actorId: ctx.me.u.id, ip: clientIp(req), detail: `${n} session(s)` }); send(res, 200, { revoked: n, user: adminUserRow(u) }); });
+route('POST', '/api/admin/users/:id/revoke-sessions', { admin: true }, async (req, res, ctx) => { const u = target(ctx); ownerGuard(ctx, u); adminChangeGuard(ctx, u); const n = revokeSessions(u.id, u.id === ctx.me.u.id ? ctx.me.s.id : null); audit('sessions_revoked', { userId: u.id, actorId: ctx.me.u.id, ip: clientIp(req), detail: `${n} sessão${n === 1 ? '' : 'ões'}` }); send(res, 200, { revoked: n, user: adminUserRow(u) }); });
 route('DELETE', '/api/admin/users/:id', { admin: true }, async (req, res, ctx) => {
   const u = target(ctx); if (u.id === ctx.me.u.id) err(400, 'Exclua sua própria conta pelas Configurações da conta.');
   ownerGuard(ctx, u); adminChangeGuard(ctx, u);
@@ -791,18 +791,18 @@ route('PATCH', '/api/admin/settings', { admin: true }, async (req, res, ctx) => 
   const b = ctx.body, s = db.settings; const changed = [];
   const int = (v, lo, hi, label) => { v = Math.round(+v); if (!Number.isFinite(v) || v < lo || v > hi) err(400, `${label} deve estar entre ${lo} e ${hi}.`); return v; };
   if (b.appName != null) { s.appName = String(b.appName).trim().slice(0, 40) || 'FORGE 90'; changed.push('nome do aplicativo'); }
-  if (b.appUrl != null) { const u = String(b.appUrl).trim().replace(/\/+$/, ''); if (u && !/^https?:\/\/[^\s/]+/i.test(u)) err(400, 'O endereço do aplicativo deve começar com http:// ou https://'); s.appUrl = u; changed.push('app address'); }
+  if (b.appUrl != null) { const u = String(b.appUrl).trim().replace(/\/+$/, ''); if (u && !/^https?:\/\/[^\s/]+/i.test(u)) err(400, 'O endereço do aplicativo deve começar com http:// ou https://'); s.appUrl = u; changed.push('endereço do aplicativo'); }
   if (b.security) { const x = b.security, q = s.security;
     if (x.pwMinLength != null) q.pwMinLength = int(x.pwMinLength, 8, 64, 'Tamanho mínimo da senha');
     if (x.pwRequireMix != null) q.pwRequireMix = !!x.pwRequireMix;
     if (x.lockThreshold != null) q.lockThreshold = int(x.lockThreshold, 3, 20, 'Tentativas com falha antes do bloqueio');
-    if (x.lockMinutes != null) q.lockMinutes = int(x.lockMinutes, 1, 1440, 'Lockout duration');
+    if (x.lockMinutes != null) q.lockMinutes = int(x.lockMinutes, 1, 1440, 'Duração do bloqueio');
     if (x.autoResetOnLock != null) q.autoResetOnLock = !!x.autoResetOnLock;
-    if (x.sessionHours != null) q.sessionHours = int(x.sessionHours, 1, 168, 'Session length');
+    if (x.sessionHours != null) q.sessionHours = int(x.sessionHours, 1, 168, 'Duração da sessão');
     if (x.rememberDays != null) q.rememberDays = int(x.rememberDays, 1, 365, 'Duração de “Manter conectado”');
     if (x.notifyPasswordChange != null) q.notifyPasswordChange = !!x.notifyPasswordChange;
     if (x.requireHttps != null) q.requireHttps = !!x.requireHttps;
-    changed.push('security'); }
+    changed.push('segurança'); }
   if (b.email) { const x = b.email, q = s.email = s.email || {}; const d = emailDefaults();
     const put = (k, v) => { if (String(v) === String(d[k])) delete q[k]; else q[k] = v; };   // only store what differs from the environment
     ['host', 'user', 'fromName', 'fromEmail'].forEach(k => { if (x[k] != null) put(k, String(x[k]).trim().slice(0, 200)); });
@@ -892,10 +892,10 @@ async function cli() {
   const a = process.argv.slice(2); if (!a.length || !/^--/.test(a[0])) return false;
   const u = findUser(a[1] || ''); if (!u) { console.error('Nenhuma conta com o e-mail', a[1]); process.exit(1); }
   if (a[0] === '--set-password') { const pp = pwProblem(a[2], u.email); if (!a[2] || pp) { console.error(pp || 'Informe a nova senha como terceiro argumento.'); process.exit(1); } u.pw = await hashPw(a[2]); u.mustChange = false; u.failed = 0; u.lockedUntil = null; u.pwChangedAt = now(); revokeSessions(u.id); audit('password_changed', { userId: u.id, detail: 'definido pela linha de comando do servidor' }); }
-  else if (a[0] === '--make-admin') { u.role = 'admin'; u.status = 'active'; u.failed = 0; u.lockedUntil = null; audit('role_changed', { userId: u.id, detail: 'admin (server command line)' }); }
-  else if (a[0] === '--make-owner') { u.role = 'admin'; u.status = 'active'; u.failed = 0; u.lockedUntil = null; db.settings.ownerId = u.id; audit('owner_set', { userId: u.id, detail: 'owner (server command line)' }); console.log(u.email, 'agora é o proprietário.'); }
-  else { console.error('Unknown option', a[0]); process.exit(1); }
-  saveDb(true); console.log('Done:', a[0], u.email); process.exit(0);
+  else if (a[0] === '--make-admin') { u.role = 'admin'; u.status = 'active'; u.failed = 0; u.lockedUntil = null; audit('role_changed', { userId: u.id, detail: 'administrador (linha de comando do servidor)' }); }
+  else if (a[0] === '--make-owner') { u.role = 'admin'; u.status = 'active'; u.failed = 0; u.lockedUntil = null; db.settings.ownerId = u.id; audit('owner_set', { userId: u.id, detail: 'proprietário (linha de comando do servidor)' }); console.log(u.email, 'agora é o proprietário.'); }
+  else { console.error('Opção desconhecida', a[0]); process.exit(1); }
+  saveDb(true); console.log('Concluído:', a[0], u.email); process.exit(0);
 }
 
 /* ---------- first run: default administrator ---------- */
@@ -916,9 +916,9 @@ async function cli() {
   const server = http.createServer((req, res) => { handle(req, res).catch(e => { console.error(e); try { send(res, 500, { error: 'Erro do servidor' }); } catch (x) { /* ignore */ } }); });
   server.headersTimeout = 20000; server.requestTimeout = 60000;
   server.listen(PORT, HOST, () => {
-    console.log(`  FORGE 90 ${VERSION} is running → ${ENV.APP_URL || `http://localhost:${PORT}`}`);
+    console.log(`  FORGE 90 ${VERSION} está em execução → ${ENV.APP_URL || `http://localhost:${PORT}`}`);
     console.log(`  Pasta de dados: ${DATA}`);
-    console.log(`  E-mail: ${emailReady() ? `${mailConfig().host}:${mailConfig().port} as ${mailConfig().user || mailConfig().fromEmail}` : 'não configurado (Admin → E-mail)'}\n`);
+    console.log(`  E-mail: ${emailReady() ? `${mailConfig().host}:${mailConfig().port} como ${mailConfig().user || mailConfig().fromEmail}` : 'não configurado (Admin → E-mail)'}\n`);
   });
   const stop = () => { saveDb(true); process.exit(0); };
   process.on('SIGINT', stop); process.on('SIGTERM', stop);
