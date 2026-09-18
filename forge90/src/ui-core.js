@@ -153,11 +153,11 @@ function mealTipHTML(key) {
   const m = day.meals.find(x => x.slot === slot); if (!m) return '';
   const b = A.batches.info[date + '|' + slot];
   let bt = '';
-  if (b) bt = b.role === 'cook' ? `<div class="note acc" style="margin:8px 0">${icon('flame')}<span>Cook today — batch of <b>${b.batch.size}</b> serving${b.batch.size > 1 ? 's' : ''}${b.batch.size < m.r.yield ? ` (recipe scaled to ${Math.round(b.batch.scale * 100)}%)` : ''}. Leftovers are scheduled.</span></div>`
-    : `<div class="note" style="margin:8px 0">${icon('loop')}<span>Leftover ${b.idx}/${b.batch.size} from ${fmtDate(b.batch.cook)}${b.frozen ? ' — thaw from freezer' : ''}.</span></div>`;
+  if (b) bt = b.role === 'cook' ? `<div class="note acc" style="margin:8px 0">${icon('flame')}<span>Preparar hoje — lote de <b>${b.batch.size}</b> porção${b.batch.size > 1 ? 'ões' : ''}${b.batch.size < m.r.yield ? ` (receita ajustada para ${Math.round(b.batch.scale * 100)}%)` : ''}. As porções restantes já estão programadas.</span></div>`
+    : `<div class="note" style="margin:8px 0">${icon('loop')}<span>Porção preparada ${b.idx}/${b.batch.size} de ${fmtDate(b.batch.cook)}${b.frozen ? ' — descongele antes de consumir' : ''}.</span></div>`;
   return `<div class="row"><span style="font-size:28px">${esc(m.r.emoji)}</span><div><h4>${esc(m.r.name)}</h4><div class="tmeta" style="margin:0">${SLOT_LABEL[slot]} · ${fmtDate(date)}</div></div></div>${bt}
     <div class="small" style="margin-top:6px"><b>${fmt(m.m.k)}</b> kcal · <span style="color:var(--prot)">P ${fmt(m.m.p)}g</span> · <span style="color:var(--carb)">C ${fmt(m.m.c)}g</span> · <span style="color:var(--fat)">F ${fmt(m.m.f)}g</span></div>
-    <div class="tiny muted" style="margin-top:6px">Portions: protein ×${day.pF.toFixed(2)} · carbs/fats ×${day.cF.toFixed(2)} (${day.isTrain ? 'training' : 'rest'} day)</div>`;
+    <div class="tiny muted" style="margin-top:6px">Porções: proteína ×${day.pF.toFixed(2)} · carboidratos/gorduras ×${day.cF.toFixed(2)} (dia de ${day.isTrain ? 'treino' : 'descanso'})</div>`;
 }
 let tipTarget = null;
 function showTip(el, html) {
