@@ -139,24 +139,24 @@ No celular, o FORGE 90 usa uma interface compacta própria, com cinco abas na pa
 
 ![FORGE 90 no celular](docs/screenshots/phone.png)
 
-### Accounts
+### Contas
 
-One account is the **owner** — whoever set the server up. Only the owner can grant or remove administrator access, and no administrator can change, disable or delete the owner's account, so nobody can lock the owner out or strip the admin list by accident. Administrators can't remove their own access either. On an existing server the longest-standing administrator becomes the owner the first time it starts after updating.
+Uma conta é a **proprietária**: a de quem configurou o servidor. Somente o proprietário pode conceder ou remover acesso administrativo, e nenhum administrador pode alterar, desativar ou excluir a conta do proprietário. Assim, ninguém consegue bloquear o proprietário nem esvaziar por acidente a lista de administradores. Administradores também não podem remover o próprio acesso. Em um servidor existente, o administrador mais antigo se torna proprietário na primeira inicialização após a atualização.
 
-An administrator invites new users from Admin → Users. Each invite link works once and expires after 7 days. A forgotten password can be reset by email (the link lasts 30 minutes). Accounts lock after repeated failed sign-ins, and the owner is emailed a reset link. Everyone can manage their profile, profile picture, password and signed-in devices, export or import their data, and delete their account.
+Um administrador convida novos usuários em Administrador → Usuários. Cada link de convite funciona uma única vez e expira após 7 dias. Uma senha esquecida pode ser redefinida por e-mail, com link válido por 30 minutos. As contas são bloqueadas após repetidas tentativas de login sem sucesso, e o proprietário recebe por e-mail um link de redefinição. Cada pessoa pode gerenciar perfil, foto, senha e dispositivos conectados, exportar ou importar seus dados e excluir a própria conta.
 
-### Admin console
+### Painel administrativo
 
-- **Users:** invite people, resend or revoke invites, grant or remove admin rights, unlock accounts, send reset links, set temporary passwords and delete accounts.
-- **Security:** password rules, lockout, session length and Require HTTPS.
-- **App settings:** the app name (used in emails and the browser tab) and the address used in email links.
-- **Email:** SMTP settings, with a test send function.
-- **Server & proxy:** checks how the current connection reaches the app (HTTPS, the client IP it sees, secure cookies) and points out any proxy settings that need changing.
-- **Activity log** and **Data & backup:** a filterable log of sign-ins and admin actions, and a full JSON export.
+- **Usuários:** convide pessoas, reenvie ou revogue convites, conceda ou remova acesso administrativo, desbloqueie contas, envie links de redefinição, defina senhas temporárias e exclua contas.
+- **Segurança:** regras de senha, bloqueio, duração da sessão e exigência de HTTPS.
+- **Configurações do aplicativo:** nome do app, usado em e-mails e na aba do navegador, e endereço usado nos links enviados por e-mail.
+- **E-mail:** configurações SMTP, com função de envio de teste.
+- **Servidor e proxy:** verifica como a conexão atual chega ao aplicativo, incluindo HTTPS, IP do cliente e cookies seguros, e aponta configurações de proxy que precisam ser alteradas.
+- **Registro de atividade** e **Dados e backup:** histórico filtrável de logins e ações administrativas, além de uma exportação JSON completa.
 
 ![Admin users](docs/screenshots/admin-users.png)
 
-## Installation
+## Instalação
 
 GitHub Container Registry:
 
@@ -164,87 +164,87 @@ GitHub Container Registry:
 ghcr.io/oroshi-zz/forge_90:latest
 ```
 
-The default listening port is `8090`. An Unraid template is included at `unraid/forge90.xml`.
+A porta padrão é `8090`. Um template do Unraid está incluído em `unraid/forge90.xml`.
 
-### Configuration
+### Configuração
 
-| Variable | Default | Description |
+| Variável | Padrão | Descrição |
 |---|---|---|
-| `APP_URL` | request host | Public address, used in invite and reset links and as the Require HTTPS redirect target. |
-| `PORT` | `8090` | Listening port inside the container. |
-| `DATA_DIR` | `/app/data` | Data location. |
-| `ADMIN_EMAIL` | `admin@forge90.local` | Default administrator, created on first start. |
-| `ADMIN_PASSWORD` | `forge90-admin` | Default administrator password. It must be changed at first sign-in. |
-| `SMTP_HOST` | `smtp.gmail.com` | Mail server. |
-| `SMTP_PORT` | `465` | Mail server port. |
-| `SMTP_SECURITY` | `tls` | `tls`, `starttls` or `none`. |
-| `SMTP_USER` | | Mail account username. |
-| `SMTP_PASS` | | Mail account password. |
-| `MAIL_FROM` | `SMTP_USER` | From address. |
-| `MAIL_FROM_NAME` | `FORGE 90` | From name. |
-| `TRUST_PROXY` | off | Addresses of your reverse proxy (IPs or CIDR ranges, comma-separated), or `true` to trust any. Forwarded headers are ignored from anywhere else. |
-| `IMPORT_ALLOW_PRIVATE` | `false` | Lets link import reach private network addresses, for recipe sites on your own network. |
-| `OFF_URL` | `https://world.openfoodfacts.org` | Where barcode lookups go, if you use an Open Food Facts mirror. |
-| `REQUIRE_HTTPS` | auto | When `APP_URL` is https, plain-HTTP requests on any other host are redirected to it and HSTS is sent. Set to `false` to disable. |
-| `COOKIE_SECURE` | `auto` | Marks the session cookie Secure when the request is HTTPS. |
-| `TZ` | `UTC` | Time zone used in emails. |
+| `APP_URL` | host da solicitação | Endereço público usado em convites, links de redefinição e como destino do redirecionamento de HTTPS obrigatório. |
+| `PORT` | `8090` | Porta de escuta dentro do contêiner. |
+| `DATA_DIR` | `/app/data` | Local dos dados. |
+| `ADMIN_EMAIL` | `admin@forge90.local` | Administrador padrão, criado na primeira inicialização. |
+| `ADMIN_PASSWORD` | `forge90-admin` | Senha padrão do administrador. Deve ser alterada no primeiro acesso. |
+| `SMTP_HOST` | `smtp.gmail.com` | Servidor de e-mail. |
+| `SMTP_PORT` | `465` | Porta do servidor de e-mail. |
+| `SMTP_SECURITY` | `tls` | `tls`, `starttls` ou `none`. |
+| `SMTP_USER` | | Usuário da conta de e-mail. |
+| `SMTP_PASS` | | Senha da conta de e-mail. |
+| `MAIL_FROM` | `SMTP_USER` | Endereço do remetente. |
+| `MAIL_FROM_NAME` | `FORGE 90` | Nome do remetente. |
+| `TRUST_PROXY` | desativado | Endereços do proxy reverso, em IPs ou faixas CIDR separadas por vírgula, ou `true` para confiar em qualquer origem. Cabeçalhos encaminhados de outros locais são ignorados. |
+| `IMPORT_ALLOW_PRIVATE` | `false` | Permite que a importação por link acesse endereços da rede privada, útil para sites de receitas hospedados na sua própria rede. |
+| `OFF_URL` | `https://world.openfoodfacts.org` | Destino das consultas de código de barras caso você use um espelho do Open Food Facts. |
+| `REQUIRE_HTTPS` | auto | Quando `APP_URL` usa HTTPS, solicitações HTTP comuns em qualquer outro host são redirecionadas para ele e o cabeçalho HSTS é enviado. Defina como `false` para desativar. |
+| `COOKIE_SECURE` | `auto` | Marca o cookie de sessão como Secure quando a solicitação usa HTTPS. |
+| `TZ` | `UTC` | Fuso horário usado nos e-mails. |
 
-The email settings can also be changed from Admin → Email.
+As configurações de e-mail também podem ser alteradas em Administrador → E-mail.
 
 > [!IMPORTANT]
-> Configuring SMTP is required to send user invites and password resets. It's recommended to have SMTP configured even if you only have one user just in case of accidental lockout.
+> Configurar SMTP é obrigatório para enviar convites e redefinições de senha. É recomendável manter o SMTP configurado mesmo com apenas um usuário, para permitir recuperação em caso de bloqueio acidental.
 
-### First sign-in
+### Primeiro acesso
 
-Sign in with `admin@forge90.local` / `forge90-admin` (or your `ADMIN_EMAIL` / `ADMIN_PASSWORD`). You'll be asked to set a new password and a real email address, and then you'll go through the questionnaire. After that, invite users from Admin → Users.
+Entre com `admin@forge90.local` / `forge90-admin` ou com seus valores de `ADMIN_EMAIL` / `ADMIN_PASSWORD`. Você deverá definir uma nova senha e um endereço de e-mail real e depois passará pelo questionário inicial. Em seguida, convide usuários em Administrador → Usuários.
 
-## Backups and recovery
+## Backup e recuperação
 
-Everything lives in the data folder:
+Tudo fica armazenado na pasta de dados:
 
-- `db.json`: accounts, sessions, invites, settings and the activity log
-- `state/`: each user's plan
-- `avatars/`: profile pictures
-- `foods.json`: products added by scanning, shared by everyone
-- `sync/`: shared-meal data for synced users
+- `db.json`: contas, sessões, convites, configurações e registro de atividade
+- `state/`: plano de cada usuário
+- `avatars/`: fotos de perfil
+- `foods.json`: produtos adicionados por leitura de código de barras e compartilhados por todos
+- `sync/`: dados de refeições compartilhadas entre usuários sincronizados
 
-To back up, copy the folder while the container is stopped. Admin → Data & backup also downloads a JSON export of all accounts and plans, but without password hashes, so it's a record rather than a full restore. Individual users can export and import their own plan from Account settings.
+Para fazer backup, copie a pasta com o contêiner parado. Administrador → Dados e backup também permite baixar uma exportação JSON de todas as contas e planos, mas sem os hashes de senha; por isso, serve como registro, não como restauração completa. Usuários individuais podem exportar e importar o próprio plano nas configurações da Conta.
 
-If you're locked out of the only admin account, stop the container and run a one-off copy of the image against the same data folder:
+Se você perder o acesso à única conta administrativa, pare o contêiner e execute temporariamente uma cópia da imagem apontando para a mesma pasta de dados:
 
 ```bash
 docker run --rm -v /path/to/data:/app/data ghcr.io/oroshi-zz/forge_90:latest \
   node server.js --set-password you@example.com "new-password"
 
-# or promote an existing account
+# ou promova uma conta existente
 docker run --rm -v /path/to/data:/app/data ghcr.io/oroshi-zz/forge_90:latest \
   node server.js --make-admin you@example.com
 
-# or hand ownership to another account
+# ou transfira a propriedade para outra conta
 docker run --rm -v /path/to/data:/app/data ghcr.io/oroshi-zz/forge_90:latest \
   node server.js --make-owner you@example.com
 ```
 
-## Security
+## Segurança
 
-- Passwords are hashed with scrypt. Session, invite and reset tokens are random 256-bit values stored only as hashes.
-- Cross-site requests are blocked, and responses carry a strict Content Security Policy.
-- Sign-in, reset and invite endpoints are rate-limited per IP, and accounts lock after repeated failures. The forgot-password form gives the same response whether or not the account exists.
-- Behind a proxy, the client IP comes from the entry your proxy added to `X-Forwarded-For`, so a client can't dodge rate limits by sending its own header.
-- Synced users only see each other's shared meals and portions.
-- Profile pictures are cropped and re-encoded in the browser, checked on the server, and only shown to signed-in users. Uploading a new one deletes the old file.
-- Link import only reaches public addresses, so it can't be used to probe your network. The Mealie token stays on the server and is never sent to the browser.
-- Gym card numbers are saved with the user's plan and aren't shared with sync partners.
-- Barcodes are decoded on the phone, and camera images never leave it. Lookups go through the server, so Open Food Facts only sees the barcode number.
+- As senhas são protegidas com hash scrypt. Tokens de sessão, convite e redefinição são valores aleatórios de 256 bits armazenados apenas como hashes.
+- Solicitações entre sites são bloqueadas, e as respostas usam uma Content Security Policy restrita.
+- Endpoints de login, redefinição e convite têm limite de requisições por IP, e contas são bloqueadas após falhas repetidas. O formulário de senha esquecida fornece a mesma resposta independentemente de a conta existir.
+- Atrás de um proxy, o IP do cliente é obtido da entrada adicionada pelo proxy em `X-Forwarded-For`, impedindo que alguém contorne os limites de requisição enviando o próprio cabeçalho.
+- Usuários sincronizados veem apenas as refeições e porções compartilhadas entre si.
+- Fotos de perfil são recortadas e recodificadas no navegador, verificadas no servidor e exibidas somente para usuários conectados. Enviar uma nova foto exclui o arquivo anterior.
+- A importação por link acessa apenas endereços públicos, evitando que seja usada para sondar sua rede. O token do Mealie permanece no servidor e nunca é enviado ao navegador.
+- Números de cartões da academia são salvos junto ao plano do usuário e não são compartilhados com parceiros de sincronização.
+- Códigos de barras são decodificados no celular e as imagens da câmera nunca saem do aparelho. As consultas passam pelo servidor, portanto o Open Food Facts recebe apenas o número do código.
 
-## License
+## Licença
 
-FORGE 90 is licensed under the GNU Affero General Public License v3.0 or later. See [LICENSE](LICENSE). If you run a modified version for other people, the AGPL requires you to offer them its source; change `SOURCE_URL` in `src/ui-core.js` to point at your copy.
+O FORGE 90 é licenciado sob a GNU Affero General Public License v3.0 ou posterior. Consulte [LICENSE](LICENSE). Se você disponibilizar uma versão modificada para outras pessoas, a AGPL exige que o código-fonte dessa versão seja oferecido a elas; altere `SOURCE_URL` em `src/ui-core.js` para apontar para a sua cópia.
 
-## Credits
+## Créditos
 
-Background photos are from Unsplash: Victor Freitas, Jorge Alberto Vega Barrera, Mina Rad, Shan A. Rajpoot, Rodrigo Rodrigues, Jason Briscoe, Vitaly Gariev, Jakob Owens, Alina Rubo, and Jonathan Borba for the sign-in page. Food values are approximations based on USDA FoodData Central. Product data for scanned barcodes comes from Open Food Facts contributors under the Open Database License. Recipe links go to their original authors.
+As fotos de fundo são do Unsplash: Victor Freitas, Jorge Alberto Vega Barrera, Mina Rad, Shan A. Rajpoot, Rodrigo Rodrigues, Jason Briscoe, Vitaly Gariev, Jakob Owens, Alina Rubo e Jonathan Borba, responsável pela foto da tela de login. Os valores dos alimentos são aproximações baseadas no USDA FoodData Central. Os dados de produtos identificados por código de barras vêm dos colaboradores do Open Food Facts sob a Open Database License. Os links das receitas apontam para seus autores originais.
 
-## Disclaimer
+## Aviso
 
-Nothing in FORGE 90 is medical advice. Consult a medical professional before following its exercise and nutrition recommendations.
+Nada no FORGE 90 constitui orientação médica. Consulte um profissional de saúde antes de seguir recomendações de exercício ou nutrição.
