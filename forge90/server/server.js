@@ -46,7 +46,7 @@ if (TP_MODE === 'list') TP_RAW.split(/[\s,]+/).filter(Boolean).forEach(x => {
   if (bits == null) TP_LIST.addAddress(a, fam === 6 ? 'ipv6' : 'ipv4'); else TP_LIST.addSubnet(a, bits, fam === 6 ? 'ipv6' : 'ipv4');
 });
 if (TP_BAD.length) console.warn('  TRUST_PROXY: ignoring', TP_BAD.join(', '), '(not an IP address or CIDR range)');
-const RESET_MINUTES = 30;                        // password-reset links expire after 30 minutes
+const RESET_MINUTES = 30;                        // password-reset links expire after 30 minutos
 const INVITE_DAYS = 7;                           // account invites expire after 7 days
 const VERSION = (() => { for (const f of [path.join(__dirname, 'VERSION'), path.join(__dirname, '..', 'VERSION')]) { try { return 'v' + fs.readFileSync(f, 'utf8').trim().replace(/^v/i, ''); } catch (e) { /* try next */ } } return 'v1.0'; })();
 const MAX_STATE_BYTES = 12 * 1024 * 1024;
@@ -91,10 +91,10 @@ const DUMMY_HASH = 'scrypt$32768$8$1$AAAAAAAAAAAAAAAAAAAAAA==$' + Buffer.alloc(6
 const COMMON = new Set(['password', 'password1', 'password123', '123456789', '1234567890', 'qwertyuiop', 'iloveyou', 'letmein123', 'forge90', 'forge90admin', 'changeme', 'welcome123', 'administrator']);
 function pwProblem(pw, email) {
   const s = db.settings.security; pw = String(pw || '');
-  if (pw.length < s.pwMinLength) return `Use at least ${s.pwMinLength} characters.`;
+  if (pw.length < s.pwMinLength) return `Use pelo menos ${s.pwMinLength} caracteres.`;
   if (pw.length > 200) return 'Essa senha é longa demais (máximo de 200 caracteres).';
   if (s.pwRequireMix && !(/[A-Za-z]/.test(pw) && /[^A-Za-z]/.test(pw))) return 'Misture letras com números ou símbolos.';
-  if (COMMON.has(pw.toLowerCase()) || (email && pw.toLowerCase().includes(normEmail(email).split('@')[0]) && normEmail(email).split('@')[0].length > 3)) return 'That password is too easy to guess.';
+  if (COMMON.has(pw.toLowerCase()) || (email && pw.toLowerCase().includes(normEmail(email).split('@')[0]) && normEmail(email).split('@')[0].length > 3)) return 'Essa senha é fácil demais de adivinhar.';
   return null;
 }
 const findUser = email => db.users.find(u => u.email === normEmail(email));
@@ -111,7 +111,7 @@ function ensureOwner() {                       // upgrading an existing server: 
   const cand = db.users.filter(u => u.role === 'admin').sort((a2, b2) => (a2.createdAt || 0) - (b2.createdAt || 0))[0];
   if (!cand) return;
   db.settings.ownerId = cand.id; saveDb();
-  audit('owner_set', { userId: cand.id, detail: 'owner (longest-standing administrator)' });
+  audit('owner_set', { userId: cand.id, detail: 'proprietário (administrador há mais tempo)' });
 }
 // guards used by the admin user routes
 function ownerGuard(ctx, u) { if (isOwner(u) && !isOwner(ctx.me.u)) err(403, 'Essa é a conta do proprietário. Somente o proprietário pode alterá-la.'); }
@@ -186,13 +186,13 @@ function emailReady() { const e = mailConfig(); return !!(e.host && e.fromEmail 
 let LOGO_PNG = null; try { LOGO_PNG = fs.readFileSync(path.join(PUBLIC, 'email-logo.png')); } catch (e) { /* optional */ }
 function friendlySmtp(e, host) {
   const m = String(e && e.message || e);
-  if (/535|534|Username and Password not accepted|Application-specific password/i.test(m) && /gmail|google/i.test(host)) return m + ' — Gmail needs an App Password (Google account → Security → 2-Step Verification → App passwords), not the normal account password.';
+  if (/535|534|Username and Password not accepted|Application-specific password/i.test(m) && /gmail|google/i.test(host)) return m + ' — O Gmail exige uma senha de app (Conta Google → Segurança → Verificação em duas etapas → Senhas de app), e não a senha normal da conta.';
   if (/ENOTFOUND|EAI_AGAIN/.test(m)) return `Can’t find the mail server “${host}”. Check the SMTP server name and this machine’s internet connection.`;
-  if (/ECONNREFUSED|timed out|ETIMEDOUT/i.test(m)) return `Can’t connect to ${host}. Check the port/security setting and that your network allows outgoing mail.`;
+  if (/ECONNREFUSED|timed out|ETIMEDOUT/i.test(m)) return `Não foi possível conectar a ${host}. Verifique a porta, a configuração de segurança e se a rede permite envio de e-mails.`;
   return m;
 }
 async function deliver(to, toName, msg) {
-  const e = mailConfig(); if (!emailReady()) throw new Error('Email isn’t set up yet (Admin → Email).');
+  const e = mailConfig(); if (!emailReady()) throw new Error('O e-mail ainda não está configurado (Admin → E-mail).');
   try { return await sendMailRaw(e, to, toName, msg); } catch (x) { throw new Error(friendlySmtp(x, e.host)); }
 }
 /* A container's hostname is a random hex id, which reads as a forged HELO to strict receivers.
@@ -216,11 +216,11 @@ function mailWarnings() {
   if (fd && ud && fd.toLowerCase() !== ud.toLowerCase())
     out.push(`The From address is at ${fd} but the mailbox signing in is at ${ud}. Most providers treat that as unauthenticated and file it as spam. Either send as ${e.user}, or add the From address as a verified alias with your mail provider.`);
   if (/gmail\.com$|googlemail\.com$/i.test(ud) && fd && !/gmail\.com$|googlemail\.com$/i.test(fd))
-    out.push('Gmail only lets you send as your own address or an alias you have verified under "Send mail as".');
+    out.push('O Gmail só permite enviar usando seu próprio endereço ou um alias verificado em “Enviar e-mail como”.');
   const host = String(ENV.APP_URL || '').replace(/^https?:\/\//i, '').split(/[/:?#]/)[0];
   if (host && /^\d+\.\d+\.\d+\.\d+$/.test(host))
-    out.push('APP_URL is a bare IP address, so invite links point at an IP. Spam filters score that heavily — a hostname, even a free dynamic-DNS one, does much better.');
-  if (!host) out.push('APP_URL isn’t set, so invite links are built from whatever host the request arrived on. Set it to the address people actually use.');
+    out.push('APP_URL está configurado apenas com um endereço IP, então os links de convite apontam para um IP. Filtros de spam penalizam isso bastante — usar um nome de host, mesmo de DNS dinâmico gratuito, costuma funcionar melhor.');
+  if (!host) out.push('APP_URL não está definido, então os links de convite são criados com o host usado na solicitação. Configure o endereço que as pessoas realmente utilizam.');
   return out;
 }
 async function sendReset(user, reason, req, extra = {}) {
@@ -230,7 +230,7 @@ async function sendReset(user, reason, req, extra = {}) {
   db.resets.push({ h: sha256(tok), userId: user.id, createdAt: now(), expiresAt, usedAt: null, reason, ip: clientIp(req) });
   saveDb();
   const link = `${baseUrl(req)}/reset?token=${tok}`;
-  const msg = MAIL.resetEmail({ name: user.name, link, minutes: RESET_MINUTES, expiresAt: new Date(expiresAt), reason, attempts: extra.attempts, ip: clientIp(req), ua: req.headers['user-agent'], appUrl: baseUrl(req), appName: db.settings.appName });
+  const msg = MAIL.resetEmail({ name: user.name, link, minutos: RESET_MINUTES, expiresAt: new Date(expiresAt), reason, attempts: extra.attempts, ip: clientIp(req), ua: req.headers['user-agent'], appUrl: baseUrl(req), appName: db.settings.appName });
   try { await deliver(user.email, user.name, msg); audit('reset_email_sent', { userId: user.id, actorId: extra.actorId || null, ip: clientIp(req), detail: reason }); return { sent: true }; }
   catch (e) { audit('reset_email_failed', { userId: user.id, actorId: extra.actorId || null, ip: clientIp(req), detail: `${reason}: ${e.message}` }); console.error('[email] reset to', user.email, 'failed:', e.message); return { sent: false, error: e.message }; }
 }
@@ -279,12 +279,12 @@ route('GET', '/api/session', async (req, res, ctx) => send(res, 200, { user: ctx
 /* invitations — the only way new accounts are created */
 function findInvite(tok) { const h = sha256(String(tok || '')); const i = db.invites.find(x => x.h === h); return i && i.expiresAt > now() ? i : null; }
 route('GET', '/api/invite/:token', async (req, res, ctx) => {
-  const i = findInvite(ctx.params.token); if (!i) err(410, 'This invite has expired or was already used. Ask your administrator to send a new one.');
-  send(res, 200, { email: i.email, name: i.name || '', role: i.role, expiresAt: i.expiresAt, invitedBy: (userById(i.invitedBy) || {}).name || 'An administrator', exists: !!findUser(i.email) });
+  const i = findInvite(ctx.params.token); if (!i) err(410, 'Este convite expirou ou já foi usado. Peça ao administrador para enviar um novo.');
+  send(res, 200, { email: i.email, name: i.name || '', role: i.role, expiresAt: i.expiresAt, invitedBy: (userById(i.invitedBy) || {}).name || 'Um administrador', exists: !!findUser(i.email) });
 });
 route('POST', '/api/invite/accept', { limit: 'auth' }, async (req, res, ctx) => {
-  const b = ctx.body; const i = findInvite(b.token); if (!i) err(410, 'This invite has expired or was already used. Ask your administrator to send a new one.');
-  if (findUser(i.email)) { db.invites = db.invites.filter(x => x !== i); saveDb(); err(409, 'An account already exists for this email. Sign in, or use “Forgot password”.'); }
+  const b = ctx.body; const i = findInvite(b.token); if (!i) err(410, 'Este convite expirou ou já foi usado. Peça ao administrador para enviar um novo.');
+  if (findUser(i.email)) { db.invites = db.invites.filter(x => x !== i); saveDb(); err(409, 'Já existe uma conta com este e-mail. Entre na conta ou use “Esqueceu a senha?”.'); }
   const name = String(b.name || i.name || i.email.split('@')[0]).trim().slice(0, 80);
   const pp = pwProblem(b.password, i.email); if (pp) err(400, pp);
   const nm = String(i.name || '').trim().split(/\s+/);
@@ -298,19 +298,19 @@ route('POST', '/api/login', { limit: 'auth' }, async (req, res, ctx) => {
   const b = ctx.body; const ip = clientIp(req); const sec = db.settings.security;
   const u = findUser(b.email);
   if (!u) { await verifyPw(String(b.password || ''), DUMMY_HASH); audit('login_fail', { ip, detail: 'unknown ' + normEmail(b.email).slice(0, 80) }); err(401, 'O e-mail e a senha não correspondem.'); }
-  if (isLocked(u)) { const m = Math.max(1, Math.ceil((u.lockedUntil - now()) / 60000)); err(423, `This account is locked after too many sign-in attempts. Try again in ${m} minute${m === 1 ? '' : 's'}, or reset your password${sec.autoResetOnLock ? ' with the link we emailed' : ''}.`, { locked: true, until: u.lockedUntil }); }
+  if (isLocked(u)) { const m = Math.max(1, Math.ceil((u.lockedUntil - now()) / 60000)); err(423, `Esta conta foi bloqueada após muitas tentativas de login. Tente novamente em ${m} minuto${m === 1 ? '' : 's'}, ou redefina sua senha${sec.autoResetOnLock ? ' usando o link enviado por e-mail' : ''}.`, { locked: true, until: u.lockedUntil }); }
   const ok = await verifyPw(String(b.password || ''), u.pw);
   if (!ok) {
     u.failed = (u.failed || 0) + 1; audit('login_fail', { userId: u.id, ip, detail: `attempt ${u.failed}` });
     if (u.failed >= sec.lockThreshold) {
       const attempts = u.failed; u.lockedUntil = now() + sec.lockMinutes * 60000; u.failed = 0; audit('locked', { userId: u.id, ip, detail: `${attempts} failed attempts · ${sec.lockMinutes} min` }); saveDb();
       let sent = false; if (sec.autoResetOnLock && u.status !== 'disabled') sent = (await sendReset(u, 'lockout', req, { attempts })).sent;
-      err(423, `Too many attempts — this account is locked for ${sec.lockMinutes} minutes.${sent ? ' We emailed a password-reset link to the account’s address.' : ''}`, { locked: true, until: u.lockedUntil, resetSent: sent });
+      err(423, `Tentativas demais — esta conta ficará bloqueada por ${sec.lockMinutes} minutos.${sent ? ' Enviamos um link de redefinição de senha para o e-mail da conta.' : ''}`, { locked: true, until: u.lockedUntil, resetSent: sent });
     }
     saveDb(); const left = sec.lockThreshold - u.failed;
     err(401, `O e-mail e a senha não correspondem.${left <= 2 ? ` ${left} attempt${left === 1 ? '' : 's'} left before the account is locked.` : ''}`);
   }
-  if (u.status === 'pending') err(403, 'Your account is waiting for an administrator to approve it.');
+  if (u.status === 'pending') err(403, 'Sua conta está aguardando aprovação de um administrador.');
   if (u.status === 'disabled') err(403, 'Esta conta foi desativada. Entre em contato com o administrador do FORGE 90.');
   u.failed = 0; u.lockedUntil = null; u.lastLoginAt = now(); u.lastLoginIp = ip;
   createSession(req, res, u, !!b.remember); audit('login_ok', { userId: u.id, ip }); send(res, 200, { user: pubUser(u) });
@@ -325,12 +325,12 @@ route('POST', '/api/forgot', { limit: 'auth' }, async (req, res, ctx) => {
     const recent = db.resets.find(r => r.userId === u.id && now() - r.createdAt < 60000);
     if (!recent) await sendReset(u, 'forgot', req);
   }
-  send(res, 200, { ok: true, minutes: RESET_MINUTES });           // same answer whether or not the account exists
+  send(res, 200, { ok: true, minutos: RESET_MINUTES });           // same answer whether or not the account exists
 });
 function findReset(tok) { const h = sha256(String(tok || '')); const r = db.resets.find(x => x.h === h); if (!r || r.usedAt || r.expiresAt < now()) return null; const u = userById(r.userId); return u && u.status !== 'disabled' ? { r, u } : null; }
-route('GET', '/api/reset/:token', async (req, res, ctx) => { const f = findReset(ctx.params.token); if (!f) err(410, 'This reset link has expired or was already used. Request a new one.'); send(res, 200, { ok: true, email: maskEmail(f.u.email), expiresAt: f.r.expiresAt }); });
+route('GET', '/api/reset/:token', async (req, res, ctx) => { const f = findReset(ctx.params.token); if (!f) err(410, 'Este link de redefinição expirou ou já foi usado. Solicite um novo.'); send(res, 200, { ok: true, email: maskEmail(f.u.email), expiresAt: f.r.expiresAt }); });
 route('POST', '/api/reset', { limit: 'auth' }, async (req, res, ctx) => {
-  const f = findReset(ctx.body.token); if (!f) err(410, 'This reset link has expired or was already used. Request a new one.');
+  const f = findReset(ctx.body.token); if (!f) err(410, 'Este link de redefinição expirou ou já foi usado. Solicite um novo.');
   const pp = pwProblem(ctx.body.password, f.u.email); if (pp) err(400, pp);
   f.u.pw = await hashPw(ctx.body.password); f.u.mustChange = false; f.u.failed = 0; f.u.lockedUntil = null; f.u.pwChangedAt = now();
   f.r.usedAt = now(); revokeSessions(f.u.id); audit('reset_done', { userId: f.u.id, ip: clientIp(req) });
@@ -362,11 +362,11 @@ route('PATCH', '/api/account', { auth: true, allowMustChange: true }, async (req
   if (b.notify && typeof b.notify === 'object') { u.notify = Object.assign({ passwordChange: true, newSignIn: false }, u.notify || {}, { passwordChange: !!b.notify.passwordChange, newSignIn: !!b.notify.newSignIn }); changes.push('notifications'); }
   if (b.email != null && normEmail(b.email) !== u.email) {
     const e = normEmail(b.email); if (!validEmail(e)) err(400, 'Enter a valid email address.');
-    if (!u.mustChange && !(await verifyPw(String(b.currentPassword || ''), u.pw))) err(403, 'Your current password is needed to change your email — and it didn’t match.');
+    if (!u.mustChange && !(await verifyPw(String(b.currentPassword || ''), u.pw))) err(403, 'Sua senha atual é necessária para alterar o e-mail — e a senha informada não corresponde.');
     if (findUser(e)) err(409, 'Outra conta já usa esse e-mail.');
     const old = u.email; u.email = e; changes.push('email');
     audit('email_changed', { userId: u.id, ip: clientIp(req), detail: `${old} → ${e}` });
-    if (emailReady() && !u.mustChange) deliver(old, u.name, MAIL.simpleEmail({ title: 'Your FORGE 90 email address was changed', heading: 'Your sign-in email was changed', lines: [`Your FORGE 90 account now signs in with ${e}.`, 'Se você não fez essa alteração, entre em contato com o administrador imediatamente.'], appUrl: baseUrl(req), appName: db.settings.appName })).catch(() => {});
+    if (emailReady() && !u.mustChange) deliver(old, u.name, MAIL.simpleEmail({ title: 'Seu endereço de e-mail do FORGE 90 foi alterado', heading: 'Seu e-mail de login foi alterado', lines: [`Sua conta FORGE 90 agora usa este e-mail para login: ${e}.`, 'Se você não fez essa alteração, entre em contato com o administrador imediatamente.'], appUrl: baseUrl(req), appName: db.settings.appName })).catch(() => {});
   }
   saveDb(); if (changes.length) audit('profile_updated', { userId: u.id, ip: clientIp(req), detail: changes.join(', ') });
   send(res, 200, { user: pubUser(u) });
@@ -385,7 +385,7 @@ function imageExt(buf) {
 }
 route('PUT', '/api/account/avatar', { auth: true, maxBody: 1024 * 1024 }, async (req, res, ctx) => {
   const u = ctx.me.u; if (limited('avatar:' + u.id, 30, 60 * 60000)) err(429, 'Too many picture changes. Try again later.');
-  const m = String(ctx.body.data || '').match(/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/); if (!m) err(400, 'Upload a JPEG, PNG or WebP image.');
+  const m = String(ctx.body.data || '').match(/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/); if (!m) err(400, 'Envie uma imagem JPEG, PNG ou WebP.');
   const buf = Buffer.from(m[2], 'base64'); if (!buf.length) err(400, 'A imagem está vazia.'); if (buf.length > AVATAR_MAX) err(413, 'A imagem é grande demais (máximo de 512 KB).');
   const ext = imageExt(buf); if (!ext) err(400, 'O arquivo não é uma imagem JPEG, PNG ou WebP.');
   const v = Date.now().toString(36); const name = `${u.id.replace(/[^A-Za-z0-9_-]/g, '')}-${v}.${ext}`;
@@ -408,7 +408,7 @@ route('GET', '/api/avatar/:id', { auth: true }, async (req, res, ctx) => {
 });
 route('POST', '/api/account/password', { auth: true, allowMustChange: true, limit: 'auth' }, async (req, res, ctx) => {
   const u = ctx.me.u, b = ctx.body;
-  if (!(await verifyPw(String(b.current || ''), u.pw))) err(403, 'Your current password didn’t match.');
+  if (!(await verifyPw(String(b.current || ''), u.pw))) err(403, 'Sua senha atual não corresponde.');
   const pp = pwProblem(b.next, u.email); if (pp) err(400, pp);
   if (await verifyPw(String(b.next), u.pw)) err(400, 'Escolha uma senha que você não tenha acabado de usar.');
   u.pw = await hashPw(b.next); u.mustChange = false; u.pwChangedAt = now();
@@ -422,9 +422,9 @@ route('DELETE', '/api/account/sessions/:id', { auth: true }, async (req, res, ct
 });
 route('POST', '/api/account/sessions/revoke-others', { auth: true }, async (req, res, ctx) => { const n = revokeSessions(ctx.me.u.id, ctx.me.s.id); audit('sessions_revoked', { userId: ctx.me.u.id, ip: clientIp(req), detail: `${n} session(s)` }); send(res, 200, { revoked: n }); });
 route('DELETE', '/api/account', { auth: true, limit: 'auth' }, async (req, res, ctx) => {
-  const u = ctx.me.u; if (!(await verifyPw(String(ctx.body.password || ''), u.pw))) err(403, 'Your password didn’t match.');
-  if (isOwner(u)) err(400, 'You own this server. Hand ownership over first — from the server command line: node server.js --make-owner <email>');
-  if (u.role === 'admin' && admins().length <= 1) err(400, 'You’re the only administrator. Make someone else an admin before deleting your account.');
+  const u = ctx.me.u; if (!(await verifyPw(String(ctx.body.password || ''), u.pw))) err(403, 'Sua senha não corresponde.');
+  if (isOwner(u)) err(400, 'Você é o proprietário deste servidor. Transfira a propriedade primeiro pela linha de comando do servidor: node server.js --make-owner <email>');
+  if (u.role === 'admin' && admins().length <= 1) err(400, 'Você é o único administrador. Torne outra pessoa administradora antes de excluir sua conta.');
   deleteUser(u); audit('account_deleted', { userId: u.id, ip: clientIp(req), detail: u.email }); setCookie(res, req, '', 0); send(res, 200, { ok: true });
 });
 function deleteUser(u) { removeAvatar(u); const sy = syncOf(u.id); if (sy) dropSync(sy); db.users = db.users.filter(x => x !== u); db.sessions = db.sessions.filter(s => s.userId !== u.id); db.resets = db.resets.filter(r => r.userId !== u.id); try { fs.unlinkSync(stateFile(u.id)); } catch (e) { /* none */ } saveDb(); }
@@ -468,45 +468,45 @@ route('GET', '/api/sync', { auth: true }, async (req, res, ctx) => {
 });
 route('POST', '/api/sync/request', { auth: true, limit: 'auth' }, async (req, res, ctx) => {
   const me = ctx.me.u; const email = normEmail(ctx.body.email);
-  if (syncOf(me.id)) err(409, 'You already have a meal sync (or a pending request). End it first.');
+  if (syncOf(me.id)) err(409, 'Você já possui uma sincronização de refeições ou uma solicitação pendente. Encerre-a primeiro.');
   if (!validEmail(email)) err(400, 'Informe o e-mail da pessoa com quem deseja sincronizar.');
-  const p = findUser(email); if (!p || p.status !== 'active') err(404, 'No active FORGE 90 account uses that email. Ask an administrator to invite them first.');
+  const p = findUser(email); if (!p || p.status !== 'active') err(404, 'Nenhuma conta FORGE 90 ativa usa esse e-mail. Peça a um administrador para enviar um convite primeiro.');
   if (p.id === me.id) err(400, 'Esse é o seu próprio e-mail.');
-  if (syncOf(p.id)) err(409, `${p.name} is already syncing meal plans with someone else.`);
+  if (syncOf(p.id)) err(409, `${p.name} já está sincronizando planos de refeição com outra pessoa.`);
   const s = { id: uid(), a: me.id, b: p.id, by: me.id, status: 'pending', slots: cleanSlots(ctx.body.slots || { breakfast: 1, lunch: 1, dinner: 1, snack1: 1, snack2: 1 }), slotReq: null, createdAt: now(), activeAt: null,
     since: null, agreed: {}, through: null, div: {}, baseRev: 0, rev: 1, changes: [], events: [], grocery: {} };
-  db.syncs.push(s); syncEvent(s, me.id, 'request', `${me.name} asked to sync meal plans`); saveDb();
+  db.syncs.push(s); syncEvent(s, me.id, 'request', `${me.name} pediu para sincronizar planos de refeição`); saveDb();
   audit('sync_requested', { userId: me.id, ip: clientIp(req), detail: 'with ' + p.email });
-  syncMail(req, p, `${me.name} wants to sync meal plans with you`, 'Sincronizar planos de refeição?', [`${me.name} (${me.email}) wants to sync FORGE 90 meal plans with you.`, 'You’d share the meals you both agree on, get one combined shopping list, and approve each other’s changes. Accept or decline it in Account settings.'], 'Revisar solicitação');
+  syncMail(req, p, `${me.name} quer sincronizar planos de refeição com você`, 'Sincronizar planos de refeição?', [`${me.name} (${me.email}) quer sincronizar planos de refeição do FORGE 90 com você.`, 'Vocês compartilharão as refeições escolhidas em comum, terão uma única lista de compras combinada e poderão aprovar as alterações um do outro. Aceite ou recuse em Configurações da conta.'], 'Revisar solicitação');
   send(res, 201, { sync: syncView(s, me.id) });
 });
 route('POST', '/api/sync/respond', { auth: true }, async (req, res, ctx) => {
-  const me = ctx.me.u; const s = needSync(ctx, 'pending'); if (s.by === me.id) err(403, 'Waiting for your partner to answer.');
+  const me = ctx.me.u; const s = needSync(ctx, 'pending'); if (s.by === me.id) err(403, 'Aguardando a resposta da outra pessoa.');
   const p = userById(s.by);
-  if (!ctx.body.accept) { dropSync(s); audit('sync_declined', { userId: me.id, ip: clientIp(req), detail: p ? p.email : '' }); if (p) syncMail(req, p, `${me.name} declined meal-plan sync`, 'Solicitação de sincronização recusada', [`${me.name} declined your request to sync meal plans.`]); return send(res, 200, { sync: null }); }
+  if (!ctx.body.accept) { dropSync(s); audit('sync_declined', { userId: me.id, ip: clientIp(req), detail: p ? p.email : '' }); if (p) syncMail(req, p, `${me.name} recusou a sincronização de refeições`, 'Solicitação de sincronização recusada', [`${me.name} recusou sua solicitação para sincronizar planos de refeição.`]); return send(res, 200, { sync: null }); }
   if (!isoDate(ctx.body.since)) err(400, 'Falta a data inicial.');
   Object.assign(s, { status: 'active', activeAt: now(), since: ctx.body.since }); if (ctx.body.slots) s.slots = cleanSlots(ctx.body.slots);
-  syncEvent(s, me.id, 'active', `${me.name} accepted — meal plans are synced`); bumpSync(s);
+  syncEvent(s, me.id, 'active', `${me.name} aceitou — os planos de refeição estão sincronizados`); bumpSync(s);
   audit('sync_started', { userId: me.id, ip: clientIp(req), detail: p ? 'with ' + p.email : '' });
-  if (p) syncMail(req, p, `${me.name} accepted meal-plan sync`, 'Your meal plans are synced', [`${me.name} accepted — your shared meals and shopping list are now combined.`, 'Changes either of you make to a shared meal show up for the other person to accept.']);
+  if (p) syncMail(req, p, `${me.name} aceitou a sincronização de refeições`, 'Seus planos de refeição estão sincronizados', [`${me.name} aceitou — suas refeições compartilhadas e sua lista de compras agora estão combinadas.`, 'Alterações feitas por qualquer uma das pessoas em uma refeição compartilhada aparecerão para a outra aprovar.']);
   send(res, 200, { sync: syncView(s, me.id) });
 });
 route('DELETE', '/api/sync', { auth: true }, async (req, res, ctx) => {      // cancel a request or unsync
   const me = ctx.me.u; const s = needSync(ctx); const p = userById(partnerId(s, me.id)); const was = s.status;
   dropSync(s); audit(was === 'active' ? 'sync_ended' : 'sync_cancelled', { userId: me.id, ip: clientIp(req), detail: p ? p.email : '' });
-  if (p && was === 'active') syncMail(req, p, `${me.name} stopped syncing meal plans`, 'Meal sync ended', [`${me.name} stopped syncing meal plans with you. Your current meals stay as they are, and from now on your plans change independently.`]);
+  if (p && was === 'active') syncMail(req, p, `${me.name} parou de sincronizar planos de refeição`, 'Sincronização de refeições encerrada', [`${me.name} parou de sincronizar planos de refeição with you. Your current meals stay as they are, and from now on your plans change independently.`]);
   send(res, 200, { sync: null });
 });
 route('POST', '/api/sync/slots', { auth: true }, async (req, res, ctx) => {    // propose / approve / decline a change to the shared meals
   const me = ctx.me.u; const s = needSync(ctx, 'active'); const b = ctx.body;
   if (b.approve != null) {
-    if (!s.slotReq || s.slotReq.by === me.id) err(409, 'There’s no change to approve.');
-    if (b.approve) { const old = s.slots; s.slots = s.slotReq.slots; SYNC_SLOTS.forEach(k => { if (old[k] && !s.slots[k]) { Object.keys(s.agreed).forEach(x => { if (x.endsWith('|' + k)) delete s.agreed[x]; }); s.changes = s.changes.filter(c => c.slot !== k); } }); syncEvent(s, me.id, 'slots', `${me.name} approved the new shared meals`); }
-    else syncEvent(s, me.id, 'slots', `${me.name} kept the shared meals as they were`);
+    if (!s.slotReq || s.slotReq.by === me.id) err(409, 'Não há nenhuma alteração para aprovar.');
+    if (b.approve) { const old = s.slots; s.slots = s.slotReq.slots; SYNC_SLOTS.forEach(k => { if (old[k] && !s.slots[k]) { Object.keys(s.agreed).forEach(x => { if (x.endsWith('|' + k)) delete s.agreed[x]; }); s.changes = s.changes.filter(c => c.slot !== k); } }); syncEvent(s, me.id, 'slots', `${me.name} aprovou as novas refeições compartilhadas`); }
+    else syncEvent(s, me.id, 'slots', `${me.name} manteve as refeições compartilhadas como estavam`);
     s.slotReq = null; bumpSync(s); return send(res, 200, { sync: syncView(s, me.id) });
   }
   const want = cleanSlots(b.slots); if (SYNC_SLOTS.every(k => want[k] === s.slots[k])) { s.slotReq = null; bumpSync(s); return send(res, 200, { sync: syncView(s, me.id) }); }
-  s.slotReq = { slots: want, by: me.id, at: now() }; syncEvent(s, me.id, 'slots', `${me.name} asked to change which meals are shared`); bumpSync(s);
+  s.slotReq = { slots: want, by: me.id, at: now() }; syncEvent(s, me.id, 'slots', `${me.name} pediu para alterar quais refeições são compartilhadas`); bumpSync(s);
   send(res, 200, { sync: syncView(s, me.id) });
 });
 route('PUT', '/api/sync/snapshot', { auth: true, limit: 'state' }, async (req, res, ctx) => {  // my shared-meal portions, so the partner's shopping list can include them
@@ -543,7 +543,7 @@ route('POST', '/api/sync/changes', { auth: true, limit: 'state' }, async (req, r
 route('POST', '/api/sync/resolve', { auth: true }, async (req, res, ctx) => {    // accept / decline the partner's changes, or cancel my own
   const me = ctx.me.u; const s = needSync(ctx, 'active'); const b = ctx.body; const ids = new Set(Array.isArray(b.ids) ? b.ids : []);
   if (!['accept', 'decline', 'cancel'].includes(b.action)) err(400, 'Unknown action');
-  const done = []; const pn = (userById(partnerId(s, me.id)) || {}).name || 'Your partner';
+  const done = []; const pn = (userById(partnerId(s, me.id)) || {}).name || 'A outra pessoa';
   s.changes.filter(c => ids.has(c.id)).forEach(c => {
     const mine = c.from === me.id; if (b.action === 'cancel' ? !mine : mine) return;
     const k = c.date + '|' + c.slot;
@@ -584,7 +584,7 @@ route('POST', '/api/sync/pantry/share', { auth: true }, async (req, res, ctx) =>
   if (on && !s.pantry.on) { s.pantry.on = true; s.pantry.items = []; s.pantry.used = {}; }
   if (!on && s.pantry.on) { s.pantry.on = false; s.pantry.items = []; }
   s.pantry.by = me.id; s.pantry.rev = (s.pantry.rev || 0) + 1;
-  syncEvent(s, me.id, 'pantry', on ? `${me.name} started sharing the pantry` : `${me.name} stopped sharing the pantry`); bumpSync(s);
+  syncEvent(s, me.id, 'pantry', on ? `${me.name} começou a compartilhar a despensa` : `${me.name} parou de compartilhar a despensa`); bumpSync(s);
   send(res, 200, { pantry: { on: s.pantry.on, items: s.pantry.items, rev: s.pantry.rev }, previous: on ? [] : prev });
 });
 route('POST', '/api/sync/pantry', { auth: true, limit: 'state' }, async (req, res, ctx) => {
@@ -628,12 +628,12 @@ function cleanSharedFood(b, cur) {
     r: ['P', 'C', 'F', 'V'].includes(b.r) ? b.r : null, k: numv('k', basis === 'u' ? 5000 : 950), p: numv('p', basis === 'u' ? 500 : 100), c: numv('c', basis === 'u' ? 500 : 100), f: numv('f', basis === 'u' ? 500 : 100),
     ml: basis === 'ml', u: basis === 'u' ? (String(b.u || 'item').trim().slice(0, 20) || 'item') : null, g: basis === 'u' ? numv('g', 5000) || null : null,
     pk: b.pk ? numv('pk', 1e5) : null, srv: b.srv ? numv('srv', 1e4) : null, src: cur ? cur.src : (b.src === 'off' ? 'off' : 'user') };
-  if (out.p + out.c + out.f > (basis === 'u' ? 5000 : 101)) err(400, 'Protein, carbs and fat add up to more than the total weight.');
+  if (out.p + out.c + out.f > (basis === 'u' ? 5000 : 101)) err(400, 'Proteínas, carboidratos e gorduras somam mais do que o peso total.');
   return out;
 }
 route('GET', '/api/foods/shared', { auth: true }, async (req, res) => send(res, 200, sharedFoods));
 route('GET', '/api/barcode/:code', { auth: true }, async (req, res, ctx) => {
-  if (limited('barcode:' + ctx.me.u.id, 150, 10 * 60000)) err(429, 'Too many lookups. Wait a few minutes.');
+  if (limited('barcode:' + ctx.me.u.id, 150, 10 * 60000)) err(429, 'Too many lookups. Wait a few minutos.');
   const code = PROD.normGtin(ctx.params.code); if (!code) err(400, 'Esse não é um número de código de barras válido.');
   const hit = Object.values(sharedFoods.foods).find(f => f.gtin === code);
   if (hit) return send(res, 200, { gtin: code, food: hit });
@@ -652,15 +652,15 @@ route('POST', '/api/foods/shared', { auth: true }, async (req, res, ctx) => {
   send(res, 200, { food, rev: sharedFoods.rev });
 });
 route('PATCH', '/api/foods/shared/:id', { auth: true }, async (req, res, ctx) => {
-  const cur = sharedFoods.foods[ctx.params.id]; if (!cur) err(404, 'Product not found.');
-  if (cur.by !== ctx.me.u.id && ctx.me.u.role !== 'admin') err(403, 'Only the person who added this product or an administrator can edit it.');
+  const cur = sharedFoods.foods[ctx.params.id]; if (!cur) err(404, 'Produto não encontrado.');
+  if (cur.by !== ctx.me.u.id && ctx.me.u.role !== 'admin') err(403, 'Somente quem adicionou este produto ou um administrador pode editá-lo.');
   const food = Object.assign({}, cur, cleanSharedFood(Object.assign({}, cur, { basis: cur.u ? 'u' : cur.ml ? 'ml' : 'g' }, ctx.body), cur), { id: cur.id, gtin: cur.gtin, by: cur.by, byName: cur.byName, at: cur.at, editedAt: now() });
   sharedFoods.foods[cur.id] = food; sharedFoods.rev++; saveFoods();
   audit('product_edited', { userId: ctx.me.u.id, ip: clientIp(req), detail: food.n });
   send(res, 200, { food, rev: sharedFoods.rev });
 });
 route('DELETE', '/api/foods/shared/:id', { admin: true }, async (req, res, ctx) => {
-  const cur = sharedFoods.foods[ctx.params.id]; if (!cur) err(404, 'Product not found.');
+  const cur = sharedFoods.foods[ctx.params.id]; if (!cur) err(404, 'Produto não encontrado.');
   delete sharedFoods.foods[cur.id]; sharedFoods.rev++; saveFoods();
   audit('product_deleted', { userId: ctx.me.u.id, actorId: ctx.me.u.id, ip: clientIp(req), detail: cur.n });
   send(res, 200, { ok: true, rev: sharedFoods.rev });
@@ -671,14 +671,14 @@ const IMP = require('./lib/recipe-import');
 if (!db.integrations || typeof db.integrations !== 'object' || Array.isArray(db.integrations)) db.integrations = {};
 const mealieCfg = () => { const m = db.integrations.mealie; return m && m.url && m.token ? m : null; };
 function mealieView(u) { const m = db.integrations.mealie || {}; return { configured: !!mealieCfg(), url: m.url || '', tokenSet: !!m.token, user: m.user || '', version: m.version || '', checkedAt: m.checkedAt || null, canEdit: u.role === 'admin' }; }
-function importLimit(ctx, kind) { if (limited(`import-${kind}:` + ctx.me.u.id, kind === 'search' ? 240 : 60, 10 * 60000)) err(429, 'Too many imports in a short time. Wait a few minutes and try again.'); }
+function importLimit(ctx, kind) { if (limited(`import-${kind}:` + ctx.me.u.id, kind === 'search' ? 240 : 60, 10 * 60000)) err(429, 'Too many imports in a short time. Wait a few minutos and try again.'); }
 async function impCall(fn) { try { return await fn(); } catch (e) { if (e instanceof IMP.ImportErr) err(e.code, e.message, e.extra && e.extra.partial ? { partial: e.extra.partial } : undefined); throw e; } }
 function mealieInput(body) {
   const cur = db.integrations.mealie || {};
   const url = IMP.mealieBase(body.url != null ? body.url : cur.url);
-  if (!/^https?:\/\/[^\s/]+/i.test(url) || url.length > 300) err(400, 'Enter the address you open Mealie at, e.g. http://192.168.1.10:9925');
+  if (!/^https?:\/\/[^\s/]+/i.test(url) || url.length > 300) err(400, 'Informe o endereço usado para abrir o Mealie, por exemplo http://192.168.1.10:9925');
   const token = body.token ? String(body.token).trim() : cur.token;
-  if (!token) err(400, 'Paste a Mealie API token.');
+  if (!token) err(400, 'Cole um token de API do Mealie.');
   if (token.length > 4000 || /\s/.test(token)) err(400, 'Esse token de API não parece válido.');
   return { url, token };
 }
@@ -697,7 +697,7 @@ route('DELETE', '/api/integrations/mealie', { admin: true }, async (req, res, ct
 route('GET', '/api/import/mealie/recipes', { auth: true }, async (req, res, ctx) => { importLimit(ctx, 'search'); send(res, 200, await impCall(() => IMP.mealieSearch(mealieCfg(), ctx.query.q, ctx.query.page))); });
 route('GET', '/api/import/mealie/recipes/:slug', { auth: true }, async (req, res, ctx) => { importLimit(ctx, 'get'); const m = mealieCfg(); send(res, 200, { recipe: await impCall(() => IMP.mealieRecipe(m, ctx.params.slug, m && m.group)) }); });
 route('POST', '/api/import/url', { auth: true }, async (req, res, ctx) => {
-  importLimit(ctx, 'get'); const u = String(ctx.body.url || '').trim(); if (!u || u.length > 2000) err(400, 'Paste a link to a recipe page.');
+  importLimit(ctx, 'get'); const u = String(ctx.body.url || '').trim(); if (!u || u.length > 2000) err(400, 'Cole um link para uma página de receita.');
   send(res, 200, { recipe: await impCall(() => IMP.importFromUrl(u)) });
 });
 
@@ -710,7 +710,7 @@ const target = ctx => { const u = userById(ctx.params.id); if (!u) err(404, 'Usu
 route('GET', '/api/admin/users', { admin: true }, async (req, res) => send(res, 200, { users: db.users.map(adminUserRow) }));
 function inviteRow(i) { return { id: i.id, email: i.email, name: i.name || '', role: i.role, createdAt: i.createdAt, sentAt: i.sentAt, expiresAt: i.expiresAt, sends: i.sends || 0, expired: i.expiresAt <= now(), invitedBy: (userById(i.invitedBy) || {}).name || null }; }
 async function sendInvite(inv, req, actor) {
-  if (!emailReady()) err(400, 'Set up email first (Admin → Email) — invites are sent by email.');
+  if (!emailReady()) err(400, 'Configure o e-mail primeiro (Admin → E-mail) — os convites são enviados por e-mail.');
   const tok = crypto.randomBytes(32).toString('base64url'); const prev = { h: inv.h, sentAt: inv.sentAt, expiresAt: inv.expiresAt };
   inv.h = sha256(tok); inv.sentAt = now(); inv.expiresAt = now() + INVITE_DAYS * 86400000;      // a new link replaces the old one
   const link = `${baseUrl(req)}/invite?token=${tok}`;
@@ -748,17 +748,17 @@ route('PATCH', '/api/admin/users/:id', { admin: true }, async (req, res, ctx) =>
   if (b.role != null && b.role !== u.role) {
     if (!['admin', 'user'].includes(b.role)) err(400, 'Unknown role.');
     if (!isOwner(me)) err(403, b.role === 'admin' ? 'Somente o proprietário pode tornar alguém administrador.' : 'Somente o proprietário pode remover o acesso de administrador.');
-    if (u.id === me.id && b.role !== 'admin') err(400, 'You can’t remove your own administrator access.');
-    if (lastAdmin && b.role !== 'admin') err(400, 'There has to be at least one active administrator.');
+    if (u.id === me.id && b.role !== 'admin') err(400, 'Você não pode remover seu próprio acesso de administrador.');
+    if (lastAdmin && b.role !== 'admin') err(400, 'É necessário haver pelo menos um administrador ativo.');
     u.role = b.role; log.push('role → ' + b.role); audit('role_changed', { userId: u.id, actorId: me.id, ip: clientIp(req), detail: b.role }); }
   if (b.status != null && b.status !== u.status) {
     if (!['active', 'disabled', 'pending'].includes(b.status)) err(400, 'Unknown status.');
     if (b.status !== 'active') adminChangeGuard(ctx, u);          // disabling an admin is a demotion by another name
-    if (lastAdmin && b.status !== 'active') err(400, 'There has to be at least one active administrator.');
-    if (u.id === me.id && b.status !== 'active') err(400, 'You can’t disable your own account.');
+    if (lastAdmin && b.status !== 'active') err(400, 'É necessário haver pelo menos um administrador ativo.');
+    if (u.id === me.id && b.status !== 'active') err(400, 'Você não pode desativar sua própria conta.');
     const was = u.status; u.status = b.status; if (b.status !== 'active') revokeSessions(u.id);
     audit('status_changed', { userId: u.id, actorId: me.id, ip: clientIp(req), detail: `${was} → ${b.status}` }); log.push('status → ' + b.status);
-    if (was === 'pending' && b.status === 'active' && emailReady()) deliver(u.email, u.name, MAIL.simpleEmail({ title: 'Your FORGE 90 account is ready', heading: 'You’re approved!', lines: [`Hi ${u.name.split(' ')[0]}, an administrator approved your FORGE 90 account.`, 'Sign in with the email and password you signed up with.'], buttonUrl: baseUrl(req), buttonLabel: 'Sign in', appUrl: baseUrl(req), appName: db.settings.appName })).catch(() => {});
+    if (was === 'pending' && b.status === 'active' && emailReady()) deliver(u.email, u.name, MAIL.simpleEmail({ title: 'Sua conta FORGE 90 está pronta', heading: 'Sua conta foi aprovada!', lines: [`Hi ${u.name.split(' ')[0]}, um administrador aprovou sua conta FORGE 90.`, 'Entre usando o e-mail e a senha cadastrados.'], buttonUrl: baseUrl(req), buttonLabel: 'Sign in', appUrl: baseUrl(req), appName: db.settings.appName })).catch(() => {});
   }
   if (b.name != null) { const n = String(b.name).trim().slice(0, 80); if (n && n !== u.name) { u.name = n; log.push('name'); } }
   if (b.email != null && normEmail(b.email) !== u.email) { const e = normEmail(b.email); if (!validEmail(e)) err(400, 'Enter a valid email address.'); if (findUser(e)) err(409, 'Outra conta já usa esse e-mail.'); audit('email_changed', { userId: u.id, actorId: me.id, ip: clientIp(req), detail: `${u.email} → ${e}` }); u.email = e; log.push('email'); }
@@ -766,7 +766,7 @@ route('PATCH', '/api/admin/users/:id', { admin: true }, async (req, res, ctx) =>
 });
 route('DELETE', '/api/admin/users/:id/avatar', { admin: true }, async (req, res, ctx) => { const u = target(ctx); ownerGuard(ctx, u); if (u.avatar) { removeAvatar(u); saveDb(); audit('avatar_changed', { userId: u.id, actorId: ctx.me.u.id, ip: clientIp(req), detail: 'removido pelo administrador' }); } send(res, 200, { user: adminUserRow(u) }); });
 route('POST', '/api/admin/users/:id/unlock', { admin: true }, async (req, res, ctx) => { const u = target(ctx); ownerGuard(ctx, u); u.failed = 0; u.lockedUntil = null; saveDb(); audit('unlocked', { userId: u.id, actorId: ctx.me.u.id, ip: clientIp(req) }); send(res, 200, { user: adminUserRow(u) }); });
-route('POST', '/api/admin/users/:id/send-reset', { admin: true }, async (req, res, ctx) => { const u = target(ctx); ownerGuard(ctx, u); if (u.status === 'disabled') err(400, 'Ative a conta primeiro.'); const r = await sendReset(u, 'admin', req, { actorId: ctx.me.u.id }); if (!r.sent) err(502, 'Não foi possível enviar o e-mail de redefinição: ' + r.error); send(res, 200, { ok: true, minutes: RESET_MINUTES }); });
+route('POST', '/api/admin/users/:id/send-reset', { admin: true }, async (req, res, ctx) => { const u = target(ctx); ownerGuard(ctx, u); if (u.status === 'disabled') err(400, 'Ative a conta primeiro.'); const r = await sendReset(u, 'admin', req, { actorId: ctx.me.u.id }); if (!r.sent) err(502, 'Não foi possível enviar o e-mail de redefinição: ' + r.error); send(res, 200, { ok: true, minutos: RESET_MINUTES }); });
 route('POST', '/api/admin/users/:id/temp-password', { admin: true }, async (req, res, ctx) => {
   const u = target(ctx); ownerGuard(ctx, u); adminChangeGuard(ctx, u); const pw = String(ctx.body.password || ''); const pp = pwProblem(pw, u.email); if (pp) err(400, pp);
   u.pw = await hashPw(pw); u.mustChange = true; u.failed = 0; u.lockedUntil = null; u.pwChangedAt = now(); const n = revokeSessions(u.id, u.id === ctx.me.u.id ? ctx.me.s.id : null);
@@ -774,9 +774,9 @@ route('POST', '/api/admin/users/:id/temp-password', { admin: true }, async (req,
 });
 route('POST', '/api/admin/users/:id/revoke-sessions', { admin: true }, async (req, res, ctx) => { const u = target(ctx); ownerGuard(ctx, u); adminChangeGuard(ctx, u); const n = revokeSessions(u.id, u.id === ctx.me.u.id ? ctx.me.s.id : null); audit('sessions_revoked', { userId: u.id, actorId: ctx.me.u.id, ip: clientIp(req), detail: `${n} session(s)` }); send(res, 200, { revoked: n, user: adminUserRow(u) }); });
 route('DELETE', '/api/admin/users/:id', { admin: true }, async (req, res, ctx) => {
-  const u = target(ctx); if (u.id === ctx.me.u.id) err(400, 'Delete your own account from Account settings instead.');
+  const u = target(ctx); if (u.id === ctx.me.u.id) err(400, 'Exclua sua própria conta pelas Configurações da conta.');
   ownerGuard(ctx, u); adminChangeGuard(ctx, u);
-  if (u.role === 'admin' && admins().length <= 1 && u.status === 'active') err(400, 'There has to be at least one active administrator.');
+  if (u.role === 'admin' && admins().length <= 1 && u.status === 'active') err(400, 'É necessário haver pelo menos um administrador ativo.');
   deleteUser(u); audit('user_deleted', { userId: u.id, actorId: ctx.me.u.id, ip: clientIp(req), detail: u.email }); send(res, 200, { ok: true });
 });
 route('GET', '/api/admin/users/:id/state', { admin: true }, async (req, res, ctx) => { const u = target(ctx); ownerGuard(ctx, u); send(res, 200, readState(u.id), { 'Content-Disposition': `attachment; filename="forge90-${u.email.replace(/[^a-z0-9]+/gi, '_')}.json"` }); });
@@ -791,7 +791,7 @@ route('PATCH', '/api/admin/settings', { admin: true }, async (req, res, ctx) => 
   const b = ctx.body, s = db.settings; const changed = [];
   const int = (v, lo, hi, label) => { v = Math.round(+v); if (!Number.isFinite(v) || v < lo || v > hi) err(400, `${label} must be between ${lo} and ${hi}.`); return v; };
   if (b.appName != null) { s.appName = String(b.appName).trim().slice(0, 40) || 'FORGE 90'; changed.push('nome do aplicativo'); }
-  if (b.appUrl != null) { const u = String(b.appUrl).trim().replace(/\/+$/, ''); if (u && !/^https?:\/\/[^\s/]+/i.test(u)) err(400, 'App address must start with http:// or https://'); s.appUrl = u; changed.push('app address'); }
+  if (b.appUrl != null) { const u = String(b.appUrl).trim().replace(/\/+$/, ''); if (u && !/^https?:\/\/[^\s/]+/i.test(u)) err(400, 'O endereço do aplicativo deve começar com http:// ou https://'); s.appUrl = u; changed.push('app address'); }
   if (b.security) { const x = b.security, q = s.security;
     if (x.pwMinLength != null) q.pwMinLength = int(x.pwMinLength, 8, 64, 'Tamanho mínimo da senha');
     if (x.pwRequireMix != null) q.pwRequireMix = !!x.pwRequireMix;
@@ -799,7 +799,7 @@ route('PATCH', '/api/admin/settings', { admin: true }, async (req, res, ctx) => 
     if (x.lockMinutes != null) q.lockMinutes = int(x.lockMinutes, 1, 1440, 'Lockout duration');
     if (x.autoResetOnLock != null) q.autoResetOnLock = !!x.autoResetOnLock;
     if (x.sessionHours != null) q.sessionHours = int(x.sessionHours, 1, 168, 'Session length');
-    if (x.rememberDays != null) q.rememberDays = int(x.rememberDays, 1, 365, '“Keep me signed in” length');
+    if (x.rememberDays != null) q.rememberDays = int(x.rememberDays, 1, 365, 'Duração de “Manter conectado”');
     if (x.notifyPasswordChange != null) q.notifyPasswordChange = !!x.notifyPasswordChange;
     if (x.requireHttps != null) q.requireHttps = !!x.requireHttps;
     changed.push('security'); }
@@ -817,8 +817,8 @@ route('PATCH', '/api/admin/settings', { admin: true }, async (req, res, ctx) => 
   saveDb(); audit('settings_changed', { actorId: ctx.me.u.id, ip: clientIp(req), detail: changed.join(', ') }); send(res, 200, adminSettingsView());
 });
 route('POST', '/api/admin/email/test', { admin: true }, async (req, res, ctx) => {
-  const to = normEmail(ctx.body.to || ctx.me.u.email); if (!validEmail(to)) err(400, 'Enter a valid address to send the test to.');
-  try { await deliver(to, '', MAIL.simpleEmail({ title: 'E-mail de teste do FORGE 90', heading: 'Email is working ✔', lines: ['This is a test from FORGE 90 → Admin → Email.', 'Password-reset emails will be sent from this account.'], buttonUrl: baseUrl(req), buttonLabel: 'Abrir FORGE 90', appUrl: baseUrl(req), appName: db.settings.appName }));
+  const to = normEmail(ctx.body.to || ctx.me.u.email); if (!validEmail(to)) err(400, 'Informe um endereço válido para enviar o teste.');
+  try { await deliver(to, '', MAIL.simpleEmail({ title: 'E-mail de teste do FORGE 90', heading: 'O e-mail está funcionando ✔', lines: ['Este é um teste do FORGE 90 → Admin → E-mail.', 'Os e-mails de redefinição de senha serão enviados por esta conta.'], buttonUrl: baseUrl(req), buttonLabel: 'Abrir FORGE 90', appUrl: baseUrl(req), appName: db.settings.appName }));
     audit('email_test', { actorId: ctx.me.u.id, ip: clientIp(req), detail: 'sent to ' + to }); send(res, 200, { ok: true, to }); }
   catch (e) { audit('email_test', { actorId: ctx.me.u.id, ip: clientIp(req), detail: 'FAILED: ' + e.message.slice(0, 200) }); err(502, e.message); }
 });
@@ -874,9 +874,9 @@ async function handle(req, res) {
       if (req.headers['x-f90'] !== '1' || !/application\/json/i.test(req.headers['content-type'] || '')) err(403, 'Solicitação bloqueada');
       const origin = req.headers.origin; if (origin) { let oh = ''; try { oh = new URL(origin).host; } catch (e) { /* bad origin */ } if (oh !== req.headers.host) err(403, 'Solicitação entre sites bloqueada'); }
     }
-    if (r.opts.limit === 'auth' && limited('auth:' + ip, 40, 15 * 60000)) err(429, 'Too many attempts from this network. Wait a few minutes and try again.');
+    if (r.opts.limit === 'auth' && limited('auth:' + ip, 40, 15 * 60000)) err(429, 'Too many attempts from this network. Wait a few minutos and try again.');
     const me = getSession(req);
-    if ((r.opts.auth || r.opts.admin) && !me) err(401, 'Please sign in again.');
+    if ((r.opts.auth || r.opts.admin) && !me) err(401, 'Entre novamente.');
     if (me && me.u.mustChange && (r.opts.auth || r.opts.admin) && !r.opts.allowMustChange) err(403, 'Defina uma nova senha primeiro.', { mustChange: true });
     if (r.opts.admin && me.u.role !== 'admin') err(403, 'Somente administradores.');
     const body = req.method === 'GET' || req.method === 'HEAD' ? {} : await readBody(req, r.opts.limit === 'state' ? MAX_STATE_BYTES : r.opts.maxBody || 256 * 1024);
@@ -891,7 +891,7 @@ async function handle(req, res) {
 async function cli() {
   const a = process.argv.slice(2); if (!a.length || !/^--/.test(a[0])) return false;
   const u = findUser(a[1] || ''); if (!u) { console.error('Nenhuma conta com o e-mail', a[1]); process.exit(1); }
-  if (a[0] === '--set-password') { const pp = pwProblem(a[2], u.email); if (!a[2] || pp) { console.error(pp || 'Informe a nova senha como terceiro argumento.'); process.exit(1); } u.pw = await hashPw(a[2]); u.mustChange = false; u.failed = 0; u.lockedUntil = null; u.pwChangedAt = now(); revokeSessions(u.id); audit('password_changed', { userId: u.id, detail: 'set from the server command line' }); }
+  if (a[0] === '--set-password') { const pp = pwProblem(a[2], u.email); if (!a[2] || pp) { console.error(pp || 'Informe a nova senha como terceiro argumento.'); process.exit(1); } u.pw = await hashPw(a[2]); u.mustChange = false; u.failed = 0; u.lockedUntil = null; u.pwChangedAt = now(); revokeSessions(u.id); audit('password_changed', { userId: u.id, detail: 'definido pela linha de comando do servidor' }); }
   else if (a[0] === '--make-admin') { u.role = 'admin'; u.status = 'active'; u.failed = 0; u.lockedUntil = null; audit('role_changed', { userId: u.id, detail: 'admin (server command line)' }); }
   else if (a[0] === '--make-owner') { u.role = 'admin'; u.status = 'active'; u.failed = 0; u.lockedUntil = null; db.settings.ownerId = u.id; audit('owner_set', { userId: u.id, detail: 'owner (server command line)' }); console.log(u.email, 'agora é o proprietário.'); }
   else { console.error('Unknown option', a[0]); process.exit(1); }
@@ -905,9 +905,9 @@ async function cli() {
     const email = normEmail(ENV.ADMIN_EMAIL || 'admin@forge90.local'); const pw = ENV.ADMIN_PASSWORD || 'forge90-admin';
     const existing = findUser(email);
     if (existing) { existing.role = 'admin'; existing.status = 'active'; }
-    else db.users.push({ id: uid(), email, name: ENV.ADMIN_NAME || 'Administrator', role: 'admin', status: 'active', pw: await hashPw(pw), mustChange: true, createdAt: now(), failed: 0, lockedUntil: null, notify: { passwordChange: true } });
+    else db.users.push({ id: uid(), email, name: ENV.ADMIN_NAME || 'Administrador', role: 'admin', status: 'active', pw: await hashPw(pw), mustChange: true, createdAt: now(), failed: 0, lockedUntil: null, notify: { passwordChange: true } });
     audit('admin_created', { detail: email }); saveDb(true);
-    console.log(`\n  Default administrator created → ${email} / ${existing ? '(existing password)' : pw}\n  You'll be asked to choose a new password the first time you sign in.\n`);
+    console.log(`\n  Administrador padrão criado → ${email} / ${existing ? '(existing password)' : pw}\n  Você deverá escolher uma nova senha na primeira vez que entrar.\n`);
   }
   ensureOwner();          // brand new server, or an existing one upgrading: the longest-standing admin owns it
   setInterval(() => { const t = now(); const n1 = db.sessions.length, n2 = db.resets.length, n3 = db.invites.length;

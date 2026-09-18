@@ -47,8 +47,8 @@ function fetchUrl(url, { allowPrivate = false, headers = {}, maxBytes = 4 * 1024
   allowPrivate = allowPrivate || allowPrivateEnv();
   return new Promise((resolve, reject) => {
     let u; try { u = new URL(url); } catch (e) { return reject(new ImportErr(400, 'Isso não parece ser um endereço da web.')); }
-    if (!/^https?:$/.test(u.protocol)) return reject(new ImportErr(400, 'Only http:// and https:// links can be imported.'));
-    if (u.username || u.password) return reject(new ImportErr(400, 'Links with a username or password can’t be imported.'));
+    if (!/^https?:$/.test(u.protocol)) return reject(new ImportErr(400, 'Somente links http:// e https:// podem ser importados.'));
+    if (u.username || u.password) return reject(new ImportErr(400, 'Links que contêm usuário ou senha não podem ser importados.'));
     const host = u.hostname.replace(/^\[|\]$/g, '');
     if (net.isIP(host) && !allowPrivate && isPrivateIp(host)) return reject(new ImportErr(400, 'Esse endereço está em uma rede privada. A importação por link só acessa sites públicos.'));
     const lib = u.protocol === 'https:' ? https : http;
@@ -57,7 +57,7 @@ function fetchUrl(url, { allowPrivate = false, headers = {}, maxBytes = 4 * 1024
       if (code >= 300 && code < 400 && res.headers.location) {
         res.resume(); clearTimeout(t);
         if (redirects <= 0) return reject(new ImportErr(502, 'Esse link redireciona vezes demais.'));
-        let next; try { next = new URL(res.headers.location, u).toString(); } catch (e) { return reject(new ImportErr(502, 'That link redirects to an invalid address.')); }
+        let next; try { next = new URL(res.headers.location, u).toString(); } catch (e) { return reject(new ImportErr(502, 'Esse link redireciona para um endereço inválido.')); }
         return fetchUrl(next, { allowPrivate, headers, maxBytes, timeout, redirects: redirects - 1 }).then(resolve, reject);
       }
       const enc = String(res.headers['content-encoding'] || '').toLowerCase();
@@ -66,7 +66,7 @@ function fetchUrl(url, { allowPrivate = false, headers = {}, maxBytes = 4 * 1024
       else if (enc === 'deflate') stream = res.pipe(zlib.createInflate());
       else if (enc === 'br') stream = res.pipe(zlib.createBrotliDecompress());
       const chunks = []; let size = 0;
-      stream.on('data', c => { size += c.length; if (size > maxBytes) { req.destroy(); stream.destroy(); clearTimeout(t); reject(new ImportErr(413, 'That page is too large to import.')); } else chunks.push(c); });
+      stream.on('data', c => { size += c.length; if (size > maxBytes) { req.destroy(); stream.destroy(); clearTimeout(t); reject(new ImportErr(413, 'Essa página é grande demais para ser importada.')); } else chunks.push(c); });
       stream.on('end', () => {
         clearTimeout(t);
         const buf = Buffer.concat(chunks); const ct = String(res.headers['content-type'] || '');
@@ -82,10 +82,10 @@ function fetchUrl(url, { allowPrivate = false, headers = {}, maxBytes = 4 * 1024
       if (e instanceof ImportErr) return reject(e);
       if (e.code === 'EPRIVATE') return reject(new ImportErr(400, 'Esse endereço está em uma rede privada. A importação por link só acessa sites públicos.'));
       if (e.code === 'ENOTFOUND' || e.code === 'EAI_AGAIN') return reject(new ImportErr(502, `Não foi possível encontrar ${u.hostname}. Verifique o link.`, { reach: true }));
-      if (e.code === 'ETIMEDOUT') return reject(new ImportErr(504, `${u.hostname} took too long to respond.`, { reach: true }));
+      if (e.code === 'ETIMEDOUT') return reject(new ImportErr(504, `${u.hostname} demorou demais para responder.`, { reach: true }));
       if (e.code === 'ECONNREFUSED') return reject(new ImportErr(502, `${u.hostname} recusou a conexão.`, { reach: true }));
-      if (/CERT|SSL|TLS/i.test(e.code || '') || /certificate/i.test(e.message)) return reject(new ImportErr(502, `${u.hostname} has a certificate problem, so it wasn’t trusted.`, { reach: true }));
-      reject(new ImportErr(502, `Couldn’t reach ${u.hostname} (${e.code || e.message}).`, { reach: true }));
+      if (/CERT|SSL|TLS/i.test(e.code || '') || /certificate/i.test(e.message)) return reject(new ImportErr(502, `${u.hostname} tem um problema no certificado e, por isso, não foi considerado confiável.`, { reach: true }));
+      reject(new ImportErr(502, `Não foi possível acessar ${u.hostname} (${e.code || e.message}).`, { reach: true }));
     });
     req.end();
   });
@@ -274,19 +274,19 @@ function parsePage(html, pageUrl) {
 async function importFromUrl(url) {
   url = String(url || '').trim(); if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(url) && /^[\w-]+(\.[\w-]+)+(:\d+)?(\/|$)/.test(url)) url = 'https://' + url;
   const r = await fetchUrl(url, { headers: { Accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.5' } });
-  if (r.status === 401 || r.status === 403 || r.status === 429 || r.status === 503) throw new ImportErr(422, `${hostName(r.url)} blocked the request (HTTP ${r.status}). Some sites don’t allow automated access.`, { partial: { url: r.url, site: hostName(r.url) } });
+  if (r.status === 401 || r.status === 403 || r.status === 429 || r.status === 503) throw new ImportErr(422, `${hostName(r.url)} bloqueou a solicitação (HTTP ${r.status}). Alguns sites não permitem acesso automatizado.`, { partial: { url: r.url, site: hostName(r.url) } });
   if (r.status === 404 || r.status === 410) throw new ImportErr(422, 'A página não foi encontrada (HTTP ' + r.status + '). Verifique o link.');
-  if (r.status >= 400) throw new ImportErr(422, `${hostName(r.url)} returned an error (HTTP ${r.status}).`);
+  if (r.status >= 400) throw new ImportErr(422, `${hostName(r.url)} retornou um erro (HTTP ${r.status}).`);
   if (!/html|xml/i.test(r.contentType) && !/^\s*</.test(r.body)) throw new ImportErr(422, 'Esse link não é uma página da web.');
   const rec = parsePage(r.body, r.url);
-  if (!rec || !rec.ingredients.length) throw new ImportErr(422, 'No recipe data was found on that page.', { partial: { name: (rec && rec.name) || pageTitle(r.body), url: r.url, site: (rec && rec.site) || meta(r.body, 'og:site_name') || hostName(r.url), steps: rec ? rec.steps : [], servings: rec ? rec.servings : null } });
+  if (!rec || !rec.ingredients.length) throw new ImportErr(422, 'Nenhum dado de receita foi encontrado nessa página.', { partial: { name: (rec && rec.name) || pageTitle(r.body), url: r.url, site: (rec && rec.site) || meta(r.body, 'og:site_name') || hostName(r.url), steps: rec ? rec.steps : [], servings: rec ? rec.servings : null } });
   return rec;
 }
 
 /* ---------- Mealie ---------- */
 const mealieBase = u => String(u || '').trim().replace(/\/+$/, '').replace(/\/api$/i, '');
 async function mealieGet(cfg, pathAndQuery) {
-  if (!cfg || !cfg.url || !cfg.token) throw new ImportErr(409, 'Mealie isn’t connected. An administrator can connect it in Settings.');
+  if (!cfg || !cfg.url || !cfg.token) throw new ImportErr(409, 'O Mealie não está conectado. Um administrador pode conectá-lo em Configurações.');
   const base = mealieBase(cfg.url);
   let r;
   try { r = await fetchUrl(base + pathAndQuery, { allowPrivate: true, timeout: 12000, maxBytes: 8 * 1024 * 1024, headers: { Accept: 'application/json', Authorization: 'Bearer ' + cfg.token } }); }
@@ -310,7 +310,7 @@ async function mealieSearch(cfg, q, page) {
   return { items, page: +(j && j.page) || 1, pages: +(j && (j.total_pages || j.totalPages)) || 1, total: +(j && j.total) || items.length };
 }
 async function mealieRecipe(cfg, slug, groupSlug) {
-  if (!/^[\w.~%-]{1,200}$/.test(String(slug || ''))) throw new ImportErr(400, 'Invalid recipe.');
+  if (!/^[\w.~%-]{1,200}$/.test(String(slug || ''))) throw new ImportErr(400, 'Receita inválida.');
   const r = await mealieGet(cfg, '/api/recipes/' + encodeURIComponent(slug));
   const base = mealieBase(cfg.url);
   const ings = arr(r.recipeIngredient).map(i => {
