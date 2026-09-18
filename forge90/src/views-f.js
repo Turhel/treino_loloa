@@ -175,7 +175,7 @@ function shareBadge(date, slot, compact) {             // compact (calendar chip
 function syncBtnHTML(cls = '') {
   if (!syncActive()) return '';
   const n = SY.data.changesIn.length + (SY.data.slotReq && SY.data.slotReq.by !== AUTH.user.id ? 1 : 0);
-  return `<button class="btn sync-btn ${cls} ${n ? 'has' : ''}" data-act="sync-open" title="Plano alimentar sincronizado com ${esc(syncName())}${n ? ` — ${n} alteração${n === 1 ? '' : 'ões'} para revisar` : ''}">${icon('users')}<span>Sync</span>${n ? `<b class="sync-badge">${n}</b>` : ''}</button>`;
+  return `<button class="btn sync-btn ${cls} ${n ? 'has' : ''}" data-act="sync-open" title="Plano alimentar sincronizado com ${esc(syncName())}${n ? ` — ${n} alteração${n === 1 ? '' : 'ões'} para revisar` : ''}">${icon('users')}<span>Sincronização</span>${n ? `<b class="sync-badge">${n}</b>` : ''}</button>`;
 }
 function refreshSyncUI() {
   $$('.sync-btn').forEach(b => { const cls = [...b.classList].filter(c => !['btn', 'sync-btn', 'has'].includes(c)).join(' '); const h = syncBtnHTML(cls); if (h) b.outerHTML = h; else b.remove(); });
