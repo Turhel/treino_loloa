@@ -260,9 +260,9 @@ function impRow(it) {
     if (it.note && !p.note) p.note = it.note;
   }
   const foodKey = impTokens(p.food, true).join(' ');
-  if (!foodKey) return { skip: 'no food in this line' };
-  if (IMP_NEGLIGIBLE.test(foodKey) && (p.qty == null || p.toTaste || /water|ice|baking|tartar|spray|parchment|foil/.test(foodKey))) return { skip: 'no calories' };
-  if (p.qty == null && !p.u && (p.toTaste || p.optional)) return { skip: p.optional ? 'optional' : 'to taste' };
+  if (!foodKey) return { skip: 'sem alimento nesta linha' };
+  if (IMP_NEGLIGIBLE.test(foodKey) && (p.qty == null || p.toTaste || /water|ice|baking|tartar|spray|parchment|foil/.test(foodKey))) return { skip: 'sem calorias' };
+  if (p.qty == null && !p.u && (p.toTaste || p.optional)) return { skip: p.optional ? 'opcional' : 'a gosto' };
   if (/^pepper$/.test(foodKey) && (!p.u || p.u.k === 'vol')) p.food = 'black pepper';
   const m = impMatch(p.food);
   let amt = '', est = null, st = m.st;

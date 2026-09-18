@@ -138,19 +138,19 @@ document.addEventListener('input', e => { const t = e.target; if (t && t.dataset
 
 /* ---------------- favorites, sorting & links (shared by Diet plan and Foods & recipes) ---------------- */
 function favBtnHTML(id, cls = '') { const on = isFav(id);
-  return `<button type="button" class="fav-btn ${cls} ${on ? 'on' : ''}" data-act="fav" data-rid="${id}" aria-pressed="${on}" title="${on ? 'Favorite — shows up about twice as often in the meal plan. Click to remove.' : 'Add to favorites — shows up more in the meal plan'}">${icon('star')}</button>`; }
+  return `<button type="button" class="fav-btn ${cls} ${on ? 'on' : ''}" data-act="fav" data-rid="${id}" aria-pressed="${on}" title="${on ? 'Favorita — aparece aproximadamente duas vezes mais no plano alimentar. Clique para remover.' : 'Adicionar aos favoritos — aparece com mais frequência no plano alimentar'}">${icon('star')}</button>`; }
 function refreshFavButtons() { $$('.fav-btn[data-rid]').forEach(b => { const on = isFav(b.dataset.rid); b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); }); }
 function toggleFav(id) {
   const r = RECIPE[id]; if (!r) return;
-  const on = !isFav(id); pushUndo(`${on ? 'favorite' : 'unfavorite'} ${r.name}`);
+  const on = !isFav(id); pushUndo(`${on ? 'favoritar' : 'remover dos favoritos'} ${r.name}`);
   S.favRecipes = S.favRecipes || {}; if (on) S.favRecipes[id] = true; else delete S.favRecipes[id];
   const from = nextPlanWeekStart(); replanMeals(from);
   const cnt = Object.keys(S.plan).filter(d => d >= from).reduce((a, d) => a + MEAL_SLOTS.filter(sl => S.plan[d].m && S.plan[d].m[sl] === id).length, 0);
   saveState(); render(); refreshFavButtons();
-  const note = !recipeAllowed(r) ? ' — but it’s blocked by your food preferences, so it won’t be scheduled' : ` — meals from ${fmtDate(from)} on re-planned (${cnt} serving${cnt === 1 ? '' : 's'} scheduled; your hand-picked meals were kept)`;
-  toast(`${on ? '★ Favorited' : 'Removed from favorites:'} ${r.name}${note}`, true);
+  const note = !recipeAllowed(r) ? ' — mas está bloqueada pelas suas preferências alimentares, então não será programada' : ` — refeições a partir de ${fmtDate(from)} replanejadas (${cnt} porção${cnt === 1 ? '' : 'ões'} programada${cnt === 1 ? '' : 's'}; suas escolhas manuais foram mantidas)`;
+  toast(`${on ? '★ Favoritada' : 'Removida dos favoritos:'} ${r.name}${note}`, true);
 }
-const REC_SORTS = [['default', 'Favorites first'], ['name', 'Name'], ['k', 'Calories'], ['p', 'Protein'], ['c', 'Carbs'], ['f', 'Fat'], ['pp', 'Protein per 100 kcal']];
+const REC_SORTS = [['default', 'Favoritos primeiro'], ['name', 'Nome'], ['k', 'Calorias'], ['p', 'Proteína'], ['c', 'Carboidratos'], ['f', 'Gorduras'], ['pp', 'Proteína por 100 kcal']];
 function sortRecipes(list) {
   const key = UI.recSort || 'default';
   if (key === 'default') return list.slice().sort((a, b) => isFav(b.id) - isFav(a.id));
