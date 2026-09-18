@@ -616,7 +616,7 @@ route('POST', '/api/sync/pantry', { auth: true, limit: 'state' }, async (req, re
 const PROD = require('./lib/products');
 const FOODS_FILE = path.join(DATA, 'foods.json');
 let sharedFoods = { rev: 0, foods: {} };
-try { if (fs.existsSync(FOODS_FILE)) sharedFoods = Object.assign({ rev: 0, foods: {} }, JSON.parse(fs.readFileSync(FOODS_FILE, 'utf8'))); } catch (e) { console.error('Could not read', FOODS_FILE, e.message); }
+try { if (fs.existsSync(FOODS_FILE)) sharedFoods = Object.assign({ rev: 0, foods: {} }, JSON.parse(fs.readFileSync(FOODS_FILE, 'utf8'))); } catch (e) { console.error('Não foi possível ler', FOODS_FILE, e.message); }
 let foodsT = null; const saveFoods = () => { clearTimeout(foodsT); foodsT = setTimeout(() => writeAtomic(FOODS_FILE, JSON.stringify(sharedFoods, null, 1)), 100); };
 const SUB_RE = /^[a-z_]{2,30}$/;
 const AISLE_OK = ['Meat & Seafood', 'Dairy & Eggs', 'Produce', 'Grains & Bread', 'Frozen', 'Pantry', 'Snacks', 'Beverages', 'Deli & Prepared'];
@@ -867,7 +867,7 @@ async function handle(req, res) {
   if (secure && requireHttpsOn()) res.setHeader('Strict-Transport-Security', 'max-age=15552000');
   if (!pathname.startsWith('/api/')) { if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405); return res.end(); } return serveStatic(req, res, pathname); }
   const r = routes.find(x => x.method === req.method && x.re.test(pathname));
-  if (!r) return send(res, 404, { error: 'Not found' });
+  if (!r) return send(res, 404, { error: 'Não encontrado' });
   const ip = clientIp(req);
   try {
     if (req.method !== 'GET') {
