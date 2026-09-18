@@ -316,10 +316,10 @@ function impNeeds() {
 function impBannerHTML() {
   const e = RE; if (!e || !e.imp) return ''; const im = e.imp; const needs = impNeeds(); const nc = e.ing.filter(r => r[2] && impRowState(r) === 'check').length;
   return `<div class="imp-banner ${needs.length ? 'need' : 'ready'}" id="re-imp-banner">
-    <div class="row wrap" style="gap:8px"><b>${icon('download')}Importado de ${esc(im.site || 'um site da web')}</b>${im.q ? `<span class="pill">Recipe ${im.q.i} of ${im.q.n}</span>` : ''}${im.dup ? `<span class="pill warn-pill" title="Você já tem uma receita com este nome ou link">Já existe “${esc(im.dup)}”</span>` : ''}</div>
+    <div class="row wrap" style="gap:8px"><b>${icon('download')}Importado de ${esc(im.site || 'um site da web')}</b>${im.q ? `<span class="pill">Receita ${im.q.i} de ${im.q.n}</span>` : ''}${im.dup ? `<span class="pill warn-pill" title="Você já tem uma receita com este nome ou link">Já existe “${esc(im.dup)}”</span>` : ''}</div>
     ${im.error ? `<div class="small" style="margin-top:6px">${esc(im.error)}</div>` : ''}
     ${needs.length ? `<div class="small" style="margin-top:6px">Preencha os itens destacados antes de salvar:</div><ul class="imp-needs">${needs.map(n => `<li>${esc(n)}</li>`).join('')}</ul>`
-      : `<div class="small" style="margin-top:6px">${icon('check')} Tudo foi preenchido.${nc ? ` ${nc} food match${nc > 1 ? 'es are' : ' is'} marked <b>Check</b> — make sure ${nc > 1 ? 'they’re' : 'it’s'} right.` : ''} Revise as quantidades e depois salve.</div>`}
+      : `<div class="small" style="margin-top:6px">${icon('check')} Tudo foi preenchido.${nc ? ` ${nc} correspondência${nc > 1 ? 's' : ''} de alimento marcada${nc > 1 ? 's' : ''} como <b>Verificar</b> — confirme se ${nc > 1 ? 'estão corretas' : 'está correta'}.` : ''} Revise as quantidades e depois salve.</div>`}
     ${im.skipped.length ? `<div class="imp-skipped tiny"><span class="muted">Ignorados:</span> ${im.skipped.map((s, i) => `<span class="imp-sk">${esc(s.text)} <button type="button" class="linkish" data-act="re-imp-add" data-i="${i}" title="Adicionar esta linha como ingrediente">Adicionar</button></span>`).join('')}</div>` : ''}
     ${im.paste ? `<div class="imp-paste"><label class="small"><b>Cole os ingredientes</b>, um por linha</label><textarea class="inp" id="re-imp-paste" rows="5" placeholder="2 lb chicken breast&#10;1 cup rice&#10;2 tbsp olive oil"></textarea><div class="row" style="margin-top:6px"><button type="button" class="btn sm primary" data-act="re-imp-paste">Adicionar ingredientes</button></div></div>`
       : `<button type="button" class="linkish tiny" data-act="re-imp-paste-show" style="margin-top:6px">Colar mais ingredientes</button>`}
@@ -413,7 +413,7 @@ async function impNext() {
   IMPQ.i++;
   if (IMPQ.i >= IMPQ.list.length) { const d = IMPQ.done, n = IMPQ.list.length; IMPQ = null; closeModal(); render(); toast(`Importadas ${d} de ${n} receita${n > 1 ? 's' : ''} do Mealie`); return; }
   const slug = IMPQ.list[IMPQ.i];
-  modal(`<div class="imp-loading"><h2>Importando do Mealie</h2><p class="sub small">Recipe ${IMPQ.i + 1} of ${IMPQ.list.length}…</p></div>`, 'sm');
+  modal(`<div class="imp-loading"><h2>Importando do Mealie</h2><p class="sub small">Receita ${IMPQ.i + 1} de ${IMPQ.list.length}…</p></div>`, 'sm');
   try { const r = await api('GET', '/api/import/mealie/recipes/' + encodeURIComponent(slug)); if (!IMPQ) return; importToEditor(r.recipe); }
   catch (e) { toast(`Não foi possível importar “${(IMPUI.items.find(x => x.slug === slug) || {}).name || slug}”: ${e.message}`); impNext(); }
 }
