@@ -6,7 +6,7 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&a
 const C = { bg: '#eef1f4', card: '#ffffff', ink: '#111827', text: '#374151', muted: '#6b7280', line: '#e5e7eb', dark: '#0f140c', lime: '#a3e635', limeInk: '#1a2e05' };
 
 function layout({ preheader, title, bodyHtml, footerNote, appUrl, appName = 'FORGE 90', repliesTo }) {
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><title>${esc(title)}</title></head>
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><title>${esc(title)}</title></head>
 <body style="margin:0;padding:0;background:${C.bg};-webkit-text-size-adjust:100%;">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${esc(preheader)}&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.bg}" style="background:${C.bg};">
@@ -33,8 +33,8 @@ const button = (href, label) => `<table role="presentation" cellpadding="0" cell
   <a href="${esc(href)}" target="_blank" style="display:inline-block;padding:14px 30px;font-family:'Segoe UI',Helvetica,Arial,sans-serif;font-size:16px;font-weight:800;color:${C.limeInk};text-decoration:none;border-radius:12px;">${esc(label)}</a></td></tr></table>`;
 const callout = (html, color = '#f7fee7', border = '#d9f99d') => `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 16px;"><tr><td bgcolor="${color}" style="background:${color};border:1px solid ${border};border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.5;color:${C.text};">${html}</td></tr></table>`;
 function device(ua) { ua = String(ua || ''); const b = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : '';
-  const o = /Windows/.test(ua) ? 'Windows' : /iPhone|iPad/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : /Mac OS X/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : ''; return b ? b + (o ? ' on ' + o : '') : ''; }
-const fmtTime = d => d.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+  const o = /Windows/.test(ua) ? 'Windows' : /iPhone|iPad/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : /Mac OS X/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : ''; return b ? b + (o ? ' em ' + o : '') : ''; }
+const fmtTime = d => d.toLocaleString('pt-BR', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
 
 function resetEmail({ name, link, minutes, expiresAt, reason, attempts, ip, ua, appUrl, appName }) {
   const hello = name ? `Olá ${esc(name.split(' ')[0])},` : 'Olá,';
