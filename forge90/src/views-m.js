@@ -103,16 +103,16 @@ function rtTick() {
   if (!RT.cued && left <= lead * 1000 + 150) { RT.cued = true; if (x.play) soundPlay(x.id, Math.max(0, left / 1000 - lead)); }
   if (left > 0) { rtPaint(false); return; }
   clearInterval(rtT); Object.assign(RT, { run: false, paused: false, left: 0, flash: true }); buzz([220, 120, 220]);
-  rtPaint(true); if (!(WO && WO.open)) toast('Rest over — back to your workout');     // in workout mode the timer bar itself turns green
+  rtPaint(true); if (!(WO && WO.open)) toast('Descanso encerrado — volte ao treino');     // in workout mode the timer bar itself turns green
   setTimeout(() => { if (RT.flash) { rtIdle(null, true); rtPaint(true); } }, 2600);
 }
 function rtHTML() {
   const st = RT.flash ? 'done' : RT.run ? 'run' : RT.paused ? 'paused' : 'idle', left = rtLeft();
-  const lbl = { done: 'Rest over · go', run: 'Resting', paused: 'Paused', idle: 'Rest · ready' }[st];
-  return `<div class="rt ${st}" id="rt" role="timer" aria-label="Rest timer ${mmss(left)}">
+  const lbl = { done: 'Descanso encerrado · vai', run: 'Descansando', paused: 'Pausado', idle: 'Descanso · pronto' }[st];
+  return `<div class="rt ${st}" id="rt" role="timer" aria-label="Cronômetro de descanso ${mmss(left)}">
     <div class="rt-l"><small>${lbl}</small><b class="num" id="rt-v">${mmss(left)}</b></div>
-    <div class="rt-b"><button type="button" data-act="rt-add" data-v="5" aria-label="Add 5 seconds">+5 s</button><button type="button" data-act="rt-add" data-v="30" aria-label="Add 30 seconds">+30 s</button>
-      <button type="button" class="go" data-act="rt-go" aria-label="${RT.run ? 'Pause' : 'Start'} the rest timer">${icon(RT.run ? 'pause' : 'play')}</button><button type="button" data-act="rt-reset" aria-label="Reset the rest timer">${icon('reset')}</button></div>
+    <div class="rt-b"><button type="button" data-act="rt-add" data-v="5" aria-label="Adicionar 5 segundos">+5 s</button><button type="button" data-act="rt-add" data-v="30" aria-label="Adicionar 30 segundos">+30 s</button>
+      <button type="button" class="go" data-act="rt-go" aria-label="${RT.run ? 'Pausar' : 'Iniciar'} o cronômetro de descanso">${icon(RT.run ? 'pause' : 'play')}</button><button type="button" data-act="rt-reset" aria-label="Reiniciar o cronômetro de descanso">${icon('reset')}</button></div>
     <i class="bar" id="rt-bar" style="width:${st === 'idle' || !RT.dur ? 0 : (1 - left / (RT.dur * 1000)) * 100}%"></i></div>`;
 }
 function rtPaint(full) {
@@ -124,7 +124,7 @@ function rtPaint(full) {
 function rtPill() {
   let p = $('#rt-pill'); const show = rtBusy() && !(WO && WO.open) && !!$('#view');
   if (!p) { if (!show) return; p = document.createElement('button'); p.type = 'button'; p.id = 'rt-pill'; p.className = 'rt-pill'; p.dataset.act = 'wo-resume'; document.body.appendChild(p); }
-  p.hidden = !show; if (show) p.innerHTML = `${icon('clock')}<b class="num">${mmss(rtLeft())}</b><span>${RT.paused ? 'paused' : 'rest'} · back to workout</span>`;
+  p.hidden = !show; if (show) p.innerHTML = `${icon('clock')}<b class="num">${mmss(rtLeft())}</b><span>${RT.paused ? 'pausado' : 'descanso'} · voltar ao treino</span>`;
 }
 
 /* ---------------- workout mode ---------------- */
@@ -137,7 +137,7 @@ const setsOf = (d, id) => ((S.logs[d] || {})[id] || []);
 const doneSets = (d, id) => setsOf(d, id).filter(s => s && +s.r > 0).length;
 function woOpen(date, i) {
   const d = date || todayISO(); const e = S.plan[d];
-  if (!e || !e.w) { toast(d === todayISO() ? 'No session is planned today — add one from the day’s workout card.' : 'No session is planned that day.'); return; }
+  if (!e || !e.w) { toast(d === todayISO() ? 'Nenhuma sessão está planejada para hoje — adicione uma pelo cartão de treino do dia.' : 'Nenhuma sessão está planejada para esse dia.'); return; }
   closeModal(); if (!WO || WO.d !== d) WO = { d, i: 0, w: {}, r: {}, edit: null };
   const rows = woRows(); if (i != null) WO.i = i; else if (!WO.open) { const k = rows.findIndex(r => !exLogged(d, r)); WO.i = k < 0 ? rows.length - 1 : k; }
   const wasOpen = WO.open; WO.open = true; WO.done = false; rtFollow(); woRender(); document.body.classList.add('wo-on');
@@ -172,11 +172,11 @@ function woRender() {
   const e = woEntry(), t = TEMPLATES[e.w.t], d = WO.d;
   if (WO.done) {
     const c = loggedSets(d, rows); const prs = rows.filter(r => { const h = exerciseHistory(r.ex.id).find(x => x.d === d); return h && h.pr; }).length;
-    root.innerHTML = `<div class="wom" role="dialog" aria-label="Workout done"><div class="wo-in">
+    root.innerHTML = `<div class="wom" role="dialog" aria-label="Treino concluído"><div class="wo-in">
       <div class="wo-h"><button type="button" class="btn icon ghost" data-act="wo-close" aria-label="Fechar">${icon('x')}</button><div class="t"><b>${esc(t.name)}</b><small>${esc(fmtDate(d, { weekday: 'long', month: 'short', day: 'numeric' }))}</small></div></div>
-      <div class="wo-b"><div class="wo-done"><span class="pill acc">${icon('check')}Workout complete</span><b class="num">${c.done} sets</b><p class="muted">${prs ? `${prs} new PR${prs > 1 ? 's' : ''} · ` : ''}~${estMinutes(rows)} min · saved to Progress</p></div>
-        <div class="wo-sum">${rows.map(r => { const s = setsOf(d, r.ex.id).filter(x => x && +x.r > 0); return `<div><b>${esc(r.ex.name)}</b><span class="num">${s.map(x => `${fmt(+x.w || 0, (+x.w || 0) % 1 ? 1 : 0)}×${x.r}`).join(', ') || 'skipped'}</span></div>`; }).join('')}</div>
-        <button type="button" class="btn primary block" data-act="wo-close">Done</button></div></div></div>`;
+      <div class="wo-b"><div class="wo-done"><span class="pill acc">${icon('check')}Treino concluído</span><b class="num">${c.done} séries</b><p class="muted">${prs ? `${prs} novo${prs > 1 ? 's' : ''} recorde${prs > 1 ? 's' : ''} · ` : ''}~${estMinutes(rows)} min · salvo em Progresso</p></div>
+        <div class="wo-sum">${rows.map(r => { const s = setsOf(d, r.ex.id).filter(x => x && +x.r > 0); return `<div><b>${esc(r.ex.name)}</b><span class="num">${s.map(x => `${fmt(+x.w || 0, (+x.w || 0) % 1 ? 1 : 0)}×${x.r}`).join(', ') || 'pulado'}</span></div>`; }).join('')}</div>
+        <button type="button" class="btn primary block" data-act="wo-close">Concluído</button></div></div></div>`;
     return;
   }
   const r = rows[WO.i], id = r.ex.id; woPrefill(r);
@@ -186,32 +186,32 @@ function woRender() {
   const segs = rows.map((x, k) => `<i class="${exLogged(d, x) ? 'done' : k === WO.i ? 'cur' : ''}"></i>`).join('');
   const sets = Array.from({ length: Math.max(r.sets, logs.length) }, (_, k) => { const s = logs[k]; const has = s && +s.r > 0;
     const isPR = has && today && today.pr && today.bestSet === s;
-    return `<li class="${has ? 'done' : k === (WO.edit != null ? WO.edit : firstOpen) ? 'cur' : ''} ${WO.edit === k ? 'edit' : ''}">${has ? `<button type="button" class="wo-set" data-act="wo-edit" data-k="${k}" aria-label="Change set ${k + 1}">` : '<span class="wo-set">'}
-      <span class="n">${has ? icon('check') : k + 1}</span>${has ? `<span class="num"><b>${fmt(+s.w || 0, (+s.w || 0) % 1 ? 1 : 0)} kg × ${s.r}</b></span>${isPR ? '<span class="pill acc">PR</span>' : ''}<span class="wo-ed">${icon('edit')}</span>` : `<span class="muted">${k === firstOpen ? 'Next set' : 'Set ' + (k + 1)}</span>`}${has ? '</button>' : '</span>'}</li>`; }).join('');
+    return `<li class="${has ? 'done' : k === (WO.edit != null ? WO.edit : firstOpen) ? 'cur' : ''} ${WO.edit === k ? 'edit' : ''}">${has ? `<button type="button" class="wo-set" data-act="wo-edit" data-k="${k}" aria-label="Alterar série ${k + 1}">` : '<span class="wo-set">'}
+      <span class="n">${has ? icon('check') : k + 1}</span>${has ? `<span class="num"><b>${fmt(+s.w || 0, (+s.w || 0) % 1 ? 1 : 0)} kg × ${s.r}</b></span>${isPR ? '<span class="pill acc">PR</span>' : ''}<span class="wo-ed">${icon('edit')}</span>` : `<span class="muted">${k === firstOpen ? 'Próxima série' : 'Série ' + (k + 1)}</span>`}${has ? '</button>' : '</span>'}</li>`; }).join('');
   const last = lastPerformance(id, d); const sug = suggestion(id, r.reps, d);
-  const lastTxt = last ? `Last time <span class="num">${last.sets.map(s => `${fmt(+s.w || 0, (+s.w || 0) % 1 ? 1 : 0)}×${s.r}`).join(', ')}</span>${sug ? ` → <b>${esc(sug.text.replace(/^Last best: [^→]*→\s*/, ''))}</b>` : ''}` : `First time — pick a weight you can lift for ${esc(r.reps)} reps with ${esc(r.rir)} in reserve.`;
+  const lastTxt = last ? `Última vez <span class="num">${last.sets.map(s => `${fmt(+s.w || 0, (+s.w || 0) % 1 ? 1 : 0)}×${s.r}`).join(', ')}</span>${sug ? ` → <b>${esc(sug.text.replace(/^Last best: [^→]*→\s*/, ''))}</b>` : ''}` : `Primeira vez — escolha uma carga que permita fazer ${esc(r.reps)} repetições com ${esc(r.rir)} em reserva.`;
   const nextEx = rows[WO.i + 1]; const allDone = rows.every(x => exLogged(d, x));
   const k = WO.edit != null ? WO.edit : firstOpen;
-  root.innerHTML = `<div class="wom" role="dialog" aria-label="Workout"><div class="wo-in">
-    <div class="wo-h"><button type="button" class="btn icon ghost" data-act="wo-close" aria-label="Close the workout">${icon('x')}</button><div class="t"><b>${esc(t.name)}</b><small>Exercise ${WO.i + 1} of ${rows.length}${d !== todayISO() ? ' · ' + esc(fmtDate(d)) : ''}</small></div>
-      <button type="button" class="btn icon ghost" data-act="rest-set" aria-label="Rest timer settings" title="Rest timer settings">${icon('clock')}</button>${swapBtnHTML(d, r).replace('class="swap-btn', 'class="btn icon ghost swap-btn')}</div>
+  root.innerHTML = `<div class="wom" role="dialog" aria-label="Treino"><div class="wo-in">
+    <div class="wo-h"><button type="button" class="btn icon ghost" data-act="wo-close" aria-label="Fechar o treino">${icon('x')}</button><div class="t"><b>${esc(t.name)}</b><small>Exercício ${WO.i + 1} de ${rows.length}${d !== todayISO() ? ' · ' + esc(fmtDate(d)) : ''}</small></div>
+      <button type="button" class="btn icon ghost" data-act="rest-set" aria-label="Configurações do cronômetro de descanso" title="Configurações do cronômetro de descanso">${icon('clock')}</button>${swapBtnHTML(d, r).replace('class="swap-btn', 'class="btn icon ghost swap-btn')}</div>
     <div class="wo-segs" style="grid-template-columns:repeat(${rows.length},1fr)">${segs}</div>
     <div class="wo-b">
-      <div><h2 class="wo-ex"><span data-tip-ex="${id}">${esc(r.ex.name)}</span></h2><div class="muted small">${esc([exGroupOf(r.ex), SLOTS[r.slot] && SLOTS[r.slot].label !== exGroupOf(r.ex) ? SLOTS[r.slot].label : ''].filter(Boolean).join(' · '))}${r.daySwap ? ' · swapped today' : ''}</div></div>
-      <div class="wo-tgt">${typeBadge(r)}<b class="num">${r.sets} × ${esc(r.reps)}</b><span class="muted">RIR ${esc(r.rir)} · rest ${mmss(restFor(r) * 1000)}</span></div>
+      <div><h2 class="wo-ex"><span data-tip-ex="${id}">${esc(r.ex.name)}</span></h2><div class="muted small">${esc([exGroupOf(r.ex), SLOTS[r.slot] && SLOTS[r.slot].label !== exGroupOf(r.ex) ? SLOTS[r.slot].label : ''].filter(Boolean).join(' · '))}${r.daySwap ? ' · trocado hoje' : ''}</div></div>
+      <div class="wo-tgt">${typeBadge(r)}<b class="num">${r.sets} × ${esc(r.reps)}</b><span class="muted">RIR ${esc(r.rir)} · descanso ${mmss(restFor(r) * 1000)}</span></div>
       ${r.note ? `<div class="small" style="color:var(--accent-text)">${esc(r.note)}</div>` : ''}
       <div class="wo-last">${lastTxt}</div>
-      ${full ? `<div class="card wo-full"><b>All ${r.sets} sets logged</b><p class="muted small">${nextEx ? 'Next: ' + esc(nextEx.ex.name) : allDone ? 'That was the last exercise.' : 'Some exercises still have sets left.'}</p></div>`
+      ${full ? `<div class="card wo-full"><b>Todas as ${r.sets} séries registradas</b><p class="muted small">${nextEx ? 'Próximo: ' + esc(nextEx.ex.name) : allDone ? 'Esse foi o último exercício.' : 'Alguns exercícios ainda têm séries restantes.'}</p></div>`
       : `<div class="wo-steps">
-        <div class="wo-stp"><label for="wo-w">${woWeightLabel(id)}</label><input id="wo-w" class="num" type="number" inputmode="decimal" step="any" min="0" value="${WO.w[id] === '' ? '' : esc(WO.w[id])}" placeholder="0" data-input="wo-w"><span class="pm"><button type="button" data-act="wo-step" data-k="w" data-v="-1" aria-label="Less weight">−</button><button type="button" data-act="wo-step" data-k="w" data-v="1" aria-label="More weight">+</button></span></div>
-        <div class="wo-stp"><label for="wo-r">Reps</label><input id="wo-r" class="num" type="number" inputmode="numeric" min="0" max="100" value="${esc(WO.r[id])}" data-input="wo-r"><span class="pm"><button type="button" data-act="wo-step" data-k="r" data-v="-1" aria-label="One rep fewer">−</button><button type="button" data-act="wo-step" data-k="r" data-v="1" aria-label="One rep more">+</button></span></div></div>`}
-      ${full ? (nextEx ? `<button type="button" class="btn primary block big" data-act="wo-go" data-i="${WO.i + 1}">Next exercise ${icon('right')}</button>` : `<button type="button" class="btn primary block big" data-act="wo-finish">${icon('check')}Finish workout</button>`)
-        : `<button type="button" class="btn primary block big" data-act="wo-log">${icon('check')}${WO.edit != null ? `Update set ${k + 1}` : k < r.sets ? `Log set ${k + 1} of ${r.sets}` : `Log extra set ${k + 1}`}</button>${WO.edit != null ? `<div class="row" style="gap:8px"><button type="button" class="btn block" data-act="wo-edit-x">Cancel</button><button type="button" class="btn block danger" data-act="wo-unlog">${icon('trash')}Remove set ${k + 1}</button></div>` : ''}`}
+        <div class="wo-stp"><label for="wo-w">${woWeightLabel(id)}</label><input id="wo-w" class="num" type="number" inputmode="decimal" step="any" min="0" value="${WO.w[id] === '' ? '' : esc(WO.w[id])}" placeholder="0" data-input="wo-w"><span class="pm"><button type="button" data-act="wo-step" data-k="w" data-v="-1" aria-label="Menos carga">−</button><button type="button" data-act="wo-step" data-k="w" data-v="1" aria-label="Mais carga">+</button></span></div>
+        <div class="wo-stp"><label for="wo-r">Repetições</label><input id="wo-r" class="num" type="number" inputmode="numeric" min="0" max="100" value="${esc(WO.r[id])}" data-input="wo-r"><span class="pm"><button type="button" data-act="wo-step" data-k="r" data-v="-1" aria-label="Uma repetição a menos">−</button><button type="button" data-act="wo-step" data-k="r" data-v="1" aria-label="Uma repetição a mais">+</button></span></div></div>`}
+      ${full ? (nextEx ? `<button type="button" class="btn primary block big" data-act="wo-go" data-i="${WO.i + 1}">Próximo exercício ${icon('right')}</button>` : `<button type="button" class="btn primary block big" data-act="wo-finish">${icon('check')}Finalizar treino</button>`)
+        : `<button type="button" class="btn primary block big" data-act="wo-log">${icon('check')}${WO.edit != null ? `Atualizar série ${k + 1}` : k < r.sets ? `Registrar série ${k + 1} de ${r.sets}` : `Registrar série extra ${k + 1}`}</button>${WO.edit != null ? `<div class="row" style="gap:8px"><button type="button" class="btn block" data-act="wo-edit-x">Cancelar</button><button type="button" class="btn block danger" data-act="wo-unlog">${icon('trash')}Remover série ${k + 1}</button></div>` : ''}`}
       <ol class="wo-sets">${sets}</ol>
-      ${allDone && !S.done[d] && !(full && !nextEx) ? `<button type="button" class="btn block" data-act="wo-finish">${icon('check')}Every set is logged — finish the workout</button>` : ''}
+      ${allDone && !S.done[d] && !(full && !nextEx) ? `<button type="button" class="btn block" data-act="wo-finish">${icon('check')}Todas as séries foram registradas — finalize o treino</button>` : ''}
     </div>
     ${rtHTML()}
-    <div class="wo-f"><button type="button" class="btn" data-act="wo-go" data-i="${WO.i - 1}" ${WO.i ? '' : 'disabled'}>${icon('left')}Voltar</button><button type="button" class="btn icon" data-act="wo-list" aria-label="All exercises" title="All exercises">${icon('list')}</button><button type="button" class="btn" data-act="wo-go" data-i="${WO.i + 1}" ${nextEx ? '' : 'disabled'}>${nDone ? 'Next' : 'Skip'}${icon('right')}</button></div>
+    <div class="wo-f"><button type="button" class="btn" data-act="wo-go" data-i="${WO.i - 1}" ${WO.i ? '' : 'disabled'}>${icon('left')}Voltar</button><button type="button" class="btn icon" data-act="wo-list" aria-label="Todos os exercícios" title="Todos os exercícios">${icon('list')}</button><button type="button" class="btn" data-act="wo-go" data-i="${WO.i + 1}" ${nextEx ? '' : 'disabled'}>${nDone ? 'Próximo' : 'Pular'}${icon('right')}</button></div>
   </div></div>`;
 }
 function woLog() {

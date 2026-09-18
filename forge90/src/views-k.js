@@ -7,18 +7,18 @@
 
 // id, name, width ('full' spans the page; half-width panels side by side share a row), short description
 const DASH_PANELS = [
-  ['hero', 'Cycle overview', 'full', 'Day count, phase and the 13-week bar'],
-  ['stats', 'Body stats', 'full', 'Weight, body fat, lean mass, trend and distance to goal'],
-  ['today', 'Today', 'half', 'Today’s workout with set logging, macros and meals'],
-  ['outlook', 'Goal outlook', 'half', 'Projection, trend coach and quick weigh-in'],
-  ['gym', 'Gym card', 'half', 'Your membership barcode for check-in'],
-  ['week', 'Next 7 days', 'full', 'The coming week at a glance'],
-  ['prs', 'Recent PRs', 'half', 'Your latest personal records']
+  ['hero', 'Visão geral do ciclo', 'full', 'Contagem de dias, fase e barra de 13 semanas'],
+  ['stats', 'Dados corporais', 'full', 'Peso, gordura corporal, massa magra, tendência e distância até a meta'],
+  ['today', 'Hoje', 'half', 'Treino de hoje com registro de séries, macros e refeições'],
+  ['outlook', 'Projeção da meta', 'half', 'Projeção, análise de tendência e pesagem rápida'],
+  ['gym', 'Cartão da academia', 'half', 'Código de barras do seu cartão para entrada'],
+  ['week', 'Próximos 7 dias', 'full', 'Visão rápida da próxima semana'],
+  ['prs', 'Recordes recentes', 'half', 'Seus recordes pessoais mais recentes']
 ];
 // the phone's Today page has its own panels and its own saved layout (see views-l)
 const LAYOUTS = {
-  dash: { key: 'dashLayout', panels: () => DASH_PANELS, title: 'Customize dashboard', defHidden: {}, where: 'dashboard' },
-  today: { key: 'todayLayout', panels: () => TODAY_PANELS, title: 'Customize Today', defHidden: { gym: 1 }, where: 'Today page' }
+  dash: { key: 'dashLayout', panels: () => DASH_PANELS, title: 'Personalizar painel', defHidden: {}, where: 'painel' },
+  today: { key: 'todayLayout', panels: () => TODAY_PANELS, title: 'Personalizar Hoje', defHidden: { gym: 1 }, where: 'página Hoje' }
 };
 const layoutOf = L => LAYOUTS[L] || LAYOUTS.dash;
 const DASH_DEFAULT = DASH_PANELS.map(p => p[0]);
@@ -44,22 +44,22 @@ function dashLayoutHTML(html, notes) {
     else out.push(`<div class="g-split dash-row">${wrap(grp[0])}<div class="dash-stack">${grp.slice(1).map(wrap).join('')}</div></div>`);
   }
   const nHid = dashOrder().filter(id => dashHidden(id)).length;
-  return `<div class="dash"><div class="dash-top">${nHid ? `<span class="tiny muted">${nHid} panel${nHid === 1 ? '' : 's'} hidden</span>` : ''}<button class="btn sm ghost" data-act="dash-edit">${icon('grid')}Customize</button></div>
-    ${notes || ''}${out.join('') || `<div class="card empty-state">${icon('grid')}<div>Every panel is hidden. <button class="btn sm" data-act="dash-edit">Customize</button> to bring some back.</div></div>`}</div>`;
+  return `<div class="dash"><div class="dash-top">${nHid ? `<span class="tiny muted">${nHid} panel${nHid === 1 ? '' : 's'} hidden</span>` : ''}<button class="btn sm ghost" data-act="dash-edit">${icon('grid')}Personalizar</button></div>
+    ${notes || ''}${out.join('') || `<div class="card empty-state">${icon('grid')}<div>Todos os painéis estão ocultos. <button class="btn sm" data-act="dash-edit">Personalize</button> para exibir alguns novamente.</div></div>`}</div>`;
 }
 
 /* ---------- Customize ---------- */
 function dashEditor(L) {
   L = L === 'today' ? 'today' : 'dash'; const C = layoutOf(L); const order = dashOrder(L);
   const rows = order.map((id, k) => { const [, name, size, desc] = dashInfo(id, L); const hid = dashHidden(id, L); const lA = L === 'today' ? ' data-l="today"' : '';
-    return `<li class="dl-row ${hid ? 'off' : ''}" data-id="${id}"><span class="dl-grip" title="Drag to move" aria-hidden="true">${icon('grip')}</span>
-      <span class="dl-t"><b>${esc(name)}</b><small>${esc(desc)}${L === 'dash' ? ` · ${size === 'full' ? 'full width' : 'half width'}` : ''}${hid ? ' · hidden' : ''}</small></span>
+    return `<li class="dl-row ${hid ? 'off' : ''}" data-id="${id}"><span class="dl-grip" title="Arraste para mover" aria-hidden="true">${icon('grip')}</span>
+      <span class="dl-t"><b>${esc(name)}</b><small>${esc(desc)}${L === 'dash' ? ` · ${size === 'full' ? 'largura total' : 'meia largura'}` : ''}${hid ? ' · oculto' : ''}</small></span>
       <span class="dl-acts"><button type="button" class="btn icon ghost sm" data-act="dash-move" data-id="${id}" data-v="-1"${lA} ${k ? '' : 'disabled'} aria-label="Mover ${esc(name)} para cima">${icon('arrowUp')}</button><button type="button" class="btn icon ghost sm" data-act="dash-move" data-id="${id}" data-v="1"${lA} ${k < order.length - 1 ? '' : 'disabled'} aria-label="Mover ${esc(name)} para baixo">${icon('arrowDown')}</button>
-        <button type="button" class="btn sm ${hid ? 'primary' : 'ghost'}" data-act="dash-hide" data-id="${id}"${lA} aria-pressed="${hid}">${icon(hid ? 'eye' : 'eyeOff')}${hid ? 'Show' : 'Hide'}</button></span></li>`; }).join('');
-  modal(`<div class="dl-m"><div class="row"><h2 style="flex:1">${C.title}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Close">${icon('x')}</button></div>
-    <div class="tiny muted" style="margin:2px 0 12px">${L === 'dash' ? 'Drag panels by the handle or use the arrows. Half-width panels next to each other share a row on wide screens: the first gets the wide column and the rest stack beside it.' : 'Drag panels by the handle or use the arrows to put them in the order you use them.'} Changes show on the ${C.where} straight away and are saved to your ${AUTH.mode === 'server' ? 'account' : 'plan'}.</div>
+        <button type="button" class="btn sm ${hid ? 'primary' : 'ghost'}" data-act="dash-hide" data-id="${id}"${lA} aria-pressed="${hid}">${icon(hid ? 'eye' : 'eyeOff')}${hid ? 'Mostrar' : 'Ocultar'}</button></span></li>`; }).join('');
+  modal(`<div class="dl-m"><div class="row"><h2 style="flex:1">${C.title}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
+    <div class="tiny muted" style="margin:2px 0 12px">${L === 'dash' ? 'Arraste os painéis pela alça ou use as setas. Em telas largas, painéis de meia largura lado a lado compartilham uma linha: o primeiro ocupa a coluna maior e os demais ficam empilhados ao lado.' : 'Arraste os painéis pela alça ou use as setas para colocá-los na ordem em que você usa.'} As alterações aparecem imediatamente em ${C.where} e são salvas ${AUTH.mode === 'server' ? 'na sua conta' : 'no seu plano'}.</div>
     <ul class="dl-list" id="dl-list" data-l="${L}">${rows}</ul>
-    <div class="row wrap" style="justify-content:flex-end;gap:8px;margin-top:14px"><button class="btn ghost" data-act="dash-reset"${L === 'today' ? ' data-l="today"' : ''} style="margin-right:auto">${icon('undo')}Reset to default</button><button class="btn primary" data-act="close-modal">Done</button></div></div>`, 'dl-modal');
+    <div class="row wrap" style="justify-content:flex-end;gap:8px;margin-top:14px"><button class="btn ghost" data-act="dash-reset"${L === 'today' ? ' data-l="today"' : ''} style="margin-right:auto">${icon('undo')}Restaurar padrão</button><button class="btn primary" data-act="close-modal">Concluído</button></div></div>`, 'dl-modal');
 }
 function dashSave(order, hidden, L) {
   const C = layoutOf(L), cur = S[C.key] || {};
@@ -90,5 +90,5 @@ Object.assign(ACT, {
   'dash-move': el => { const L = el.dataset.l; const o = dashOrder(L); const i = o.indexOf(el.dataset.id), j = i + +el.dataset.v; if (i < 0 || j < 0 || j >= o.length) return; [o[i], o[j]] = [o[j], o[i]]; dashSave(o, null, L); dashEditor(L);
     const b = $(`#dl-list [data-act="dash-move"][data-id="${el.dataset.id}"][data-v="${el.dataset.v}"]`); if (b && !b.disabled) b.focus(); },
   'dash-hide': el => { const L = el.dataset.l; const id = el.dataset.id; dashSave(null, { [id]: !dashHidden(id, L) }, L); dashEditor(L); },
-  'dash-reset': el => { const L = el.dataset.l; delete S[layoutOf(L).key]; saveState(); render(); dashEditor(L); toast(L === 'today' ? 'Today layout reset' : 'Dashboard layout reset'); }
+  'dash-reset': el => { const L = el.dataset.l; delete S[layoutOf(L).key]; saveState(); render(); dashEditor(L); toast(L === 'today' ? 'Layout de Hoje restaurado' : 'Layout do painel restaurado'); }
 });

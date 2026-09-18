@@ -283,8 +283,8 @@ function gymSave(form) {
 function gymScanned(code, fmt) {
   const d = Object.assign({}, (SCN && SCN.draft) || GC || {}, { code, fmt: fmt || gymAutoFmt(code) }); scanStop(); SCN = null;
   if (d.fmt === 'code39') d.code = d.code.toUpperCase();
-  if (!GYM_FMTS.some(x => x[0] === d.fmt)) { toast('That barcode type isn’t supported — type the number instead.'); d.fmt = 'auto'; }
-  gymCardModal(d); toast(`Read ${fmtName(d.fmt)}: ${d.fmt === 'qr' && d.code.length > 30 ? d.code.slice(0, 30) + '…' : d.code}`);
+  if (!GYM_FMTS.some(x => x[0] === d.fmt)) { toast('Esse tipo de código de barras não é compatível — digite o número.'); d.fmt = 'auto'; }
+  gymCardModal(d); toast(`Lido ${fmtName(d.fmt)}: ${d.fmt === 'qr' && d.code.length > 30 ? d.code.slice(0, 30) + '…' : d.code}`);
 }
 // the dashboard panel
 function gymPanelHTML() {
