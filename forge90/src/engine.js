@@ -471,7 +471,7 @@ function latestStats() { return statsOn(null); }
 
 /* ---------- energy targets (Katch–McArdle) ---------- */
 const goalKind = () => { const g = S.settings.goal; return g === 'bulk' || g === 'maintain' ? g : 'cut'; };
-// lb/week the plan expects the scale to move: negative cutting, positive bulking, 0 at maintenance
+// kg/semana que o plano espera que a balança varie: negativo em perda, positivo em ganho, 0 em manutenção
 function planRate(w) {
   const st = S.settings; const k = goalKind();
   if (k === 'maintain') return 0;
@@ -713,27 +713,27 @@ function weightTrend() {
   const pts = ws.filter(x => x.d >= from).map(x => [dayDiff(from, x.d), x.w]);
   if (pts.length < 3 || pts[pts.length - 1][0] - pts[0][0] < 7) return null;
   const lr = linreg(pts); if (!lr) return null;
-  const rate = -lr.m * 7;                       // lb lost per week (negative while gaining)
+  const rate = -lr.m * 7;                       // kg perdidos por semana (negativo durante ganho)
   const kind = goalKind(); const st0 = latestStats() || {};
   let advice = null, delta = 0;
   if (kind === 'maintain') {
-    const drift = -rate;                        // lb/wk on the scale
-    if (Math.abs(drift) <= 0.35) advice = `Holding steady: ${drift >= 0 ? '+' : ''}${drift.toFixed(2)} lb/wk. Maintenance calories look right.`;
+    const drift = -rate;                        // kg/sem na balança
+    if (Math.abs(drift) <= 0.35) advice = `Peso estável: ${drift >= 0 ? '+' : ''}${drift.toFixed(2)} kg/sem. As calorias de manutenção parecem adequadas.`;
     else { delta = drift > 0 ? -150 : 150; advice = `Você está ${drift > 0 ? 'ganhando' : 'perdendo'} ${Math.abs(drift).toFixed(2)} kg/sem enquanto tenta manter. ${delta > 0 ? 'Adicione' : 'Reduza'} ${Math.abs(delta)} kcal/dia.`; }
     return { rate, advice, delta, points: pts.length, kind };
   }
   if (kind === 'bulk') {
-    const gain = -rate;                         // lb/wk gained
+    const gain = -rate;                         // kg/sem ganhos
     const target = bulkKg(st0.w);
     if (gain < target * 0.5) { delta = gain < 0 ? 300 : 200; advice = `Você está ganhando ${gain.toFixed(2)} kg/sem para uma meta de ${target.toFixed(2)} kg/sem. Adicione ${delta} kcal/dia.`; }
     else if (gain > target * 1.6) { delta = -150; advice = `Você está ganhando ${gain.toFixed(2)} kg/sem — acima da meta de ${target.toFixed(2)} kg/sem, e o excedente tende a aumentar principalmente gordura. Reduza ${-delta} kcal/dia.`; }
-    else advice = `On track: ${gain.toFixed(2)} lb/wk against a ${target.toFixed(2)} lb/wk target. Keep going.`;
+    else advice = `No ritmo planejado: ${gain.toFixed(2)} kg/sem para uma meta de ${target.toFixed(2)} kg/sem. Continue assim.`;
     return { rate, advice, delta, points: pts.length, kind };
   }
   const target = S.settings.rate;
   if (rate < target * 0.7) { delta = rate < target * 0.4 ? -200 : -125; advice = `Você está perdendo ${rate.toFixed(2)} kg/sem para uma meta de ${target} kg/sem. Reduza ${-delta} kcal/dia.`; }
   else if (rate > target * 1.35 && rate > 1.5) { delta = 150; advice = `Você está perdendo ${rate.toFixed(2)} kg/sem — mais rápido que o planejado. Adicione ${delta} kcal/dia para preservar massa muscular e qualidade do treino.`; }
-  else advice = `On track: ${rate.toFixed(2)} lb/wk vs ${target} lb/wk target. Keep going.`;
+  else advice = `No ritmo planejado: ${rate.toFixed(2)} kg/sem para uma meta de ${target} kg/sem. Continue assim.`;
   return { rate, advice, delta, points: pts.length, kind };
 }
 function movingAvg(ws, days = 7) {
