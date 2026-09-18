@@ -699,7 +699,7 @@ function suggestion(exId, reps, beforeDate) {
   const w = last.bestSet ? +last.bestSet.w : 0;
   const allTop = last.sets.every(s => +s.r >= hi);
   const inc = /Dumbbell|DB/.test(ex.name) || ex.group === 'Shoulders' || ex.group === 'Biceps' || ex.group === 'Triceps' ? 2 : 5;
-  if (isBW(exId)) return { text: `Last best: ${last.bestReps} reps → aim for ${last.bestReps + 1}+`, last };
+  if (isBW(exId)) return { text: `Melhor anterior: ${last.bestReps} repetições → tente ${last.bestReps + 1}+`, last };
   if (ex.assist) return { text: allTop ? `Chegou ao topo da faixa — reduza a assistência para ${Math.max(0, w - 5)} kg` : `Mantenha ${w} kg de assistência e adicione uma repetição por série`, last };
   if (allTop) return { text: `Chegou a ${hi}+ em todas as séries → suba para ${w + inc} kg e busque ${lo}+`, last };
   return { text: `Mantenha ${w} kg e supere ${last.sets.map(s => s.r).join('/')} repetições`, last };
@@ -719,20 +719,20 @@ function weightTrend() {
   if (kind === 'maintain') {
     const drift = -rate;                        // lb/wk on the scale
     if (Math.abs(drift) <= 0.35) advice = `Holding steady: ${drift >= 0 ? '+' : ''}${drift.toFixed(2)} lb/wk. Maintenance calories look right.`;
-    else { delta = drift > 0 ? -150 : 150; advice = `You’re ${drift > 0 ? 'gaining' : 'losing'} ${Math.abs(drift).toFixed(2)} lb/wk while aiming to hold. ${delta > 0 ? 'Add' : 'Trim'} ${Math.abs(delta)} kcal/day.`; }
+    else { delta = drift > 0 ? -150 : 150; advice = `Você está ${drift > 0 ? 'ganhando' : 'perdendo'} ${Math.abs(drift).toFixed(2)} kg/sem enquanto tenta manter. ${delta > 0 ? 'Adicione' : 'Reduza'} ${Math.abs(delta)} kcal/dia.`; }
     return { rate, advice, delta, points: pts.length, kind };
   }
   if (kind === 'bulk') {
     const gain = -rate;                         // lb/wk gained
     const target = bulkKg(st0.w);
-    if (gain < target * 0.5) { delta = gain < 0 ? 300 : 200; advice = `You’re gaining ${gain.toFixed(2)} lb/wk against a ${target.toFixed(2)} lb/wk target. Add ${delta} kcal/day.`; }
-    else if (gain > target * 1.6) { delta = -150; advice = `You’re gaining ${gain.toFixed(2)} lb/wk — faster than the ${target.toFixed(2)} lb/wk target, and the extra is mostly fat. Trim ${-delta} kcal/day.`; }
+    if (gain < target * 0.5) { delta = gain < 0 ? 300 : 200; advice = `Você está ganhando ${gain.toFixed(2)} kg/sem para uma meta de ${target.toFixed(2)} kg/sem. Adicione ${delta} kcal/dia.`; }
+    else if (gain > target * 1.6) { delta = -150; advice = `Você está ganhando ${gain.toFixed(2)} kg/sem — acima da meta de ${target.toFixed(2)} kg/sem, e o excedente tende a aumentar principalmente gordura. Reduza ${-delta} kcal/dia.`; }
     else advice = `On track: ${gain.toFixed(2)} lb/wk against a ${target.toFixed(2)} lb/wk target. Keep going.`;
     return { rate, advice, delta, points: pts.length, kind };
   }
   const target = S.settings.rate;
-  if (rate < target * 0.7) { delta = rate < target * 0.4 ? -200 : -125; advice = `You’re losing ${rate.toFixed(2)} lb/wk vs a ${target} lb/wk target. Trim ${-delta} kcal/day.`; }
-  else if (rate > target * 1.35 && rate > 1.5) { delta = 150; advice = `You’re losing ${rate.toFixed(2)} lb/wk — faster than planned. Add ${delta} kcal/day to protect muscle and training quality.`; }
+  if (rate < target * 0.7) { delta = rate < target * 0.4 ? -200 : -125; advice = `Você está perdendo ${rate.toFixed(2)} kg/sem para uma meta de ${target} kg/sem. Reduza ${-delta} kcal/dia.`; }
+  else if (rate > target * 1.35 && rate > 1.5) { delta = 150; advice = `Você está perdendo ${rate.toFixed(2)} kg/sem — mais rápido que o planejado. Adicione ${delta} kcal/dia para preservar massa muscular e qualidade do treino.`; }
   else advice = `On track: ${rate.toFixed(2)} lb/wk vs ${target} lb/wk target. Keep going.`;
   return { rate, advice, delta, points: pts.length, kind };
 }
