@@ -27,7 +27,7 @@ function viewDashboard() {
   const dW = cur.w - st.startWeight, dBF = cur.bf - st.startBF, dL = cur.lbm - startLBM;
   const eyebrow = idx < 0 ? `Começa em ${fmtDate(start, { weekday: 'long', month: 'long', day: 'numeric' })}` : `Ciclo ${cyc} · Semana ${ph.wic} de 13 · ${ph.name}`;
   const title = idx < 0 ? `${-idx} dia${-idx === 1 ? '' : 's'} até o Dia 1` : cyc === 1 && idx < LAUNCH_DAYS ? `Dia ${idx + 1} de 90` : `Dia ${idx + 1}`;
-  const bars = Array.from({ length: 13 }, (_, i) => { const w = cStartWk + i; const p = phaseForWeek(w); const cw = idx < 0 ? 0 : wk; return `<i class="${p.cls} ${w < cw ? 'done' : ''} ${w === cw && idx >= 0 ? 'now' : ''}" data-tip="Week ${w} · ${p.name}"></i>`; }).join('');
+  const bars = Array.from({ length: 13 }, (_, i) => { const w = cStartWk + i; const p = phaseForWeek(w); const cw = idx < 0 ? 0 : wk; return `<i class="${p.cls} ${w < cw ? 'done' : ''} ${w === cw && idx >= 0 ? 'now' : ''}" data-tip="Semana ${w} · ${p.name}"></i>`; }).join('');
   const barLabels = (cyc === 1 ? CYCLE1 : CYCLEN).map(p => `<span>${p.key === 'test' ? 'Teste' : p.name}</span>`).join('');
   const day = A.days[focus];
   const tile = (lbl, ic, val, unit, delta, good, extra = '') => `<div class="card stat"><div class="lbl">${icon(ic)}${lbl}</div><div class="val">${val}<small>${unit}</small></div><div class="delta ${delta == null ? 'neu' : good ? 'good' : 'bad'}">${delta == null ? extra : delta}</div></div>`;
@@ -55,7 +55,7 @@ function viewDashboard() {
     return `<div class="row" style="padding:7px 0;border-top:1px solid var(--line)" data-tip-meal="${focus}|${m.slot}"><span style="font-size:20px;width:26px;text-align:center">${esc(m.r.emoji)}</span><div style="flex:1;min-width:0"><div class="tiny muted" style="text-transform:uppercase;letter-spacing:.08em;font-weight:700">${SLOT_LABEL[m.slot]}</div><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.r.name)} ${batchBadge(b)}${shareBadge(focus, m.slot)}</div></div><span class="num small"><b>${fmt(m.m.k)}</b> kcal · <span style="color:var(--prot)">${fmt(m.m.p)}P</span></span><button class="btn icon ghost qe-pen" data-act="qe" data-d="${focus}" data-f="meal:${m.slot}" title="Trocar esta refeição" aria-label="Trocar ${SLOT_LABEL[m.slot].toLowerCase()}">${icon('edit')}</button></div>`; }).join('');
   const kfrac = day.totals.k / day.tg.kcal;
   const todayCard = `<div class="card"><div class="card-h"><h2>${focus === today ? 'Hoje' : fmtDate(focus, { weekday: 'long', month: 'short', day: 'numeric' })}</h2><span class="pill ${day.isTrain ? 'acc' : ''}">${day.isTrain ? 'Dia de treino' : 'Dia de descanso'}</span>${syncBtnHTML('sm')}<a class="btn sm ghost" href="#/day/${focus}">Abrir dia ${icon('right')}</a></div>
-    <div class="qe-links"><button class="btn sm" data-act="qe" data-d="${focus}" data-f="wo">${icon('dumbbell')}Edit workout</button><button class="btn sm" data-act="qe" data-d="${focus}" data-f="meals">${icon('food')}Edit meals</button>${focus === today ? scanBtnHTML('today', 'sm') + addFoodBtnHTML('', 'sm') : ''}${day.entry.w ? `<button class="btn sm primary" data-act="wo-open" data-d="${focus}" title="Um exercício por vez, com cronômetro de descanso">${icon('play')}Modo treino</button>` : ''}<a class="btn sm ghost" href="#/workouts">${icon('grip')}Workout plan</a><a class="btn sm ghost" href="#/foods">${icon('book')}Recipes</a></div>
+    <div class="qe-links"><button class="btn sm" data-act="qe" data-d="${focus}" data-f="wo">${icon('dumbbell')}Editar treino</button><button class="btn sm" data-act="qe" data-d="${focus}" data-f="meals">${icon('food')}Editar refeições</button>${focus === today ? scanBtnHTML('today', 'sm') + addFoodBtnHTML('', 'sm') : ''}${day.entry.w ? `<button class="btn sm primary" data-act="wo-open" data-d="${focus}" title="Um exercício por vez, com cronômetro de descanso">${icon('play')}Modo treino</button>` : ''}<a class="btn sm ghost" href="#/workouts">${icon('grip')}Plano de treino</a><a class="btn sm ghost" href="#/foods">${icon('book')}Receitas</a></div>
     ${wo}<hr class="sep"><div class="grid ring-row" style="grid-template-columns:auto 1fr;gap:20px;align-items:center">
       <div class="ring">${ringSVG(kfrac, 'var(--kcal)')}<div class="c"><b>${fmt(day.totals.k)}</b><span>de ${fmt(day.tg.kcal)} kcal</span></div></div>
       <div>${macroBars(day.totals, day.tg)}<div class="tiny muted" style="margin-top:6px">Multiplicadores de porção: proteína ×${day.pF.toFixed(2)} · carboidratos/gorduras ×${day.cF.toFixed(2)}</div></div></div>
@@ -115,7 +115,7 @@ function cellHTML(date, A, big, monthNum) {
   const outMonth = monthNum != null && dd.getMonth() + 1 !== monthNum;
   if (!inPlan(date)) return `<div class="cell out" style="${outMonth ? 'opacity:.3' : ''}"><div class="cell-head"><span class="dn">${dd.getDate()}</span>${big ? `<span class="dt">${DOW[dd.getDay()]}</span>` : ''}</div><div class="tiny muted" style="margin:auto;text-align:center">Outside plan</div></div>`;
   const day = A.days[date]; const e = S.plan[date]; const today = date === todayISO();
-  const wo = e.w ? woChip(date, e) : `<div class="rest-lbl">Rest</div>`;
+  const wo = e.w ? woChip(date, e) : `<div class="rest-lbl">Descanso</div>`;
   const meals = MEAL_SLOTS.map(slot => {
     const rid = e.m[slot]; const lbl = big ? `<div class="slot-l">${SLOT_LABEL[slot]}</div>` : '';
     if (!rid) return lbl + `<div class="slot-empty" data-drop="slot" data-date="${date}" data-slot="${slot}">+ ${SLOT_LABEL[slot]}</div>`;
@@ -127,7 +127,7 @@ function cellHTML(date, A, big, monthNum) {
   const kf = Math.min(1.1, day.totals.k / day.tg.kcal);
   const off = Math.abs(day.totals.k - day.tg.kcal) > 120;
   return `<div class="cell ${e.w ? 'train' : ''} ${today ? 'today' : ''}" data-drop="cell" data-date="${date}" data-go="${date}">
-    <div class="cell-head"><span class="dn">${dd.getDate()}</span><span class="dt">${big ? DOW[dd.getDay()] + ' · ' : ''}D${planIndex(date) + 1}</span>${S.done[date] ? `<span class="ck" data-tip="Workout completed">${icon('check')}</span>` : ''}</div>
+    <div class="cell-head"><span class="dn">${dd.getDate()}</span><span class="dt">${big ? DOW[dd.getDay()] + ' · ' : ''}D${planIndex(date) + 1}</span>${S.done[date] ? `<span class="ck" data-tip="Treino concluído">${icon('check')}</span>` : ''}</div>
     ${wo}${meals}
     <div class="cell-foot"><div class="k">${fmt(day.totals.k)}<span>/ ${fmt(day.tg.kcal)} kcal</span></div><div class="mini"><i style="width:${kf * 100 / 1.1}%;${off ? 'background:var(--warn)' : ''}"></i></div>
     <div class="pcf"><span class="p"><b>${fmt(day.totals.p)}</b>P</span><span class="c"><b>${fmt(day.totals.c)}</b>C</span><span class="f"><b>${fmt(day.totals.f)}</b>F</span></div></div></div>`;
@@ -149,7 +149,7 @@ function agendaHTML(dates, A) {
     }).join('');
     return `<div class="ag-day ${e.w ? 'train' : ''} ${today ? 'today' : ''}" data-drop="cell" data-date="${date}" data-go="${date}">
       <div class="ag-date"><span class="dw">${DOW[dd.getDay()]}</span><b>${dd.getDate()}</b><span class="dx">D${planIndex(date) + 1}</span></div>
-      <div style="min-width:0"><div class="ag-top">${e.w ? woChip(date, e) : '<span class="rest-lbl">Rest day</span>'}${S.done[date] ? `<span class="pill acc">${icon('check').replace('<svg', '<svg style="width:12px;height:12px"')}Done</span>` : ''}<span class="ag-k">${fmt(day.totals.k)} <span>/ ${fmt(day.tg.kcal)} kcal</span></span></div>
+      <div style="min-width:0"><div class="ag-top">${e.w ? woChip(date, e) : '<span class="rest-lbl">Dia de descanso</span>'}${S.done[date] ? `<span class="pill acc">${icon('check').replace('<svg', '<svg style="width:12px;height:12px"')}Concluído</span>` : ''}<span class="ag-k">${fmt(day.totals.k)} <span>/ ${fmt(day.tg.kcal)} kcal</span></span></div>
         <div class="ag-meals">${meals}</div>
         <div class="pcf"><span class="p"><b>${fmt(day.totals.p)}</b>g protein</span><span class="c"><b>${fmt(day.totals.c)}</b>g carbs</span><span class="f"><b>${fmt(day.totals.f)}</b>g fat</span></div></div></div>`;
   }).join('');
@@ -166,7 +166,7 @@ function viewCalendar() {
   if (UI.calView === 'week') {
     const days = Array.from({ length: 7 }, (_, i) => addDays(UI.calWeek, i));
     const pw = days.find(inPlan);
-    title = `${fmtDate(days[0], { month: 'short', day: 'numeric' })} – ${fmtDate(days[6], { month: 'short', day: 'numeric' })}` + (pw ? ` <span class="muted" style="font-size:14px;font-weight:500">· Week ${planWeek(pw)}</span>` : '');
+    title = `${fmtDate(days[0], { month: 'short', day: 'numeric' })} – ${fmtDate(days[6], { month: 'short', day: 'numeric' })}` + (pw ? ` <span class="muted" style="font-size:14px;font-weight:500">· Semana ${planWeek(pw)}</span>` : '');
     grid = compact ? agendaHTML(days, A) : `<div class="cal week">${days.map(d => `<div class="dow">${DOW[parseISO(d).getDay()]}</div>`).join('')}${days.map(d => cellHTML(d, A, true)).join('')}</div>`;
   } else {
     const [y, m] = UI.calMonth.split('-').map(Number);
@@ -179,13 +179,13 @@ function viewCalendar() {
   const showLib = UI.showLib && !compact;
   const lib = showLib ? libraryHTML() : '';
   const fitsCollapsed = compact && !UI.navCollapsed && innerWidth > 860 && (() => { const w = ($('#view') ? $('#view').clientWidth : innerWidth) + 162 - 48; const lib = UI.showLib && w >= 1130 ? 280 : 0; return (w - lib - 36) / 7 >= (UI.calView === 'week' ? 124 : 116); })();
-  return `<div class="page-head"><div class="t"><h1>Plan calendar</h1><p>${compact ? 'Tap any day for the full breakdown — swap meals or change the session there.' + (fitsCollapsed ? ` <button class="btn sm ghost" data-act="nav-toggle" style="vertical-align:middle">${icon('sideL')}Collapse the menu for the drag-and-drop grid</button>` : '') : 'Drag workouts and meals between days — portions and macros recalculate instantly. <span class="kbd">Ctrl</span>/<span class="kbd">Alt</span>-drag copies. Click a day for the full breakdown.'}</p></div>${inPlan(t) ? `<div class="row wrap">${scanBtnHTML('today')}${addFoodBtnHTML()}</div>` : ''}</div>
+  return `<div class="page-head"><div class="t"><h1>Calendário do plano</h1><p>${compact ? 'Toque em qualquer dia para ver todos os detalhes — troque refeições ou altere a sessão ali.' + (fitsCollapsed ? ` <button class="btn sm ghost" data-act="nav-toggle" style="vertical-align:middle">${icon('sideL')}Recolher o menu para usar a grade de arrastar e soltar</button>` : '') : 'Arraste treinos e refeições entre os dias — porções e macros são recalculados instantaneamente. Arrastar com <span class="kbd">Ctrl</span>/<span class="kbd">Alt</span> copia. Clique em um dia para ver todos os detalhes.'}</p></div>${inPlan(t) ? `<div class="row wrap">${scanBtnHTML('today')}${addFoodBtnHTML()}</div>` : ''}</div>
     <div class="cal-wrap ${showLib ? '' : 'nolib'}"><div>
       <div class="cal-bar"><button class="btn icon" data-act="cal-prev">${icon('left')}</button><h2>${title}</h2><button class="btn icon" data-act="cal-next">${icon('right')}</button>
-        <button class="btn sm" data-act="cal-today">Today</button><div class="spacer"></div>${syncBtnHTML('sm')}
-        <div class="seg"><button class="${UI.calView === 'month' ? 'on' : ''}" data-act="cal-view" data-v="month">Month</button><button class="${UI.calView === 'week' ? 'on' : ''}" data-act="cal-view" data-v="week">Week</button></div>
+        <button class="btn sm" data-act="cal-today">Hoje</button><div class="spacer"></div>${syncBtnHTML('sm')}
+        <div class="seg"><button class="${UI.calView === 'month' ? 'on' : ''}" data-act="cal-view" data-v="month">Mês</button><button class="${UI.calView === 'week' ? 'on' : ''}" data-act="cal-view" data-v="week">Semana</button></div>
         <button class="btn sm" data-act="undo" ${undoStack.length ? '' : 'disabled'}>${icon('undo')}Undo</button>
-        ${compact ? '' : `<button class="btn sm ${UI.showLib ? '' : 'primary'}" data-act="toggle-lib">${icon('panel')}${UI.showLib ? 'Hide' : 'Show'} library</button>`}</div>
+        ${compact ? '' : `<button class="btn sm ${UI.showLib ? '' : 'primary'}" data-act="toggle-lib">${icon('panel')}${UI.showLib ? 'Ocultar' : 'Mostrar'} biblioteca</button>`}</div>
       <div class="row wrap" style="gap:14px;margin-bottom:10px">${['push', 'pull', 'legs', 'deload', 'test'].map(k => `<span class="legend-dot"><i style="background:${KIND_VAR(k)}"></i>${{ push: 'Push', pull: 'Pull', legs: 'Legs', deload: 'Deload', test: 'PR test' }[k]}</span>`).join('')}
         <span class="legend-dot"><span class="bd cook">COOK ×4</span>batch cook</span><span class="legend-dot"><span class="bd left">↺ 2/4</span>leftover</span>${syncActive() ? `<span class="legend-dot"><span class="bd shr pend">${icon('users')}?</span>shared-meal change to review</span>` : ''}</div>
       ${grid}</div>${lib}</div>
@@ -201,13 +201,13 @@ function libraryHTML() {
     const rs = RECIPES.filter(r => recipeAllowed(r) && (UI.libFilter === 'all' || r.cat === UI.libFilter) && (!q || r.name.toLowerCase().includes(q))).sort((a, b) => isFav(b.id) - isFav(a.id));
     const hidden = RECIPES.filter(r => !recipeAllowed(r)).length;
     list = rs.map(r => { const m = RPS(r.id);
-      return `<div class="lib-item" draggable="true" data-drag="meal" data-from="lib" data-rid="${r.id}"><span class="em">${esc(r.emoji)}</span><div style="min-width:0"><b>${isFav(r.id) ? '<span class="fav-mark" title="Favorite">★</span> ' : ''}${esc(r.name)}${r.custom ? ' <span class="pill acc" style="font-size:9.5px;padding:1px 6px">Custom</span>' : ''}</b><span>${fmt(m.k)} kcal · ${fmt(m.p)}P · ${fmt(m.c)}C · ${fmt(m.f)}F${r.yield > 1 ? ' · makes ' + r.yield : ''}</span></div></div>`; }).join('') || '<div class="muted small">No matches</div>';
+      return `<div class="lib-item" draggable="true" data-drag="meal" data-from="lib" data-rid="${r.id}"><span class="em">${esc(r.emoji)}</span><div style="min-width:0"><b>${isFav(r.id) ? '<span class="fav-mark" title="Favorito">★</span> ' : ''}${esc(r.name)}${r.custom ? ' <span class="pill acc" style="font-size:9.5px;padding:1px 6px">Personalizada</span>' : ''}</b><span>${fmt(m.k)} kcal · ${fmt(m.p)}P · ${fmt(m.c)}C · ${fmt(m.f)}F${r.yield > 1 ? ' · rende ' + r.yield : ''}</span></div></div>`; }).join('') || '<div class="muted small">Nenhum resultado</div>';
     if (hidden) list += `<a class="tiny muted" href="#/foods" style="padding:4px 2px">${hidden} recipe${hidden === 1 ? '' : 's'} hidden by your food preferences →</a>`;
   }
-  return `<aside class="card lib"><div class="row"><h3 style="flex:1">Library</h3><div class="seg"><button class="${UI.libTab === 'workouts' ? 'on' : ''}" data-act="lib-tab" data-v="workouts">Workouts</button><button class="${UI.libTab === 'meals' ? 'on' : ''}" data-act="lib-tab" data-v="meals">Meals</button></div></div>
+  return `<aside class="card lib"><div class="row"><h3 style="flex:1">Biblioteca</h3><div class="seg"><button class="${UI.libTab === 'workouts' ? 'on' : ''}" data-act="lib-tab" data-v="workouts">Treinos</button><button class="${UI.libTab === 'meals' ? 'on' : ''}" data-act="lib-tab" data-v="meals">Refeições</button></div></div>
     ${UI.libTab === 'meals' ? `<div class="filters" style="margin-top:10px">${['all', 'breakfast', 'lunch', 'dinner', 'snack'].map(f => `<button class="${UI.libFilter === f ? 'on' : ''}" data-act="lib-filter" data-v="${f}">${f[0].toUpperCase() + f.slice(1)}</button>`).join('')}</div>
-      <input class="inp" style="margin-top:8px;height:32px" placeholder="Search meals…" data-input="libq" value="${esc(UI.libQ)}">` : '<div class="tiny muted" style="margin-top:8px">Drop a session on any day. Exercise variations follow that day’s week in the rotation.</div>'}
-    <div class="lib-list">${list}</div><div class="trash" data-drop="trash">${icon('trash')}Remove from this day</div></aside>`;
+      <input class="inp" style="margin-top:8px;height:32px" placeholder="Buscar refeições…" data-input="libq" value="${esc(UI.libQ)}">` : '<div class="tiny muted" style="margin-top:8px">Solte uma sessão em qualquer dia. As variações de exercícios seguem a semana daquele dia na rotação.</div>'}
+    <div class="lib-list">${list}</div><div class="trash" data-drop="trash">${icon('trash')}Remover deste dia</div></aside>`;
 }
 
 /* ---------- drag & drop ---------- */

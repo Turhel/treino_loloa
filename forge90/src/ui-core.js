@@ -140,7 +140,7 @@ function woTipHTML(date) {
   const e = S.plan[date]; if (!e || !e.w) return '';
   const t = TEMPLATES[e.w.t]; const rows = sessionRows(e.w);
   const prim = new Set(), sec = new Set(); rows.forEach(r => { r.ex.primary.forEach(k => prim.add(k)); r.ex.secondary.forEach(k => sec.add(k)); });
-  return `<div class="tmm">${muscleMap([...prim], [...sec])}<div><h4>${esc(t.name)}</h4><div class="tmeta">Week ${e.w.wk} · ${phaseForWeek(e.w.wk).name} · ${rows.reduce((a, r) => a + r.sets, 0)} sets · ~${estMinutes(rows)} min</div><div class="small sub">${esc(t.focus)}</div></div></div>
+  return `<div class="tmm">${muscleMap([...prim], [...sec])}<div><h4>${esc(t.name)}</h4><div class="tmeta">Semana ${e.w.wk} · ${phaseForWeek(e.w.wk).name} · ${rows.reduce((a, r) => a + r.sets, 0)} séries · ~${estMinutes(rows)} min</div><div class="small sub">${esc(t.focus)}</div></div></div>
     <ul class="tl">${rows.map(r => `<li>${esc(r.ex.name)}<span>${r.sets}×${esc(r.reps)}</span></li>`).join('')}</ul><div class="tiny muted" style="margin-top:8px">Drag to move · Ctrl/Alt-drag to copy · click the day for details</div>`;
 }
 function tplTipHTML(t) {
@@ -259,8 +259,8 @@ function ringSVG(frac, color, size = 132, stroke = 12) {
   return `<svg viewBox="0 0 ${size} ${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="var(--surface-3)" stroke-width="${stroke}"/><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}" stroke-linecap="round" stroke-dasharray="${c * f} ${c}"/></svg>`;
 }
 function macroBars(tot, tg) {
-  const row = (lbl, v, t, col, unit = 'g') => `<div class="mbar"><span class="sub">${lbl}</span><div class="track"><i style="width:${Math.min(100, t ? v / t * 100 : 0)}%;background:${col}"></i></div><b class="num">${fmt(v)}${t ? `<span class="muted"> / ${lbl === 'Protein' ? '' : '~'}${fmt(t)}${unit}</span>` : unit}</b></div>`;
-  return row('Protein', tot.p, tg.protein, 'var(--prot)') + row('Carbs', tot.c, tg.carbs, 'var(--carb)') + row('Fat', tot.f, tg.fat, 'var(--fat)');
+  const row = (lbl, v, t, col, unit = 'g') => `<div class="mbar"><span class="sub">${lbl}</span><div class="track"><i style="width:${Math.min(100, t ? v / t * 100 : 0)}%;background:${col}"></i></div><b class="num">${fmt(v)}${t ? `<span class="muted"> / ${lbl === 'Proteína' ? '' : '~'}${fmt(t)}${unit}</span>` : unit}</b></div>`;
+  return row('Proteína', tot.p, tg.protein, 'var(--prot)') + row('Carboidratos', tot.c, tg.carbs, 'var(--carb)') + row('Gorduras', tot.f, tg.fat, 'var(--fat)');
 }
 function estMinutes(rows) { return Math.round(rows.reduce((a, r) => a + r.sets * (0.75 + r.rest / 60), 0) + 8); }
 

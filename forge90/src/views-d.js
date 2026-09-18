@@ -7,7 +7,7 @@ const GROUP_REGION = { Chest: 'chest', Back: 'lats', Shoulders: 'sideDelt', Bice
 let XE = null;
 function slotOptionsFor(group, sel) {
   const slots = Object.entries(SLOTS).filter(([, v]) => v.group === group);
-  return `<option value="">Library only — don’t add to the rotation</option>` + slots.map(([k, v]) => `<option value="${k}" ${sel === k ? 'selected' : ''}>Add to “${esc(v.label)}” rotation (${v.vars.filter(id => !exOffNow(id)).length + (CUSTOM_SLOT[k] || []).filter(e => e.id !== (XE && XE.id)).length} → ${v.vars.filter(id => !exOffNow(id)).length + (CUSTOM_SLOT[k] || []).filter(e => e.id !== (XE && XE.id)).length + 1} variations)</option>`).join('');
+  return `<option value="">Somente biblioteca — não adicionar à rotação</option>` + slots.map(([k, v]) => `<option value="${k}" ${sel === k ? 'selected' : ''}>Adicionar à rotação “${esc(v.label)}” (${v.vars.filter(id => !exOffNow(id)).length + (CUSTOM_SLOT[k] || []).filter(e => e.id !== (XE && XE.id)).length} → ${v.vars.filter(id => !exOffNow(id)).length + (CUSTOM_SLOT[k] || []).filter(e => e.id !== (XE && XE.id)).length + 1} variações)</option>`).join('');
 }
 function exerciseEditor(id, group) {
   const e = id ? S.customExercises[id] : null;
@@ -15,10 +15,10 @@ function exerciseEditor(id, group) {
   XE = { id: id || null, group: g, compound: e ? !!e.compound : false, bw: e ? !!e.bw : false,
     primary: new Set(e ? e.primary : [GROUP_REGION[g]]), secondary: new Set(e ? e.secondary : []), slot: e ? (e.slot || '') : '' };
   const chips = which => Object.entries(REGION_LABEL).map(([k, l]) => `<button type="button" class="mus ${XE[which].has(k) ? 'on ' + which : ''}" data-act="xe-mus" data-k="${k}" data-which="${which}">${esc(l)}</button>`).join('');
-  modal(`<div class="row"><h2 style="flex:1">${id ? 'Edit exercise' : 'New exercise'}</h2><button class="btn icon ghost" data-act="close-modal">${icon('x')}</button></div>
+  modal(`<div class="row"><h2 style="flex:1">${id ? 'Editar exercício' : 'Novo exercício'}</h2><button class="btn icon ghost" data-act="close-modal">${icon('x')}</button></div>
     <form data-form="exercise" class="xe" style="margin-top:12px">
       <div class="xe-top"><div class="xe-fields">
-        <div class="field"><label>Exercise name</label><input class="inp" name="name" value="${esc(e ? e.name : '')}" placeholder="e.g. Landmine Press" required></div>
+        <div class="field"><label>Nome do exercício</label><input class="inp" name="name" value="${esc(e ? e.name : '')}" placeholder="ex.: Landmine Press" required></div>
         <div class="grid g2" style="gap:10px;margin-top:10px">
           <div class="field"><label>Muscle group</label><select class="inp" name="group" data-input="xe-group">${EX_GROUPS.map(x => `<option ${x === g ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
           <div class="field"><label>Equipment</label><input class="inp" name="equip" value="${esc(e ? e.equip : '')}" placeholder="e.g. Barbell + landmine"></div></div>
@@ -28,15 +28,15 @@ function exerciseEditor(id, group) {
         <div class="xe-map" id="xe-map">${muscleMap([...XE.primary], [...XE.secondary])}</div></div>
       <div class="field" style="margin-top:12px"><label>Primary muscles</label><div class="mus-row">${chips('primary')}</div></div>
       <div class="field" style="margin-top:10px"><label>Secondary muscles</label><div class="mus-row">${chips('secondary')}</div></div>
-      <div class="field" style="margin-top:12px"><label>Workout plan</label><select class="inp" name="slot" id="xe-slot">${slotOptionsFor(g, XE.slot)}</select>
+      <div class="field" style="margin-top:12px"><label>Plano de treino</label><select class="inp" name="slot" id="xe-slot">${slotOptionsFor(g, XE.slot)}</select>
         <span class="tiny muted">Added exercises join the weekly variation rotation from this week on — earlier weeks stay as they were.</span></div>
       <div class="grid g2" style="gap:10px;margin-top:12px">
-        <div class="field"><label>How to do it (one step per line)</label><textarea class="inp" name="steps" rows="5" style="height:auto;padding:8px 11px" placeholder="Set up…&#10;Lower under control…">${esc(e ? e.steps.join('\n') : '')}</textarea></div>
+        <div class="field"><label>Como executar (uma etapa por linha)</label><textarea class="inp" name="steps" rows="5" style="height:auto;padding:8px 11px" placeholder="Posicione-se…&#10;Desça com controle…">${esc(e ? e.steps.join('\n') : '')}</textarea></div>
         <div class="field"><label>Coaching cues (one per line)</label><textarea class="inp" name="cues" rows="5" style="height:auto;padding:8px 11px" placeholder="Elbows tucked&#10;Full stretch">${esc(e ? e.cues.join('\n') : '')}</textarea></div></div>
       <div class="field" style="margin-top:10px"><label>Common mistake to avoid</label><input class="inp" name="mistake" value="${esc(e ? e.mistake : '')}" placeholder="e.g. Shrugging the shoulders"></div>
       <div class="row" style="justify-content:flex-end;margin-top:16px">
-        ${id ? `<button type="button" class="btn danger" data-act="ex-del" data-id="${id}" style="margin-right:auto">${icon('trash')}Delete</button>` : ''}
-        <button type="button" class="btn" data-act="close-modal">Cancel</button><button class="btn primary" type="submit">${id ? 'Save changes' : 'Add exercise'}</button></div></form>`);
+        ${id ? `<button type="button" class="btn danger" data-act="ex-del" data-id="${id}" style="margin-right:auto">${icon('trash')}Excluir</button>` : ''}
+        <button type="button" class="btn" data-act="close-modal">Cancelar</button><button class="btn primary" type="submit">${id ? 'Salvar alterações' : 'Adicionar exercício'}</button></div></form>`);
 }
 function refreshXEMap() { const m = $('#xe-map'); if (m && XE) m.innerHTML = muscleMap([...XE.primary], [...XE.secondary]); }
 function saveExercise(form) {
@@ -67,8 +67,8 @@ Object.assign(ACT, {
     $$(`[data-act="xe-mus"][data-k="${k}"]`).forEach(b => { const w = b.dataset.which; b.className = 'mus' + (XE[w].has(k) ? ' on ' + w : ''); });
     refreshXEMap();
   },
-  'ex-del': el => { const x = S.customExercises[el.dataset.id]; confirmBox('Delete exercise?', `Delete <b>${esc(x.name)}</b>? It leaves the rotation; any sets you logged for it stay saved but won’t show on the PR board.`, 'Delete', () => {
-    delete S.customExercises[x.id]; rebuildExercises(); saveState(); render(); toast('Exercise deleted'); }, true); }
+  'ex-del': el => { const x = S.customExercises[el.dataset.id]; confirmBox('Excluir exercício?', `Excluir <b>${esc(x.name)}</b>? Ele sairá da rotação; as séries já registradas continuarão salvas, mas não aparecerão no quadro de recordes.`, 'Excluir', () => {
+    delete S.customExercises[x.id]; rebuildExercises(); saveState(); render(); toast('Exercício excluído'); }, true); }
 });
 
 /* ---------------- quick edit (dashboard): change a day's workout and meals without leaving the page ---------------- */
@@ -80,7 +80,7 @@ function renderQuickEdit() {
   const prev = inPlan(addDays(d, -1)) ? addDays(d, -1) : null, next = inPlan(addDays(d, 1)) ? addDays(d, 1) : null;
   const ph = phaseForWeek(planWeek(d));
   const tplOpt = k => `<option value="${k}" ${e.w && e.w.t === k ? 'selected' : ''}>${esc(TEMPLATES[k].name)}</option>`;
-  const woOpts = `<option value="">— Rest day —</option>` + (e.w && TEMPLATES[e.w.t] && TEMPLATES[e.w.t].legacy ? `<option value="${e.w.t}" selected>${esc(TEMPLATES[e.w.t].name)} (earlier plan)</option>` : '')
+  const woOpts = `<option value="">— Dia de descanso —</option>` + (e.w && TEMPLATES[e.w.t] && TEMPLATES[e.w.t].legacy ? `<option value="${e.w.t}" selected>${esc(TEMPLATES[e.w.t].name)} (plano anterior)</option>` : '')
     + `<optgroup label="This week’s phase — ${esc(ph.name)}">${ph.templates.map(tplOpt).join('')}</optgroup>`
     + ALL_PHASES.filter(p => p.templates.join() !== ph.templates.join()).map(p => `<optgroup label="${esc(p.name)}">${p.templates.map(tplOpt).join('')}</optgroup>`).join('');
   let woBody = '';
@@ -98,10 +98,10 @@ function renderQuickEdit() {
   modal(`<div class="row"><button class="btn icon ghost" data-act="qe-day" data-d="${prev || ''}" ${prev ? '' : 'disabled'} aria-label="Dia anterior">${icon('left')}</button>
       <div style="flex:1;text-align:center"><div class="tiny muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.08em">Edição rápida · ${x.isTrain ? 'dia de treino' : 'dia de descanso'}</div><h2 style="margin-top:2px">${d === todayISO() ? 'Hoje · ' : ''}${fmtDate(d, { weekday: 'long', month: 'short', day: 'numeric' })}</h2></div>
       <button class="btn icon ghost" data-act="qe-day" data-d="${next || ''}" ${next ? '' : 'disabled'} aria-label="Próximo dia">${icon('right')}</button><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
-    <section class="qe-sec ${QE.focus === 'wo' ? 'focus' : ''}"><div class="row"><h3 style="flex:1">${icon('dumbbell')}Workout</h3>${e.w ? `<button class="btn sm ${S.done[d] ? 'primary' : ''}" data-act="qe-done">${icon('check')}${S.done[d] ? 'Concluído' : 'Marcar como concluído'}</button>` : ''}</div>
+    <section class="qe-sec ${QE.focus === 'wo' ? 'focus' : ''}"><div class="row"><h3 style="flex:1">${icon('dumbbell')}Treino</h3>${e.w ? `<button class="btn sm ${S.done[d] ? 'primary' : ''}" data-act="qe-done">${icon('check')}${S.done[d] ? 'Concluído' : 'Marcar como concluído'}</button>` : ''}</div>
       <select class="inp" id="qe-wo" data-input="qe-wo" style="margin-top:8px;width:100%">${woOpts}</select>${woBody}
-      <div class="row wrap" style="gap:6px;margin-top:10px"><a class="btn sm ghost" href="#/day/${d}" data-act="close-go" data-h="#/day/${d}">${icon('list')}Open day to log sets</a><a class="btn sm ghost" href="#/workouts" data-act="close-go" data-h="#/workouts">${icon('grip')}Swap in the program</a></div></section>
-    <section class="qe-sec ${QE.focus !== 'wo' ? 'focus' : ''}"><div class="row"><h3 style="flex:1">${icon('food')}Meals</h3><span class="tiny muted">★ favoritos primeiro · alterações preservam suas refeições escolhidas manualmente quando o plano é recalculado</span></div>
+      <div class="row wrap" style="gap:6px;margin-top:10px"><a class="btn sm ghost" href="#/day/${d}" data-act="close-go" data-h="#/day/${d}">${icon('list')}Abrir dia para registrar séries</a><a class="btn sm ghost" href="#/workouts" data-act="close-go" data-h="#/workouts">${icon('grip')}Trocar no programa</a></div></section>
+    <section class="qe-sec ${QE.focus !== 'wo' ? 'focus' : ''}"><div class="row"><h3 style="flex:1">${icon('food')}Refeições</h3><span class="tiny muted">★ favoritos primeiro · alterações preservam suas refeições escolhidas manualmente quando o plano é recalculado</span></div>
       ${MEAL_SLOTS.map(mealRow).join('')}
       <div class="qe-tot"><div><span class="tiny muted">Total do dia</span><b class="num">${fmt(x.totals.k)}</b><span class="small muted"> / ${fmt(x.tg.kcal)} kcal</span></div><div class="small num"><span style="color:var(--prot)"><b>${fmt(x.totals.p)}</b>/${fmt(x.tg.protein)}g P</span> · <span style="color:var(--carb)">${fmt(x.totals.c)}C</span> · <span style="color:var(--fat)">${fmt(x.totals.f)}F</span></div><span class="tiny muted">As porções são ajustadas automaticamente</span></div></section>
     <div class="row" style="justify-content:flex-end;margin-top:12px;gap:6px"><button class="btn" data-act="undo" ${undoStack.length ? '' : 'disabled'}>${icon('undo')}Undo</button><button class="btn primary" data-act="close-modal">Concluído</button></div>`);
