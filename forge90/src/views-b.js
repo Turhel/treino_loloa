@@ -118,23 +118,23 @@ function recipeParts(rid) {
   const list = rs => rs.map(x => `<span>${esc(x.name)}</span><span class="q">${x.t.main}${x.t.sub ? `<small>${x.t.sub}</small>` : ''}</span>`).join('');
   const roles = { P: 'protein', C: 'carb', F: 'fat', V: 'fixed' };
   return { r, m, per: rows(r.yield), batch: rows(1), list,
-    meta: `${r.cat} · ${r.yield > 1 ? 'makes ' + r.yield : '1 serving'} · ${r.storage === 'freezer' ? 'freezer-friendly' : r.storage === 'fridge' ? 'keeps 4 days' : 'eat fresh'}${r.time ? ' · ' + r.time + ' min' : ''}`,
+    meta: `${r.cat} · ${r.yield > 1 ? 'rende ' + r.yield : '1 porção'} · ${r.storage === 'freezer' ? 'pode ser congelada' : r.storage === 'fridge' ? 'dura 4 dias na geladeira' : 'consumir fresca'}${r.time ? ' · ' + r.time + ' min' : ''}`,
     tags: r.tags.map(t => `<span class="pill">${esc(t)}</span>`).join(''),
     macros: [['kcal', m.k, 'var(--kcal)'], ['Proteína', m.p, 'var(--prot)'], ['Carboidratos', m.c, 'var(--carb)'], ['Gorduras', m.f, 'var(--fat)']].map(([l, v, c]) => `<div class="card" style="box-shadow:none;background:var(--surface-2);padding:12px"><div class="tiny muted">${l}${l !== 'kcal' ? ' (g)' : ''}</div><div style="font-size:22px;font-weight:700;border-left:3px solid ${c};padding-left:8px;margin-top:4px" class="num">${fmt(v)}</div></div>`).join(''),
     steps: r.steps.length ? `<ol class="rec-steps">${r.steps.map(x => `<li>${esc(x)}</li>`).join('')}</ol>` : '<div class="tiny muted">Nenhuma etapa ainda — adicione usando Editar receita.</div>',
-    scaling: `<div class="note" style="margin-top:10px">${icon('info')}<span>Portion scaling: ${r.fixed ? 'fixed portion (not scaled).' : r.ing.map(([id]) => `${ING[id].n.split(',')[0]} → ${roles[ING[id].r]}`).join(' · ')}</span></div>`,
-    blocked: recipeAllowed(r) ? '' : `<span class="pill warn-pill">Blocked · ${esc(blockedBy(r).join(', '))}</span>` };
+    scaling: `<div class="note" style="margin-top:10px">${icon('info')}<span>Ajuste de porções: ${r.fixed ? 'porção fixa (não ajustada).' : r.ing.map(([id]) => `${ING[id].n.split(',')[0]} → ${roles[ING[id].r]}`).join(' · ')}</span></div>`,
+    blocked: recipeAllowed(r) ? '' : `<span class="pill warn-pill">Bloqueada · ${esc(blockedBy(r).join(', '))}</span>` };
 }
 function recipeModal(rid) {
   const x = recipeParts(rid); if (!x) return; const r = x.r;
   modal(`<div class="row" style="align-items:flex-start"><div style="font-size:44px">${esc(r.emoji)}</div><div style="flex:1;min-width:0"><div class="tiny muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.08em">${x.meta}</div><h2 style="font-size:22px">${esc(r.name)}</h2>
     <div class="row wrap" style="margin-top:6px">${x.tags}</div></div>${favBtnHTML(rid, 'in-modal')}
-    <button class="btn icon ghost" data-act="recipe-print" data-rid="${rid}" title="Print this recipe" aria-label="Print this recipe">${icon('print')}</button>
+    <button class="btn icon ghost" data-act="recipe-print" data-rid="${rid}" title="Imprimir esta receita" aria-label="Imprimir esta receita">${icon('print')}</button>
     <button class="btn icon ghost" data-act="recipe-expand" data-rid="${rid}" title="Abrir em página completa" aria-label="Abrir em página completa">${icon('expand')}</button>
     <button class="btn icon ghost" data-act="close-modal" title="Fechar" aria-label="Fechar">${icon('x')}</button></div>
     <div class="grid g4" style="gap:10px;margin:16px 0">${x.macros}</div>
-    <div class="grid g2"><div><h3>Per standard serving</h3><div class="ing-list">${x.list(x.per)}</div></div>${r.yield > 1 ? `<div><h3>Full batch (${r.yield} servings)</h3><div class="ing-list">${x.list(x.batch)}</div></div>` : ''}</div>
-    <h3 style="margin-top:16px">Method</h3>${x.steps}
+    <div class="grid g2"><div><h3>Por porção padrão</h3><div class="ing-list">${x.list(x.per)}</div></div>${r.yield > 1 ? `<div><h3>Receita completa (${r.yield} porções)</h3><div class="ing-list">${x.list(x.batch)}</div></div>` : ''}</div>
+    <h3 style="margin-top:16px">Modo de preparo</h3>${x.steps}
     ${linksBlockHTML(r)}${x.scaling}
     <div class="row wrap" style="justify-content:flex-end;margin-top:14px;gap:6px">${x.blocked ? `<span style="margin-right:auto">${x.blocked}</span>` : ''}
       <button class="btn" data-act="recipe-dup" data-rid="${rid}">Duplicar</button><button class="btn primary" data-act="recipe-edit" data-rid="${rid}">${icon('edit')}Editar receita</button></div>`);
@@ -247,7 +247,7 @@ function moneySaverHTML(wd) {
     const a = shoppingStats(real(days)), o = shoppingStats(Object.fromEntries(days.map(d => [d, sim[d] || {}]))); pk4 += on ? o.packs - a.packs : a.packs - o.packs; }
   const good = dPk > 0 || dIt > 0;
   const headline = on
-    ? (good ? `Compartilhar ingredientes economiza cerca de <b>${Math.max(0, dPk)} embalagem${dPk === 1 ? '' : 'ns'} de alimento fresco</b>${dIt > 0 ? ` e <b>${dIt} item${dIt === 1 ? '' : 'ns'}</b>` : ''} nesta semana${dLb > 0.2 ? `, com menos alimento fresco sobrando em embalagens abertas` : ''}.` : `This week already lines up well — the plain rotation wouldn’t need fewer packages.`)
+    ? (good ? `Compartilhar ingredientes economiza cerca de <b>${Math.max(0, dPk)} embalagem${dPk === 1 ? '' : 'ns'} de alimento fresco</b>${dIt > 0 ? ` e <b>${dIt} item${dIt === 1 ? '' : 'ns'}</b>` : ''} nesta semana${dLb > 0.2 ? `, com menos alimento fresco sobrando em embalagens abertas` : ''}.` : `Esta semana já está bem otimizada — a rotação padrão não usaria menos embalagens.`)
     : (dPk < 0 || dIt < 0 ? `Ativar o compartilhamento de ingredientes economizaria cerca de <b>${Math.max(0, -dPk)} embalagem${-dPk === 1 ? '' : 'ns'} de alimento fresco</b>${-dIt > 0 ? ` e <b>${-dIt} item${-dIt === 1 ? '' : 'ns'}</b>` : ''} nesta semana.` : `O compartilhamento de ingredientes está desativado.`);
   const chips = actual.shared.filter(x => packInfo(x.id).w >= .3).slice(0, 10).map(x => `<span class="pill share-chip" data-tip="${esc(x.recipes.map(r => RECIPE[r] ? RECIPE[r].name : r).join(' · '))}">${esc(ING[x.id].n.split(',')[0])} <b>×${x.n}</b></span>`).join('');
   const sum = on ? (dPk > 0 ? `−${dPk} embalagem${dPk === 1 ? '' : 'ns'} nesta semana` : 'ativado') : 'desativado';
