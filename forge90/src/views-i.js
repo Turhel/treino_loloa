@@ -139,7 +139,7 @@ function sharedAdd(food) { SHARED_FOODS[food.id] = food; rebuildCatalog(); }
 const foodLabel = id => { const g = ING[id]; return g ? g.n + (g.brand ? ' · ' + g.brand : '') : id; };
 const pantryName = id => { const g = ING[id]; return !g ? 'Alimento removido' : g.dry ? g.dryName : g.n; };   // rice & co. are kept and shown uncooked
 const canScan = () => AUTH.mode === 'server';
-const scanBtnHTML = (mode = 'today', cls = '', date = '') => canScan() ? `<button class="btn ${cls}" data-act="scan" data-v="${mode}" ${date ? `data-d="${date}"` : ''} title="${mode === 'pantry' ? 'Escanear compras para a despensa' : `Escanear um código de barras para adicionar em ${date && date !== todayISO() ? fmtDate(date) : 'hoje'}`}">${icon('scan')}Scan</button>` : '';
+const scanBtnHTML = (mode = 'today', cls = '', date = '') => canScan() ? `<button class="btn ${cls}" data-act="scan" data-v="${mode}" ${date ? `data-d="${date}"` : ''} title="${mode === 'pantry' ? 'Escanear compras para a despensa' : `Escanear um código de barras para adicionar em ${date && date !== todayISO() ? fmtDate(date) : 'hoje'}`}">${icon('scan')}Escanear</button>` : '';
 // "Add food" — pick any food or scanned product to add to a day (works without a camera)
 const addFoodBtnHTML = (date = '', cls = '') => `<button class="btn ${cls}" data-act="qa-pick" ${date ? `data-d="${date}"` : ''} title="Adicionar um lanche ou alimento em ${date && date !== todayISO() ? fmtDate(date) : 'hoje'}">${icon('plus')}Add food</button>`;
 
@@ -224,7 +224,7 @@ async function scanFound(raw, fmt) {
   const code = gtinNorm(raw); if (!/^\d{8}$|^\d{13,14}$/.test(code)) return;
   if (SCN.last === code && Date.now() - SCN.lastAt < 3000) return; SCN.last = code; SCN.lastAt = Date.now();
   if (navigator.vibrate) try { navigator.vibrate(60); } catch (e) { /* no vibration */ }
-  SCN.busy = true; scanMsg('Found ' + code + ' — looking it up…', 'ok');
+  SCN.busy = true; scanMsg('Encontrado ' + code + ' — buscando…', 'ok');
   try { const id = await barcodeFood(code); if (id) scanUse(id); else if (SCN) SCN.busy = false; }
   catch (e) { scanMsg(e.message, 'warn'); if (SCN) SCN.busy = false; }
 }
@@ -247,7 +247,7 @@ function scanUse(id) {
       const it = pantryAdd(id, null, null, 'scan'); if (!it) { SCN.busy = false; return; }
       SCN.added.unshift({ food: id, itemId: it.id, n: 1, base });
       if (/^#\/(pantry|grocery)/.test(location.hash)) render();   // the page behind the scanner stays current
-      scanMsg(`Added ${foodLabel(id)} — scan the next item`, 'ok');
+      scanMsg(`${foodLabel(id)} adicionado — escaneie o próximo item`, 'ok');
     }
     scanPaint(); SCN.busy = false; return;
   }
@@ -255,7 +255,7 @@ function scanUse(id) {
 }
 
 /* ---------- adding (or fixing) a product on the shared food list ---------- */
-const PRODUCT_SUBS = [['bars', 'Protein & snack bars'], ['rtd', 'Protein shakes'], ['whey', 'Protein powder'], ['chips', 'Chips & salty snacks'], ['crackers', 'Crackers & rice cakes'], ['sweets', 'Sweets & desserts'], ['cereal', 'Cereal & granola'], ['bread', 'Bread'], ['wraps', 'Tortillas & wraps'], ['pasta', 'Pasta & noodles'], ['rice', 'Rice'], ['yogurt', 'Yogurt'], ['milk', 'Milk'], ['milk_alt', 'Plant milk'], ['cheese', 'Cheese'], ['deli', 'Deli meat'], ['jerky', 'Jerky'], ['frozen_meals', 'Frozen & ready meals'], ['soups', 'Soups & chili'], ['sauces', 'Sauces'], ['condiments', 'Condiments'], ['spices', 'Spices & baking'], ['peanuts', 'Peanut butter & peanuts'], ['tree_nuts', 'Nuts'], ['juice', 'Juice & sports drinks'], ['zero_drinks', 'Zero-calorie drinks'], ['soda', 'Soda & energy drinks']];
+const PRODUCT_SUBS = [['bars', 'Barras de proteína e lanches'], ['rtd', 'Shakes proteicos'], ['whey', 'Proteína em pó'], ['chips', 'Chips e salgadinhos'], ['crackers', 'Biscoitos e bolachas de arroz'], ['sweets', 'Doces e sobremesas'], ['cereal', 'Cereais e granola'], ['bread', 'Pães'], ['wraps', 'Tortillas e wraps'], ['pasta', 'Massas e macarrões'], ['rice', 'Arroz'], ['yogurt', 'Iogurte'], ['milk', 'Leite'], ['milk_alt', 'Leites vegetais'], ['cheese', 'Queijos'], ['deli', 'Frios'], ['jerky', 'Jerky'], ['frozen_meals', 'Congelados e refeições prontas'], ['soups', 'Sopas e chili'], ['sauces', 'Molhos'], ['condiments', 'Condimentos'], ['spices', 'Temperos e confeitaria'], ['peanuts', 'Pasta de amendoim e amendoins'], ['tree_nuts', 'Castanhas e nozes'], ['juice', 'Sucos e bebidas esportivas'], ['zero_drinks', 'Bebidas zero caloria'], ['soda', 'Refrigerantes e energéticos']];
 const PRODUCT_AISLE = { bars: 'Snacks', rtd: 'Beverages', whey: 'Pantry', chips: 'Snacks', crackers: 'Snacks', sweets: 'Snacks', cereal: 'Grains & Bread', bread: 'Grains & Bread', wraps: 'Grains & Bread', pasta: 'Grains & Bread', rice: 'Grains & Bread', yogurt: 'Dairy & Eggs', milk: 'Dairy & Eggs', milk_alt: 'Dairy & Eggs', cheese: 'Dairy & Eggs', deli: 'Deli & Prepared', jerky: 'Snacks', frozen_meals: 'Frozen', soups: 'Pantry', sauces: 'Pantry', condiments: 'Pantry', spices: 'Pantry', peanuts: 'Pantry', tree_nuts: 'Snacks', juice: 'Beverages', zero_drinks: 'Beverages', soda: 'Beverages' };
 function productGuessSub(s) {
   const c = ((s && s.categories) || []).join(' ') + ' ' + ((s && s.name) || '');
@@ -269,17 +269,17 @@ const pfVal = v => v == null || v === '' ? '' : Math.round(v * 10) / 10;
 const pfInt = v => v == null || v === '' ? '' : Math.max(0, Math.round(+v || 0));   // package size, serving size and item weight are whole units
 function productFieldsHTML(v, lock) {
   const dis = lock ? 'disabled' : ''; const b = v.basis;
-  return `<div class="field" style="grid-column:1/-1"><label>Name</label><input class="inp" name="n" value="${esc(v.n || '')}" required maxlength="80" placeholder="ex.: Barra de proteína de chocolate" ${dis}></div>
-    <div class="field"><label>Brand</label><input class="inp" name="brand" value="${esc(v.brand || '')}" maxlength="60" ${dis}></div>
-    <div class="field"><label>Type</label><select class="inp" name="sub" ${dis}>${PRODUCT_SUBS.concat(PRODUCT_SUBS.some(x => x[0] === v.sub) || !v.sub ? [] : [[v.sub, SUB_LABEL[v.sub] || v.sub]]).map(([k, l]) => `<option value="${k}" ${k === v.sub ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
-    <div class="field"><label>Nutrition is for</label><select class="inp" name="basis" data-input="pf-basis" ${dis || (v.edit ? 'disabled' : '')}><option value="g" ${b === 'g' ? 'selected' : ''}>100 g</option><option value="ml" ${b === 'ml' ? 'selected' : ''}>100 ml</option><option value="u" ${b === 'u' ? 'selected' : ''}>1 item (bar, bottle…)</option></select></div>
-    <div class="field pf-unit ${b === 'u' ? '' : 'hidden'}"><label>Item name & weight</label><div class="row" style="gap:6px"><input class="inp" name="u" value="${esc(v.u || 'item')}" style="width:50%" ${dis}><input class="inp" type="number" min="1" step="1" name="g" value="${esc(pfInt(v.g))}" inputmode="numeric" placeholder="grams" style="width:50%" ${dis}></div></div>
-    <div class="field"><label>Calories</label><input class="inp" type="number" min="0" step="0.1" name="k" value="${pfVal(v.k)}" required ${dis}></div>
-    <div class="field"><label>Protein (g)</label><input class="inp" type="number" min="0" step="0.1" name="p" value="${pfVal(v.p)}" required ${dis}></div>
-    <div class="field"><label>Carbs (g)</label><input class="inp" type="number" min="0" step="0.1" name="c" value="${pfVal(v.c)}" required ${dis}></div>
-    <div class="field"><label>Fat (g)</label><input class="inp" type="number" min="0" step="0.1" name="f" value="${pfVal(v.f)}" required ${dis}></div>
-    <div class="field"><label>Package size <span class="muted pf-pku" style="font-weight:500">(${b === 'u' ? 'items' : b})</span></label><input class="inp" type="number" min="0" step="1" name="pk" value="${esc(pfInt(v.pk))}" inputmode="numeric" ${dis}></div>
-    <div class="field"><label>Serving size (${b === 'ml' ? 'ml' : 'g'})</label><input class="inp" type="number" min="0" step="1" name="srv" value="${esc(pfInt(v.srv))}" inputmode="numeric" ${dis || (b === 'u' ? 'disabled' : '')}></div>`;
+  return `<div class="field" style="grid-column:1/-1"><label>Nome</label><input class="inp" name="n" value="${esc(v.n || '')}" required maxlength="80" placeholder="ex.: Barra de proteína de chocolate" ${dis}></div>
+    <div class="field"><label>Marca</label><input class="inp" name="brand" value="${esc(v.brand || '')}" maxlength="60" ${dis}></div>
+    <div class="field"><label>Tipo</label><select class="inp" name="sub" ${dis}>${PRODUCT_SUBS.concat(PRODUCT_SUBS.some(x => x[0] === v.sub) || !v.sub ? [] : [[v.sub, SUB_LABEL[v.sub] || v.sub]]).map(([k, l]) => `<option value="${k}" ${k === v.sub ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
+    <div class="field"><label>Informação nutricional referente a</label><select class="inp" name="basis" data-input="pf-basis" ${dis || (v.edit ? 'disabled' : '')}><option value="g" ${b === 'g' ? 'selected' : ''}>100 g</option><option value="ml" ${b === 'ml' ? 'selected' : ''}>100 ml</option><option value="u" ${b === 'u' ? 'selected' : ''}>1 unidade (barra, garrafa…)</option></select></div>
+    <div class="field pf-unit ${b === 'u' ? '' : 'hidden'}"><label>Nome e peso da unidade</label><div class="row" style="gap:6px"><input class="inp" name="u" value="${esc(v.u || 'item')}" style="width:50%" ${dis}><input class="inp" type="number" min="1" step="1" name="g" value="${esc(pfInt(v.g))}" inputmode="numeric" placeholder="gramas" style="width:50%" ${dis}></div></div>
+    <div class="field"><label>Calorias</label><input class="inp" type="number" min="0" step="0.1" name="k" value="${pfVal(v.k)}" required ${dis}></div>
+    <div class="field"><label>Proteína (g)</label><input class="inp" type="number" min="0" step="0.1" name="p" value="${pfVal(v.p)}" required ${dis}></div>
+    <div class="field"><label>Carboidratos (g)</label><input class="inp" type="number" min="0" step="0.1" name="c" value="${pfVal(v.c)}" required ${dis}></div>
+    <div class="field"><label>Gorduras (g)</label><input class="inp" type="number" min="0" step="0.1" name="f" value="${pfVal(v.f)}" required ${dis}></div>
+    <div class="field"><label>Tamanho da embalagem <span class="muted pf-pku" style="font-weight:500">(${b === 'u' ? 'unidades' : b})</span></label><input class="inp" type="number" min="0" step="1" name="pk" value="${esc(pfInt(v.pk))}" inputmode="numeric" ${dis}></div>
+    <div class="field"><label>Tamanho da porção (${b === 'ml' ? 'ml' : 'g'})</label><input class="inp" type="number" min="0" step="1" name="srv" value="${esc(pfInt(v.srv))}" inputmode="numeric" ${dis || (b === 'u' ? 'disabled' : '')}></div>`;
 }
 function productForm(gtin, sug, error) {
   return new Promise(resolve => {
@@ -291,12 +291,12 @@ function productForm(gtin, sug, error) {
       k: x('k'), p: x('p'), c: x('c'), f: x('f'), pk: perItem ? (s.pk && s.srv ? Math.max(1, Math.round(s.pk / s.srv)) : 1) : s.pk, srv: perItem ? null : s.srv };
     PF = { gtin, resolve, sug: s };
     scanStop();
-    modal(`<div class="prod-m"><div class="row"><h2 style="flex:1">${sug ? 'Add this product?' : 'Novo produto'}</h2><button class="btn icon ghost" data-act="prod-cancel" aria-label="Fechar">${icon('x')}</button></div>
-      <div class="prod-head">${s.image ? `<img src="${esc(s.image)}" alt="" loading="lazy" onerror="this.remove()">` : `<span class="prod-ph">${icon('scan')}</span>`}<div><div class="tiny muted">Barcode ${esc(gtin)}</div>
-        <div class="small">${sug ? 'Found on <b>Open Food Facts</b>. Check the details, then add it to the food list — everyone on this server can use it after that.' : `${error ? esc(error) + ' ' : 'This barcode isn’t in Open Food Facts. '}Enter it from the nutrition label and it’s added to the food list for everyone.`}</div></div></div>
+    modal(`<div class="prod-m"><div class="row"><h2 style="flex:1">${sug ? 'Adicionar este produto?' : 'Novo produto'}</h2><button class="btn icon ghost" data-act="prod-cancel" aria-label="Fechar">${icon('x')}</button></div>
+      <div class="prod-head">${s.image ? `<img src="${esc(s.image)}" alt="" loading="lazy" onerror="this.remove()">` : `<span class="prod-ph">${icon('scan')}</span>`}<div><div class="tiny muted">Código de barras ${esc(gtin)}</div>
+        <div class="small">${sug ? 'Encontrado no <b>Open Food Facts</b>. Confira os dados e adicione à lista de alimentos — depois disso, todos neste servidor poderão usá-lo.' : `${error ? esc(error) + ' ' : 'Este código de barras não está no Open Food Facts. '}Informe os dados do rótulo nutricional e o produto será adicionado à lista de alimentos para todos.`}</div></div></div>
       <form data-form="product" class="grid g2" style="gap:12px;margin-top:12px">${productFieldsHTML(v)}
-        <div class="row" style="grid-column:1/-1;justify-content:flex-end;gap:8px"><button type="button" class="btn" data-act="prod-cancel">Not now</button><button class="btn primary" type="submit">Add to food list</button></div></form>
-      ${sug ? '<div class="tiny muted" style="margin-top:8px">Product data © Open Food Facts contributors, available under the Open Database License.</div>' : ''}</div>`, 'prod-modal');
+        <div class="row" style="grid-column:1/-1;justify-content:flex-end;gap:8px"><button type="button" class="btn" data-act="prod-cancel">Agora não</button><button class="btn primary" type="submit">Adicionar à lista de alimentos</button></div></form>
+      ${sug ? '<div class="tiny muted" style="margin-top:8px">Dados do produto © colaboradores do Open Food Facts, disponíveis sob a Open Database License.</div>' : ''}</div>`, 'prod-modal');
   });
 }
 // scanned products are shared: the person who added one (or an admin) can fix it; everyone else sees the details
@@ -305,23 +305,23 @@ function sharedFoodEditor(id) {
   const mine = AUTH.user && (g.by === AUTH.user.id || isAdmin());
   const v = { edit: id, n: g.n, brand: g.brand, sub: g.sub, basis: g.u ? 'u' : g.ml ? 'ml' : 'g', u: g.u, g: g.g, k: g.k, p: g.p, c: g.c, f: g.f, pk: g.pk, srv: g.srv };
   PF = { gtin: g.gtin, edit: id, resolve: null };
-  modal(`<div class="prod-m"><div class="row"><h2 style="flex:1">${mine ? 'Edit product' : 'Product details'}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
-    <div class="prod-head"><span class="prod-ph">${icon('scan')}</span><div>${g.gtin ? `<div class="tiny muted">Barcode ${esc(g.gtin)}</div>` : ''}<div class="small">On the shared food list — added by ${esc(g.byName || 'someone')}${g.at ? ' on ' + esc(fmtDate(String(g.at).slice(0, 10), { month: 'short', day: 'numeric', year: 'numeric' })) : ''}${g.src === 'off' ? ' from Open Food Facts' : ''}. ${mine ? 'Changes apply for everyone.' : 'Only they or an administrator can change it.'}</div></div></div>
+  modal(`<div class="prod-m"><div class="row"><h2 style="flex:1">${mine ? 'Editar produto' : 'Detalhes do produto'}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
+    <div class="prod-head"><span class="prod-ph">${icon('scan')}</span><div>${g.gtin ? `<div class="tiny muted">Código de barras ${esc(g.gtin)}</div>` : ''}<div class="small">Na lista compartilhada de alimentos — adicionado por ${esc(g.byName || 'alguém')}${g.at ? ' em ' + esc(fmtDate(String(g.at).slice(0, 10), { month: 'short', day: 'numeric', year: 'numeric' })) : ''}${g.src === 'off' ? ' pelo Open Food Facts' : ''}. ${mine ? 'As alterações valem para todos.' : 'Somente essa pessoa ou um administrador pode alterá-lo.'}</div></div></div>
     <form data-form="product" class="grid g2" style="gap:12px;margin-top:12px">${productFieldsHTML(v, !mine)}
-      <div class="row wrap" style="grid-column:1/-1;justify-content:flex-end;gap:8px">${isAdmin() ? `<button type="button" class="btn danger" data-act="prod-del" data-id="${id}" style="margin-right:auto">${icon('trash')}Delete</button>` : ''}<button type="button" class="btn" data-act="close-modal">${mine ? 'Cancel' : 'Close'}</button>${mine ? '<button class="btn primary" type="submit">Save for everyone</button>' : ''}</div></form>
-    ${g.src === 'off' ? '<div class="tiny muted" style="margin-top:8px">Product data © Open Food Facts contributors, available under the Open Database License.</div>' : ''}</div>`, 'prod-modal');
+      <div class="row wrap" style="grid-column:1/-1;justify-content:flex-end;gap:8px">${isAdmin() ? `<button type="button" class="btn danger" data-act="prod-del" data-id="${id}" style="margin-right:auto">${icon('trash')}Excluir</button>` : ''}<button type="button" class="btn" data-act="close-modal">${mine ? 'Cancelar' : 'Fechar'}</button>${mine ? '<button class="btn primary" type="submit">Salvar para todos</button>' : ''}</div></form>
+    ${g.src === 'off' ? '<div class="tiny muted" style="margin-top:8px">Dados do produto © colaboradores do Open Food Facts, disponíveis sob a Open Database License.</div>' : ''}</div>`, 'prod-modal');
 }
 async function productSave(form) {
   const fd = new FormData(form); const o = Object.fromEntries(fd.entries()); o.a = PRODUCT_AISLE[o.sub] || 'Pantry';
   ['g', 'pk', 'srv'].forEach(k => { if (o[k] !== '' && o[k] != null) o[k] = String(pfInt(o[k])); });   // whole items/grams, whatever Open Food Facts or a typed decimal gave us
   const btn = form.querySelector('button[type=submit]'); btn.disabled = true;
   if (PF && PF.edit) {
-    try { const r = await api('PATCH', '/api/foods/shared/' + encodeURIComponent(PF.edit), o); sharedAdd(r.food); PF = null; closeModal(); render(); toast(`${r.food.n} updated for everyone`); }
+    try { const r = await api('PATCH', '/api/foods/shared/' + encodeURIComponent(PF.edit), o); sharedAdd(r.food); PF = null; closeModal(); render(); toast(`${r.food.n} atualizado para todos`); }
     catch (e) { btn.disabled = false; toast(e.message); }
     return;
   }
   o.gtin = PF.gtin; o.src = PF.sug && PF.sug.name ? 'off' : 'user';
-  try { const r = await api('POST', '/api/foods/shared', o); sharedAdd(r.food); const res = PF.resolve; PF = null; toast(r.existed ? `${r.food.n} was already on the food list` : `${r.food.n} added to the food list for everyone`);
+  try { const r = await api('POST', '/api/foods/shared', o); sharedAdd(r.food); const res = PF.resolve; PF = null; toast(r.existed ? `${r.food.n} já estava na lista de alimentos` : `${r.food.n} adicionado à lista de alimentos para todos`);
     if (SCN && SCN.mode === 'pantry') { openScannerKeep(); } res(r.food.id); }
   catch (e) { btn.disabled = false; toast(e.message); }
 }
@@ -331,17 +331,17 @@ function scanReview() {
   if (!SCN || !SCN.added.length) return;
   const added = SCN.added; scanStop();
   SCN = { mode: 'pantry', date: todayISO(), added, last: '', lastAt: 0, draft: null, review: true };
-  modal(`<div class="scan-rev-m"><div class="row"><h2 style="flex:1">Scanned items</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
-    <div class="tiny muted" style="margin:2px 0 10px">Everything here is already na despensa. Adjust the counts or use-by dates, or take something back off.</div>
+  modal(`<div class="scan-rev-m"><div class="row"><h2 style="flex:1">Itens escaneados</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
+    <div class="tiny muted" style="margin:2px 0 10px">Tudo aqui já está na despensa. Ajuste as quantidades ou datas de validade, ou remova algum item.</div>
     <div id="scan-rev-list">${scanReviewListHTML()}</div>
-    <div class="row wrap" style="justify-content:flex-end;gap:8px;margin-top:12px"><button type="button" class="btn" data-act="scan-again">${icon('scan')}Scan more</button><button type="button" class="btn primary" data-act="scan-done">Done</button></div></div>`, 'scan-rev-modal');
+    <div class="row wrap" style="justify-content:flex-end;gap:8px;margin-top:12px"><button type="button" class="btn" data-act="scan-again">${icon('scan')}Escanear mais</button><button type="button" class="btn primary" data-act="scan-done">Concluído</button></div></div>`, 'scan-rev-modal');
 }
 function scanReviewListHTML() {
-  if (!SCN || !SCN.added.length) return '<div class="muted small">Nothing left. Close this and scan again.</div>';
+  if (!SCN || !SCN.added.length) return '<div class="muted small">Nada restante. Feche e escaneie novamente.</div>';
   return SCN.added.map(e => { const it = pantryItems().find(x => x.id === e.itemId);
     return `<div class="sr-row"><div class="sr-t"><b>${esc(foodLabel(e.food))}</b><span class="tiny muted">${esc(pantryQtyText(e.food, packInfo(e.food).P * e.n))}</span></div>
       <div class="qstep">${scanStepHTML(e, 'srv')}</div>
-      <input class="inp sm sr-exp" type="date" data-input="sr-exp" data-f="${esc(e.food)}" value="${it && it.exp ? esc(it.exp) : ''}" aria-label="Use by">
+      <input class="inp sm sr-exp" type="date" data-input="sr-exp" data-f="${esc(e.food)}" value="${it && it.exp ? esc(it.exp) : ''}" aria-label="Validade">
       <button type="button" class="btn icon sm ghost" data-act="srv-rm" data-f="${esc(e.food)}" aria-label="Remover">${icon('trash')}</button></div>`;
   }).join('');
 }
@@ -350,10 +350,10 @@ function scanReviewPaint() { const el = $('#scan-rev-list'); if (el) el.innerHTM
 /* ---------- adição rápida to a day ---------- */
 let QP = null;
 function quickPick(date) {
-  const d = date || todayISO(); if (!inPlan(d)) { toast('That day isn’t in your plan.'); return; }
+  const d = date || todayISO(); if (!inPlan(d)) { toast('Esse dia não está no seu plano.'); return; }
   QP = { d };
-  modal(`<div class="qp-m"><div class="row"><h2 style="flex:1">Add food to ${d === todayISO() ? 'today' : esc(fmtDate(d, { weekday: 'short', month: 'short', day: 'numeric' }))}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
-    <div class="row" style="gap:8px;margin:10px 0"><input class="inp" type="search" id="qp-q" data-input="qp-q" placeholder="Search foods and scanned products…" style="flex:1;min-width:0" autocomplete="off">${scanBtnHTML('today', '', d)}</div>
+  modal(`<div class="qp-m"><div class="row"><h2 style="flex:1">Adicionar alimento em ${d === todayISO() ? 'hoje' : esc(fmtDate(d, { weekday: 'short', month: 'short', day: 'numeric' }))}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
+    <div class="row" style="gap:8px;margin:10px 0"><input class="inp" type="search" id="qp-q" data-input="qp-q" placeholder="Buscar alimentos e produtos escaneados…" style="flex:1;min-width:0" autocomplete="off">${scanBtnHTML('today', '', d)}</div>
     <div class="qp-list" id="qp-list">${qpListHTML('')}</div></div>`, 'qp-modal');
   const q = $('#qp-q'); if (q && window.matchMedia && matchMedia('(pointer: fine)').matches) q.focus();
 }
@@ -366,8 +366,8 @@ function qpListHTML(q, act, d) {
   const list = Object.values(ING).filter(g => words.every(w => hay(g).includes(w))).sort((a, b) => rank(b) - rank(a) || (recent[b.id] || 0) - (recent[a.id] || 0) || a.n.localeCompare(b.n));
   const top = list.slice(0, 50);
   return top.map(g => `<button type="button" class="qp-opt" data-act="${act}" data-id="${g.id}" data-d="${esc(d)}"><span class="qp-t"><b>${esc(g.n)}</b><small>${esc([g.brand, SUB_LABEL[g.sub]].filter(Boolean).join(' · '))}</small></span>
-      <span class="qp-p">${isFavFood(g.id) ? `<span class="qp-star" title="Favorite">${icon('star')}</span>` : ''}${recent[g.id] ? '<span class="pill">Recent</span>' : ''}${g.shared ? '<span class="pill acc">Scanned</span>' : ''}<span class="tiny muted num">${fmt(g.k)} kcal / ${g.u ? esc(g.u) : g.ml ? '100 ml' : '100 g'}</span></span></button>`).join('')
-    + (list.length > top.length ? `<div class="tiny muted" style="padding:8px 4px">${list.length - top.length} more — keep typing to narrow it down.</div>` : '') || `<div class="muted small" style="padding:12px 4px">No foods match.${canScan() ? ' Scan the barcode to add a new product.' : ''}</div>`;
+      <span class="qp-p">${isFavFood(g.id) ? `<span class="qp-star" title="Favorito">${icon('star')}</span>` : ''}${recent[g.id] ? '<span class="pill">Recente</span>' : ''}${g.shared ? '<span class="pill acc">Escaneado</span>' : ''}<span class="tiny muted num">${fmt(g.k)} kcal / ${g.u ? esc(g.u) : g.ml ? '100 ml' : '100 g'}</span></span></button>`).join('')
+    + (list.length > top.length ? `<div class="tiny muted" style="padding:8px 4px">${list.length - top.length} more — keep typing to narrow it down.</div>` : '') || `<div class="muted small" style="padding:12px 4px">Nenhum alimento corresponde à busca.${canScan() ? ' Escaneie o código de barras para adicionar um novo produto.' : ''}</div>`;
 }
 
 /* ---------- find a food by name ----------
@@ -377,15 +377,15 @@ let FP = null;              // { mode: 'pantry' | 'today' | 'foods', d }
 function foodByName(mode, date) {
   scanStop();               // release the camera if we came from the scanner
   FP = { mode, d: date || (SCN && SCN.date) || todayISO() };
-  const title = mode === 'pantry' ? 'Add to the pantry by name' : mode === 'foods' ? 'Find a food' : `Add food to ${FP.d === todayISO() ? 'today' : fmtDate(FP.d, { weekday: 'short', month: 'short', day: 'numeric' })}`;
-  const hint = mode === 'pantry' ? 'Pick a food to put one package na despensa — handy for loose produce and anything without a barcode.'
-    : mode === 'foods' ? 'Search everything on the food list, including products other people scanned. Pick one to see or edit it.'
-    : 'Search the food list and anything scanned on this server.';
+  const title = mode === 'pantry' ? 'Adicionar à despensa pelo nome' : mode === 'foods' ? 'Encontrar um alimento' : `Adicionar alimento em ${FP.d === todayISO() ? 'hoje' : fmtDate(FP.d, { weekday: 'short', month: 'short', day: 'numeric' })}`;
+  const hint = mode === 'pantry' ? 'Escolha um alimento para colocar uma embalagem na despensa — útil para hortifruti avulso e itens sem código de barras.'
+    : mode === 'foods' ? 'Busque tudo na lista de alimentos, incluindo produtos escaneados por outras pessoas. Escolha um para ver ou editar.'
+    : 'Busque na lista de alimentos e em tudo que foi escaneado neste servidor.';
   modal(`<div class="qp-m"><div class="row"><h2 style="flex:1">${esc(title)}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
     <div class="tiny muted" style="margin:2px 0 8px">${esc(hint)}</div>
-    <div class="row" style="gap:8px;margin-bottom:10px"><input class="inp" type="search" id="fp-q" data-input="fp-q" placeholder="Search foods and scanned products…" style="flex:1;min-width:0" autocomplete="off">${mode !== 'foods' && canScan() ? `<button type="button" class="btn" data-act="fp-scan">${icon('scan')}Scan</button>` : ''}</div>
+    <div class="row" style="gap:8px;margin-bottom:10px"><input class="inp" type="search" id="fp-q" data-input="fp-q" placeholder="Buscar alimentos e produtos escaneados…" style="flex:1;min-width:0" autocomplete="off">${mode !== 'foods' && canScan() ? `<button type="button" class="btn" data-act="fp-scan">${icon('scan')}Escanear</button>` : ''}</div>
     <div class="qp-list" id="fp-list">${qpListHTML('', 'fp-pick', FP.d)}</div>
-    ${mode === 'foods' ? `<div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="btn" data-act="food-new-from-pick">${icon('plus')}None of these — create a new food</button></div>` : ''}</div>`, 'qp-modal');
+    ${mode === 'foods' ? `<div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="btn" data-act="food-new-from-pick">${icon('plus')}Nenhum destes — criar novo alimento</button></div>` : ''}</div>`, 'qp-modal');
   const q = $('#fp-q'); if (q && window.matchMedia && matchMedia('(pointer: fine)').matches) q.focus();
 }
 function fpPick(id) {
@@ -394,7 +394,7 @@ function fpPick(id) {
   if (m === 'pantry') {
     if (SCN && SCN.mode === 'pantry') { scanUse(id); openScannerKeep(); return; }   // straight back to the scanner with the session list
     const it = pantryAdd(id, null, null, 'manual'); closeModal(); render();
-    toast(it ? `${foodLabel(id)} added to the pantry` : 'That food has no package size set');
+    toast(it ? `${foodLabel(id)} adicionado à despensa` : 'Esse alimento não tem tamanho de embalagem definido');
     return;
   }
   SCN = null; quickAdd(id, d);
@@ -403,7 +403,7 @@ const slotNow = () => { const h = new Date().getHours() + new Date().getMinutes(
 let QA = null;
 function quickAdd(id, date) {
   const g = ING[id]; if (!g) return; const d = date || todayISO();
-  if (!inPlan(d)) { closeModal(); toast(`${d === todayISO() ? 'Today isn’t' : 'That day isn’t'} in your plan, so there’s nothing to add it to.`); return; }
+  if (!inPlan(d)) { closeModal(); toast(`${d === todayISO() ? 'Hoje não está' : 'Esse dia não está'} no seu plano, então não há onde adicionar este alimento.`); return; }
   ensurePlanThrough(d);
   const srv = +g.srv > 0 ? +g.srv : 0;
   const units = g.u ? [['u', 1, g.u]] : [].concat(srv ? [['srv', srv, `porção (${fmt(srv)} ${g.ml ? 'ml' : 'g'})`]] : [], +g.pk > 1 ? [['pk', +g.pk, `embalagem (${fmt(+g.pk)} ${g.ml ? 'ml' : 'g'})`]] : [], [['g', 1, g.ml ? 'ml' : 'g']]);
@@ -413,31 +413,31 @@ function quickAdd(id, date) {
 function qaAmount() { const u = QA.units.find(x => x[0] === QA.unit); return Math.max(0, +QA.n || 0) * u[1]; }
 function renderQuickAdd() {
   const g = ING[QA.id]; const amt = qaAmount(); const m = ingMacros(QA.id, amt);
-  modal(`<div class="qa-m"><div class="row"><h2 style="flex:1">Add to ${QA.d === todayISO() ? 'today' : fmtDate(QA.d)}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
+  modal(`<div class="qa-m"><div class="row"><h2 style="flex:1">Adicionar em ${QA.d === todayISO() ? 'hoje' : fmtDate(QA.d)}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
     <div class="qa-food"><b>${esc(g.n)}</b>${g.brand ? `<span class="tiny muted">${esc(g.brand)}</span>` : ''}${favFoodBtnHTML(QA.id)}</div>
     <div class="grid g2" style="gap:12px;margin-top:10px">
-      <div class="field"><label>Amount</label><div class="row" style="gap:6px"><input class="inp" type="number" min="0" step="${QA.unit === 'g' ? 5 : 0.5}" value="${QA.n}" data-input="qa-n" style="width:90px"><select class="inp" data-input="qa-unit">${QA.units.map(([k, , l]) => `<option value="${k}" ${QA.unit === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div></div>
-      <div class="field"><label>With</label><select class="inp" data-input="qa-slot">${MEAL_SLOTS.map(s => `<option value="${s}" ${QA.slot === s ? 'selected' : ''}>${SLOT_LABEL[s]}</option>`).join('')}</select></div></div>
+      <div class="field"><label>Quantidade</label><div class="row" style="gap:6px"><input class="inp" type="number" min="0" step="${QA.unit === 'g' ? 5 : 0.5}" value="${QA.n}" data-input="qa-n" style="width:90px"><select class="inp" data-input="qa-unit">${QA.units.map(([k, , l]) => `<option value="${k}" ${QA.unit === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div></div>
+      <div class="field"><label>Com</label><select class="inp" data-input="qa-slot">${MEAL_SLOTS.map(s => `<option value="${s}" ${QA.slot === s ? 'selected' : ''}>${SLOT_LABEL[s]}</option>`).join('')}</select></div></div>
     <div class="qa-mac" id="qa-mac"><b>${fmt(m.k)}</b> kcal · <span style="color:var(--prot)">${fmt(m.p)}P</span> · <span style="color:var(--carb)">${fmt(m.c)}C</span> · <span style="color:var(--fat)">${fmt(m.f)}F</span></div>
-    <div class="tiny muted">It counts toward the day’s macros, and the rest of the day’s portions shrink to make room.</div>
-    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:14px"><button class="btn" data-act="close-modal">Cancelar</button><button class="btn primary" data-act="qa-save">${icon('plus')}Add</button></div></div>`, 'sm qa-modal');
+    <div class="tiny muted">Conta nos macros do dia, e as demais porções são reduzidas para abrir espaço.</div>
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:14px"><button class="btn" data-act="close-modal">Cancelar</button><button class="btn primary" data-act="qa-save">${icon('plus')}Adicionar</button></div></div>`, 'sm qa-modal');
 }
 function qaSave() {
-  const amt = qaAmount(); if (!(amt > 0)) { toast('Enter an amount'); return; }
+  const amt = qaAmount(); if (!(amt > 0)) { toast('Informe uma quantidade'); return; }
   const e = S.plan[QA.d]; if (!e) return; pushUndo('adição rápida');
   e.x = (e.x || []).concat([{ id: QA.id, amt: Math.round(amt * 100) / 100, slot: QA.slot }]);
-  saveState(); closeModal(); render(); toast(`${ING[QA.id].n} added to ${SLOT_LABEL[QA.slot].toLowerCase()} ${QA.d === todayISO() ? 'today' : 'on ' + fmtDate(QA.d)}`, true); QA = null;
+  saveState(); closeModal(); render(); toast(`${ING[QA.id].n} adicionado em ${SLOT_LABEL[QA.slot].toLowerCase()} ${QA.d === todayISO() ? 'hoje' : 'em ' + fmtDate(QA.d)}`, true); QA = null;
 }
-function extraRemove(d, i) { const e = S.plan[d]; if (!e || !e.x || !e.x[i]) return; pushUndo('remove added food'); const x = e.x.splice(i, 1)[0]; if (!e.x.length) delete e.x; saveState(); render(); toast(`${ING[x.id] ? ING[x.id].n : 'Item'} removed`, true); }
+function extraRemove(d, i) { const e = S.plan[d]; if (!e || !e.x || !e.x[i]) return; pushUndo('remover alimento adicionado'); const x = e.x.splice(i, 1)[0]; if (!e.x.length) delete e.x; saveState(); render(); toast(`${ING[x.id] ? ING[x.id].n : 'Item'} removido`, true); }
 // foods added to a day (adição rápida / scan); slot null = every slot, labelled
 function extrasHTML(day, slot) {
   const xs = (day.extras || []).filter(x => !slot || x.slot === slot); if (!xs.length) return '';
-  return `<div class="xtras ${slot ? '' : 'all'}">${xs.map(x => `<span class="xtra">${icon('plus')}<span class="xtra-t">${slot ? '' : `<span class="xtra-s">${SLOT_LABEL[x.slot] || ''}</span>`}${esc(ING[x.id].n)} <b>${esc(amountText(x.id, x.amt).main)}</b> <span class="muted num">${fmt(x.m.k)} kcal · ${fmt(x.m.p)}P</span></span><button type="button" class="xtra-x" data-act="x-rm" data-d="${day.date}" data-i="${x.i}" title="Remove" aria-label="Remove ${esc(ING[x.id].n)}">${icon('x')}</button></span>`).join('')}</div>`;
+  return `<div class="xtras ${slot ? '' : 'all'}">${xs.map(x => `<span class="xtra">${icon('plus')}<span class="xtra-t">${slot ? '' : `<span class="xtra-s">${SLOT_LABEL[x.slot] || ''}</span>`}${esc(ING[x.id].n)} <b>${esc(amountText(x.id, x.amt).main)}</b> <span class="muted num">${fmt(x.m.k)} kcal · ${fmt(x.m.p)}P</span></span><button type="button" class="xtra-x" data-act="x-rm" data-d="${day.date}" data-i="${x.i}" title="Remover" aria-label="Remover ${esc(ING[x.id].n)}">${icon('x')}</button></span>`).join('')}</div>`;
 }
 
 /* ---------- favorite foods ---------- */
 const isFavFood = id => !!(S.favFoods || {})[id];
-function favFoodBtnHTML(id) { const on = isFavFood(id); return `<button type="button" class="fav-btn sm ${on ? 'on' : ''}" data-act="fav-food" data-id="${id}" aria-pressed="${on}" title="${on ? 'Favorite food — click to remove' : 'Add to favorite foods'}">${icon('star')}</button>`; }
+function favFoodBtnHTML(id) { const on = isFavFood(id); return `<button type="button" class="fav-btn sm ${on ? 'on' : ''}" data-act="fav-food" data-id="${id}" aria-pressed="${on}" title="${on ? 'Alimento favorito — clique para remover' : 'Adicionar aos alimentos favoritos'}">${icon('star')}</button>`; }
 function toggleFavFood(id) { S.favFoods = S.favFoods || {}; if (S.favFoods[id]) delete S.favFoods[id]; else S.favFoods[id] = 1; saveState(); $$(`.fav-btn[data-act="fav-food"][data-id="${id}"]`).forEach(b => { const on = isFavFood(id); b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); }); }
 
 /* ---------- pantry ---------- */

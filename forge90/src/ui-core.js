@@ -306,7 +306,7 @@ window.addEventListener('popstate', () => {
   try { top.close(); } catch (e) { /* already gone */ }
 });
 function confirmBox(title, text, okLabel, onOk, danger) {
-  modal(`<h2>${esc(title)}</h2><p class="sub">${text}</p><div class="row" style="justify-content:flex-end;margin-top:18px"><button class="btn" data-act="close-modal">Cancel</button><button class="btn ${danger ? 'danger' : 'primary'}" id="cf-ok">${esc(okLabel)}</button></div>`, 'sm');
+  modal(`<h2>${esc(title)}</h2><p class="sub">${text}</p><div class="row" style="justify-content:flex-end;margin-top:18px"><button class="btn" data-act="close-modal">Cancelar</button><button class="btn ${danger ? 'danger' : 'primary'}" id="cf-ok">${esc(okLabel)}</button></div>`, 'sm');
   $('#cf-ok').onclick = () => { closeModal(); onOk(); };
 }
 
