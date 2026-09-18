@@ -19,7 +19,7 @@ function viewWorkouts() {
   const ph = ALL_PHASES.find(p => p.key === UI.planPhase || p.n === +UI.planPhase) || ALL_PHASES[0];
   const start = S.settings.startDate;
   const card = (p, i, cyc) => `<div class="card phase-card"><i class="band ${p.cls}b"></i><span class="num">0${i + 1}</span>
-    <div class="tiny muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.1em">Weeks ${p.weeks[0]}${p.weeks[1] !== p.weeks[0] ? '–' + p.weeks[1] : ''} · ${fmtDate(addDays(cycleStartDate(cyc), (p.weeks[0] - 1) * 7), { month: 'short', day: 'numeric' })}</div>
+    <div class="tiny muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.1em">Semanas ${p.weeks[0]}${p.weeks[1] !== p.weeks[0] ? '–' + p.weeks[1] : ''} · ${fmtDate(addDays(cycleStartDate(cyc), (p.weeks[0] - 1) * 7), { month: 'short', day: 'numeric' })}</div>
     <h2 style="margin:4px 0 6px">${p.name}</h2><div class="small sub">${esc(p.summary)}</div><div class="row wrap" style="margin-top:10px"><span class="pill">${esc(p.legs)}</span></div></div>`;
   const phaseCards = CYCLE1.map((p, i) => card(p, i, 1)).join('');
   const contCards = CYCLEN.map((p, i) => card(p, i, 2)).join('');
@@ -31,44 +31,44 @@ function viewWorkouts() {
     return `<div class="card" style="margin-bottom:14px"><div class="card-h"><span class="pill" style="background:${KIND_VAR(t.kind)};color:#fff">${ph.key === 'test' ? (t.kind === 'test' ? 'Teste' : 'Deload') : 'Sessão ' + (si + 1)}</span><h3>${esc(t.name)}</h3><span class="muted small">${t.rows.reduce((a, r) => a + r[2], 0)} séries</span></div><div class="small sub" style="margin:-6px 0 12px">${esc(t.focus)}</div>
       <div class="scroll-x"><table class="tbl"><thead><tr><th>Posição</th><th>Prescrição</th>${weeks.map(w => `<th>Semana ${w}${phaseForWeek(w).cycle > 1 ? ` <span class="muted" style="text-transform:none;letter-spacing:0">(ciclo ${phaseForWeek(w).cycle})</span>` : ''}</th>`).join('')}</tr></thead><tbody>
       ${t.rows.map(r => { const [slot, type, sets, reps, rest, off, note] = r;
-        return `<tr><td><b>${esc(SLOTS[slot].label)}</b><div class="tiny muted">${SLOTS[slot].group}</div></td><td style="white-space:nowrap"><span class="type-${type.toLowerCase()}">${type === 'T' ? 'TEST' : type === 'S' ? 'F' : type}</span> ${sets} × ${esc(reps)}<div class="tiny muted">rest ${rest >= 120 ? rest / 60 + ' min' : rest + ' s'}${note ? ' · ' + esc(note) : ''}</div></td>
+        return `<tr><td><b>${esc(SLOTS[slot].label)}</b><div class="tiny muted">${SLOTS[slot].group}</div></td><td style="white-space:nowrap"><span class="type-${type.toLowerCase()}">${type === 'T' ? 'TESTE' : type === 'S' ? 'F' : type}</span> ${sets} × ${esc(reps)}<div class="tiny muted">descanso ${rest >= 120 ? rest / 60 + ' min' : rest + ' s'}${note ? ' · ' + esc(note) : ''}</div></td>
           ${weeks.map(w => { const vv = slotVars(slot, w); const exId = vv[((w - 1 + off) % vv.length + vv.length) % vv.length]; const wip = weekInPhase(w); const rir = type === 'T' ? 'série máxima' : ph.key === 'test' ? 'RIR 3–4' : 'RIR ' + RIR[type][wip - 1];
             const swapped = S.slotSwap && slotSwapsOn(slot, planWeekStart(w)).some(x => x[1] === exId);
             return `<td><div class="var-cell"><span class="ex-name" data-tip-ex="${exId}">${esc(EX[exId].name)}</span><span class="tiny muted">${rir}${swapped ? ' · <span class="swap-mark">trocado</span>' : ''}</span><button type="button" class="swap-btn" data-act="swap-prog" data-slot="${slot}" data-ex="${exId}" title="Trocar ${esc(EX[exId].name)} no programa" aria-label="Trocar ${esc(EX[exId].name)} no programa">${icon('loop')}</button></div></td>`; }).join('')}</tr>`; }).join('')}</tbody></table></div></div>`; }).join('');
   const lib = MUSCLE_GROUPS.map(g => {
     const exs = Object.values(EX).filter(e => exGroupOf(e) === g); const onN = exs.filter(e => !exOffNow(e.id)).length;
     const cw = curPlanWeekStart(); const inProg = new Set(Object.keys(S.slotSwap || {}).flatMap(sl => SLOTS[sl] ? slotSwapsOn(sl, cw).map(x => x[1]) : []));
-    return `<div style="margin-bottom:18px"><h3 style="margin-bottom:8px">${g} <span class="muted small" style="font-weight:500">· ${onN} of ${exs.length} in rotation</span></h3><div class="grid g4" style="gap:10px">
+    return `<div style="margin-bottom:18px"><h3 style="margin-bottom:8px">${g} <span class="muted small" style="font-weight:500">· ${onN} de ${exs.length} na rotação</span></h3><div class="grid g4" style="gap:10px">
       ${exs.map(e => { const on = !exOffNow(e.id); const last = on && onN <= 1;
         return `<div class="ex-card ${e.custom ? 'custom' : ''} ${on ? '' : 'desativado'}" data-tip-ex="${e.id}">${muscleMap(e.primary, e.secondary)}<div style="min-width:0;flex:1"><b>${esc(e.name)}</b><span>${esc(e.equip || '—')}</span><div class="row wrap" style="margin-top:4px;gap:4px">${inProg.has(e.id) ? '<span class="pill acc" style="font-size:10.5px">Inserido por troca</span>' : ''}<span class="pill" style="font-size:10.5px">${e.compound ? 'Composto' : 'Isolador'}</span>${e.custom ? `<span class="pill acc" style="font-size:10.5px">Seu${e.slot && SLOTS[e.slot] ? ' · na rotação' : ''}</span>` : ''}</div>
           <label class="ex-tog" title="${last ? `Este é o único exercício de ${g.toLowerCase()} ativado — cada grupo muscular mantém pelo menos um` : on ? 'Desative para removê-lo das suas sessões' : 'Ative para adicioná-lo novamente à rotação'}"><input type="checkbox" data-input="ex-on" data-id="${e.id}" ${on ? 'checked' : ''} ${last ? 'disabled' : ''}><i class="switch ${on ? 'ativado' : ''}" aria-hidden="true"><i></i></i><span>${on ? (last ? 'Obrigatório' : 'Na rotação') : 'Desativado'}</span></label></div>
         ${e.custom ? `<button class="ex-edit" data-act="ex-edit" data-id="${e.id}" title="Editar exercício" aria-label="Editar ${esc(e.name)}">${icon('edit')}</button>` : ''}</div>`; }).join('')}
-      <button class="ex-card ex-add" data-act="ex-new" data-group="${g === 'Rear delts' ? 'Shoulders' : g}" aria-label="Add a ${g.toLowerCase()} exercise"><span class="plus">${icon('plus')}</span><span>Add ${g === 'Rear delts' ? 'rear delt' : g.toLowerCase()} exercise</span></button></div></div>`; }).join('');
-  const libCard = `<div class="card ${collCls('lib')}" data-coll="lib"><div class="card-h">${collHead('lib', 'Exercise library', `<span class="muted small">Hover for step-by-step form · switch exercises on or off · add your own with the + card</span>`)}</div><div class="coll-body">
-      <div class="note" style="margin-bottom:14px">${icon('info')}<span>Switching an exercise off removes it from the rotation from this plan week on (next week if you’ve already logged it this week); past sessions keep what you did. Every muscle group keeps at least one exercise on — if every variation for a slot is off, the plan borrows another switched-on exercise for the same muscles. Research picks start switched off; hover one to see why it’s included.</span></div>${lib}</div></div>`;
-  return `<div class="page-head"><div class="t"><h1>Workout plan</h1><p>A 90-day launch, then repeating 13-week cycles · ${S.settings.trainDays.length} training day${S.settings.trainDays.length === 1 ? '' : 's'} a week (change it below or in <a href="#/settings">Settings</a>) · Push / Pull / Legs — push and pull never share a session. Every muscle group rotates through 3+ exercise variations.</p></div></div>
+      <button class="ex-card ex-add" data-act="ex-new" data-group="${g === 'Rear delts' ? 'Shoulders' : g}" aria-label="Adicionar exercício de ${g.toLowerCase()}"><span class="plus">${icon('plus')}</span><span>Adicionar exercício de ${g === 'Rear delts' ? 'deltoide posterior' : g.toLowerCase()}</span></button></div></div>`; }).join('');
+  const libCard = `<div class="card ${collCls('lib')}" data-coll="lib"><div class="card-h">${collHead('lib', 'Biblioteca de exercícios', `<span class="muted small">Passe o mouse para ver a execução passo a passo · ative ou desative exercícios · adicione os seus com o cartão +</span>`)}</div><div class="coll-body">
+      <div class="note" style="margin-bottom:14px">${icon('info')}<span>Desativar um exercício o remove da rotação a partir desta semana do plano (ou da próxima, se você já o registrou nesta semana); sessões anteriores mantêm o que foi feito. Cada grupo muscular mantém pelo menos um exercício ativo — se todas as variações de uma posição estiverem desativadas, o plano usa outro exercício ativo para os mesmos músculos. As opções selecionadas por evidências começam desativadas; passe o mouse para ver por que foram incluídas.</span></div>${lib}</div></div>`;
+  return `<div class="page-head"><div class="t"><h1>Plano de treino</h1><p>Um início de 90 dias, seguido por ciclos repetidos de 13 semanas · ${S.settings.trainDays.length} dia${S.settings.trainDays.length === 1 ? '' : 's'} de treino por semana (altere abaixo ou em <a href="#/settings">Configurações</a>) · Push / Pull / Legs — push e pull nunca dividem a mesma sessão. Cada grupo muscular alterna entre 3+ variações de exercícios.</p></div></div>
     ${trainingDaysCardHTML(true)}<div style="height:16px"></div>
-    <section class="${collCls('cycle1')}" data-coll="cycle1"><div class="coll-row">${collHead('cycle1', 'Cycle 1 · the 90-day launch')}</div><div class="coll-body"><div class="grid g4">${phaseCards}</div></div></section><div style="height:18px"></div>
-    <section class="${collCls('cycle2')}" data-coll="cycle2"><div class="coll-row">${collHead('cycle2', 'Cycle 2 onward · repeats every 13 weeks', `<span class="pill">Next: ${fmtDate(cycleStartDate(2), { month: 'short', day: 'numeric', year: 'numeric' })}</span>`)}</div><div class="coll-body">
+    <section class="${collCls('cycle1')}" data-coll="cycle1"><div class="coll-row">${collHead('cycle1', 'Ciclo 1 · início de 90 dias')}</div><div class="coll-body"><div class="grid g4">${phaseCards}</div></div></section><div style="height:18px"></div>
+    <section class="${collCls('cycle2')}" data-coll="cycle2"><div class="coll-row">${collHead('cycle2', 'Ciclo 2 em diante · repete a cada 13 semanas', `<span class="pill">Próximo: ${fmtDate(cycleStartDate(2), { month: 'short', day: 'numeric', year: 'numeric' })}</span>`)}</div><div class="coll-body">
     <div class="grid g4">${contCards}</div>
-    <div class="note" style="margin-top:12px">${icon('loop')}<span>Legs stay at full frequency from here on. The exercise rotation keeps counting week by week, so each new cycle pairs the variations differently. The calendar adds the next cycle automatically; the diet keeps adjusting from your weigh-ins and switches to maintenance when you hit your goal (changeable in Settings).</span></div></div></section><div style="height:16px"></div>
+    <div class="note" style="margin-top:12px">${icon('loop')}<span>Daqui em diante, pernas permanecem com frequência completa. A rotação de exercícios continua contando semana a semana, então cada novo ciclo combina as variações de forma diferente. O calendário adiciona o próximo ciclo automaticamente; o plano alimentar continua se ajustando às suas pesagens e passa para manutenção quando você atinge a meta (alterável em Configurações).</span></div></div></section><div style="height:16px"></div>
     <div class="g-half">
-      <div class="card ${collCls('how')}" data-coll="how"><div class="card-h">${collHead('how', 'How the program works')}</div><div class="coll-body">
+      <div class="card ${collCls('how')}" data-coll="how"><div class="card-h">${collHead('how', 'Como o programa funciona')}</div><div class="coll-body">
         <div class="small" style="display:grid;gap:10px">
-          <div class="note">${icon('pull')}<span><b>Push / Pull / Legs.</b> Push days train chest, shoulders and triceps; pull days train back, rear delts and biceps; legs get their own day. Sessions are handed out in a rolling order across your training days, so it works with any number of days.</span></div>
-          <div class="note">${icon('dumbbell')}<span><b>Isolation-first.</b> Machines, cables and dumbbells carry most of the volume. Compound lifts appear only in the “strength” slot of a session (stable machine/DB versions), which keeps joint stress and fatigue low while you’re in a calorie deficit.</span></div>
-          <div class="note">${icon('loop')}<span><b>Variation rotation.</b> Each slot has 3 exercises that cycle weekly (Week 1 → A, Week 2 → B, Week 3 → C, repeat). Each variation comes back every 3 weeks — beat what you did last time on it. The B session of each pair uses a different variation from the A session. Swap any exercise with the ${icon('loop').replace('<svg', '<svg style="width:12px;height:12px;vertical-align:-2px"')} button — in a day’s session for that day only, or in the table below for the whole program.</span></div>
-          <div class="note">${icon('trend')}<span><b>Double progression.</b> Work in the rep range at the target RIR. When every set hits the top of the range, add load (≈5 lb dumbbells/cables, 10 lb machines) and start again at the bottom.</span></div>
-          <div class="note">${icon('flame')}<span><b>Effort waves.</b> RIR drops across each 4-week phase, then resets as the next phase changes the split. Every 13th week is a deload plus PR tests on the strength slots.</span></div>
+          <div class="note">${icon('pull')}<span><b>Push / Pull / Legs.</b> Dias de push treinam peito, ombros e tríceps; dias de pull treinam costas, deltoides posteriores e bíceps; pernas têm seu próprio dia. As sessões seguem uma ordem contínua ao longo dos seus dias de treino, então o sistema funciona com qualquer quantidade de dias.</span></div>
+          <div class="note">${icon('dumbbell')}<span><b>Prioridade ao isolamento.</b> Máquinas, cabos e halteres concentram a maior parte do volume. Exercícios compostos aparecem apenas na posição de “força” da sessão (em versões estáveis com máquina/halteres), reduzindo estresse articular e fadiga durante o déficit calórico.</span></div>
+          <div class="note">${icon('loop')}<span><b>Rotação de variações.</b> Cada posição tem 3 exercícios que alternam semanalmente (Semana 1 → A, Semana 2 → B, Semana 3 → C, e repete). Cada variação retorna a cada 3 semanas — tente superar o que fez da última vez. A sessão B de cada par usa uma variação diferente da sessão A. Troque qualquer exercício com o ${icon('loop').replace('<svg', '<svg style="width:12px;height:12px;vertical-align:-2px"')} — apenas na sessão daquele dia ou, na tabela abaixo, para o programa inteiro.</span></div>
+          <div class="note">${icon('trend')}<span><b>Progressão dupla.</b> Trabalhe dentro da faixa de repetições no RIR-alvo. Quando todas as séries atingirem o topo da faixa, aumente a carga e recomece pela parte inferior da faixa.</span></div>
+          <div class="note">${icon('flame')}<span><b>Ondas de esforço.</b> O RIR diminui ao longo de cada fase de 4 semanas e é redefinido quando a fase seguinte muda a divisão. A cada 13ª semana há deload e testes de recorde nas posições de força.</span></div>
         </div>
-        <table class="tbl" style="margin-top:12px"><thead><tr><th>Week of phase</th><th>1</th><th>2</th><th>3</th><th>4</th></tr></thead><tbody>
+        <table class="tbl" style="margin-top:12px"><thead><tr><th>Semana da fase</th><th>1</th><th>2</th><th>3</th><th>4</th></tr></thead><tbody>
           <tr><td>Séries de hipertrofia (H)</td>${RIR.H.map(v => `<td>RIR ${v}</td>`).join('')}</tr><tr><td>Séries de força (F)</td>${RIR.S.map(v => `<td>RIR ${v}</td>`).join('')}</tr></tbody></table></div></div>
-      <div class="card ${collCls('sets')}" data-coll="sets"><div class="card-h">${collHead('sets', 'Direct weekly sets by muscle', `<span class="pill">${S.settings.trainDays.length} days / week</span>`)}</div><div class="coll-body"><div class="small sub" style="margin:-6px 0 10px">Average sets per week with your current training days. Legs stay low in month 1, then rise to their full share.</div><div class="scroll-x">${heat}</div></div></div></div>
+      <div class="card ${collCls('sets')}" data-coll="sets"><div class="card-h">${collHead('sets', 'Séries diretas semanais por músculo', `<span class="pill">${S.settings.trainDays.length} dias / semana</span>`)}</div><div class="coll-body"><div class="small sub" style="margin:-6px 0 10px">Média de séries por semana com seus dias de treino atuais. O volume de pernas fica menor no primeiro mês e depois sobe até a frequência completa.</div><div class="scroll-x">${heat}</div></div></div></div>
     <div style="height:16px"></div>
     ${libCard}
     <div style="height:16px"></div>
-    <section class="${collCls('sessions')}" data-coll="sessions"><div class="coll-row" style="margin-bottom:12px">${collHead('sessions', 'Sessions & rotation', `<div class="seg">${ALL_PHASES.map(p => `<button class="${ph.key === p.key ? 'ativado' : ''}" data-act="plan-phase" data-v="${p.key}">${p.name}</button>`).join('')}</div>`)}</div>
-    <div class="coll-body"><div class="tiny muted" style="margin:-4px 0 12px">Use ${icon('loop').replace('<svg', '<svg style="width:12px;height:12px;vertical-align:-2px"')} on any exercise to swap it in the program from this week on.</div>${sessions}</div></section>`;
+    <section class="${collCls('sessions')}" data-coll="sessions"><div class="coll-row" style="margin-bottom:12px">${collHead('sessions', 'Sessões e rotação', `<div class="seg">${ALL_PHASES.map(p => `<button class="${ph.key === p.key ? 'ativado' : ''}" data-act="plan-phase" data-v="${p.key}">${p.name}</button>`).join('')}</div>`)}</div>
+    <div class="coll-body"><div class="tiny muted" style="margin:-4px 0 12px">Use ${icon('loop').replace('<svg', '<svg style="width:12px;height:12px;vertical-align:-2px"')} em qualquer exercício para trocá-lo no programa a partir desta semana.</div>${sessions}</div></section>`;
 }
 
 /* ---------------- DIET ---------------- */
@@ -81,12 +81,12 @@ function viewDiet() {
   const nextR = dates.find(d => d >= ref && !A.days[d].isTrain) || dates.find(d => !A.days[d].isTrain);
   const trend = weightTrend(); const pj = projection();
   const weeklyAvg = Math.round((tT.kcal * st.trainDays.length + tR.kcal * (7 - st.trainDays.length)) / 7);
-  const targets = `<div class="card"><div class="card-h"><h2>Your targets</h2>${tT.maintMode ? '<span class="pill acc">Goal reached · maintenance</span>' : ''}<span class="pill">${fmt(cur.w, 1)} lb · ${fmt(cur.bf, 1)}% BF${cur.est ? ' est.' : ''}</span></div>
+  const targets = `<div class="card"><div class="card-h"><h2>Suas metas</h2>${tT.maintMode ? '<span class="pill acc">Meta atingida · manutenção</span>' : ''}<span class="pill">${fmt(cur.w, 1)} lb · ${fmt(cur.bf, 1)}% BF${cur.est ? ' est.' : ''}</span></div>
     <div class="grid g4" style="gap:12px">
-      <div class="card stat" style="box-shadow:none;background:var(--surface-2)"><div class="lbl">${icon('dumbbell')}Training day</div><div class="val">${fmt(tT.kcal)}<small>kcal</small></div><div class="delta neu">${fmt(tT.protein)} g de proteína</div></div>
-      <div class="card stat" style="box-shadow:none;background:var(--surface-2)"><div class="lbl">${icon('moon')}Rest day</div><div class="val">${fmt(tR.kcal)}<small>kcal</small></div><div class="delta neu">${fmt(tR.protein)} g de proteína</div></div>
-      <div class="card stat" style="box-shadow:none;background:var(--surface-2)"><div class="lbl">${icon('target')}Weekly average</div><div class="val">${fmt(weeklyAvg)}<small>kcal</small></div><div class="delta neu">−${fmt(tT.deficit)} kcal/dia vs. manutenção</div></div>
-      <div class="card stat" style="box-shadow:none;background:var(--surface-2)"><div class="lbl">${icon('bolt')}Protein</div><div class="val">${fmt(st.proteinPerKg, 2)}<small>g/kg</small></div><div class="delta neu">faixa ${fmt(cur.w * 1.4)}–${fmt(cur.w * 2)} g (1,4–2 g/kg)</div></div></div>
+      <div class="card stat" style="box-shadow:none;background:var(--surface-2)"><div class="lbl">${icon('dumbbell')}Dia de treino</div><div class="val">${fmt(tT.kcal)}<small>kcal</small></div><div class="delta neu">${fmt(tT.protein)} g de proteína</div></div>
+      <div class="card stat" style="box-shadow:none;background:var(--surface-2)"><div class="lbl">${icon('moon')}Dia de descanso</div><div class="val">${fmt(tR.kcal)}<small>kcal</small></div><div class="delta neu">${fmt(tR.protein)} g de proteína</div></div>
+      <div class="card stat" style="box-shadow:none;background:var(--surface-2)"><div class="lbl">${icon('target')}Média semanal</div><div class="val">${fmt(weeklyAvg)}<small>kcal</small></div><div class="delta neu">−${fmt(tT.deficit)} kcal/dia vs. manutenção</div></div>
+      <div class="card stat" style="box-shadow:none;background:var(--surface-2)"><div class="lbl">${icon('bolt')}Proteína</div><div class="val">${fmt(st.proteinPerKg, 2)}<small>g/kg</small></div><div class="delta neu">faixa ${fmt(cur.w * 1.4)}–${fmt(cur.w * 2)} g (1,4–2 g/kg)</div></div></div>
     <div class="scroll-x" style="margin-top:14px"><table class="tbl"><tbody>
       <tr><td>Massa corporal magra</td><td class="num">${fmt(cur.lbm, 1)} lb</td><td class="muted">peso × (1 − % de gordura)</td></tr>
       <tr><td>BMR (Katch–McArdle)</td><td class="num">${fmt(tT.bmr)} kcal</td><td class="muted">370 + 21,6 × massa magra (kg)</td></tr>
@@ -109,7 +109,7 @@ function viewDiet() {
     ${bfEstimateNote()}${targets}<div style="height:16px"></div>${portions}<div style="height:16px"></div>
     <div style="height:16px"></div>
     <div class="grid g2">${lossRateCardHTML()}${bodyGoalsCardHTML()}<div style="grid-column:1/-1">${nutritionCardHTML()}</div></div>
-    <div class="note" style="margin-top:12px">${icon('info')}<span>Estas são as mesmas configurações da página Configurações — alterá-las aqui atualiza suas metas e todas as porções do calendário. Explore, favorite e edite receitas em <a href="#/foods">Foods &amp; recipes</a>.</span></div>`;
+    <div class="note" style="margin-top:12px">${icon('info')}<span>Estas são as mesmas configurações da página Configurações — alterá-las aqui atualiza suas metas e todas as porções do calendário. Explore, favorite e edite receitas em <a href="#/foods">Alimentos e receitas</a>.</span></div>`;
 }
 /* ---------- recipe details: popup, full page and print ---------- */
 function recipeParts(rid) {
@@ -120,8 +120,8 @@ function recipeParts(rid) {
   return { r, m, per: rows(r.yield), batch: rows(1), list,
     meta: `${r.cat} · ${r.yield > 1 ? 'makes ' + r.yield : '1 serving'} · ${r.storage === 'freezer' ? 'freezer-friendly' : r.storage === 'fridge' ? 'keeps 4 days' : 'eat fresh'}${r.time ? ' · ' + r.time + ' min' : ''}`,
     tags: r.tags.map(t => `<span class="pill">${esc(t)}</span>`).join(''),
-    macros: [['kcal', m.k, 'var(--kcal)'], ['Protein', m.p, 'var(--prot)'], ['Carbs', m.c, 'var(--carb)'], ['Fat', m.f, 'var(--fat)']].map(([l, v, c]) => `<div class="card" style="box-shadow:none;background:var(--surface-2);padding:12px"><div class="tiny muted">${l}${l !== 'kcal' ? ' (g)' : ''}</div><div style="font-size:22px;font-weight:700;border-left:3px solid ${c};padding-left:8px;margin-top:4px" class="num">${fmt(v)}</div></div>`).join(''),
-    steps: r.steps.length ? `<ol class="rec-steps">${r.steps.map(x => `<li>${esc(x)}</li>`).join('')}</ol>` : '<div class="tiny muted">No steps yet — add them with Edit recipe.</div>',
+    macros: [['kcal', m.k, 'var(--kcal)'], ['Proteína', m.p, 'var(--prot)'], ['Carboidratos', m.c, 'var(--carb)'], ['Gorduras', m.f, 'var(--fat)']].map(([l, v, c]) => `<div class="card" style="box-shadow:none;background:var(--surface-2);padding:12px"><div class="tiny muted">${l}${l !== 'kcal' ? ' (g)' : ''}</div><div style="font-size:22px;font-weight:700;border-left:3px solid ${c};padding-left:8px;margin-top:4px" class="num">${fmt(v)}</div></div>`).join(''),
+    steps: r.steps.length ? `<ol class="rec-steps">${r.steps.map(x => `<li>${esc(x)}</li>`).join('')}</ol>` : '<div class="tiny muted">Nenhuma etapa ainda — adicione usando Editar receita.</div>',
     scaling: `<div class="note" style="margin-top:10px">${icon('info')}<span>Portion scaling: ${r.fixed ? 'fixed portion (not scaled).' : r.ing.map(([id]) => `${ING[id].n.split(',')[0]} → ${roles[ING[id].r]}`).join(' · ')}</span></div>`,
     blocked: recipeAllowed(r) ? '' : `<span class="pill warn-pill">Blocked · ${esc(blockedBy(r).join(', '))}</span>` };
 }
@@ -130,23 +130,23 @@ function recipeModal(rid) {
   modal(`<div class="row" style="align-items:flex-start"><div style="font-size:44px">${esc(r.emoji)}</div><div style="flex:1;min-width:0"><div class="tiny muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.08em">${x.meta}</div><h2 style="font-size:22px">${esc(r.name)}</h2>
     <div class="row wrap" style="margin-top:6px">${x.tags}</div></div>${favBtnHTML(rid, 'in-modal')}
     <button class="btn icon ghost" data-act="recipe-print" data-rid="${rid}" title="Print this recipe" aria-label="Print this recipe">${icon('print')}</button>
-    <button class="btn icon ghost" data-act="recipe-expand" data-rid="${rid}" title="Open as a full page" aria-label="Open as a full page">${icon('expand')}</button>
-    <button class="btn icon ghost" data-act="close-modal" title="Close" aria-label="Close">${icon('x')}</button></div>
+    <button class="btn icon ghost" data-act="recipe-expand" data-rid="${rid}" title="Abrir em página completa" aria-label="Abrir em página completa">${icon('expand')}</button>
+    <button class="btn icon ghost" data-act="close-modal" title="Fechar" aria-label="Fechar">${icon('x')}</button></div>
     <div class="grid g4" style="gap:10px;margin:16px 0">${x.macros}</div>
     <div class="grid g2"><div><h3>Per standard serving</h3><div class="ing-list">${x.list(x.per)}</div></div>${r.yield > 1 ? `<div><h3>Full batch (${r.yield} servings)</h3><div class="ing-list">${x.list(x.batch)}</div></div>` : ''}</div>
     <h3 style="margin-top:16px">Method</h3>${x.steps}
     ${linksBlockHTML(r)}${x.scaling}
     <div class="row wrap" style="justify-content:flex-end;margin-top:14px;gap:6px">${x.blocked ? `<span style="margin-right:auto">${x.blocked}</span>` : ''}
-      <button class="btn" data-act="recipe-dup" data-rid="${rid}">Duplicate</button><button class="btn primary" data-act="recipe-edit" data-rid="${rid}">${icon('edit')}Edit recipe</button></div>`);
+      <button class="btn" data-act="recipe-dup" data-rid="${rid}">Duplicar</button><button class="btn primary" data-act="recipe-edit" data-rid="${rid}">${icon('edit')}Editar receita</button></div>`);
 }
 let REC_FROM = '';                        // where "Back" goes from the full-page recipe
 function viewRecipe(rid) {
   const x = recipeParts(rid);
-  if (!x) return `<div class="page-head"><div class="t"><h1>Recipe not found</h1><p>It may have been deleted. <a href="#/foods">Back to Foods &amp; recipes</a></p></div></div>`;
+  if (!x) return `<div class="page-head"><div class="t"><h1>Receita não encontrada</h1><p>Ela pode ter sido excluída. <a href="#/foods">Voltar para Alimentos e receitas</a></p></div></div>`;
   const r = x.r;
   return `<div class="page-head rec-head"><div class="t"><a class="rec-back" href="${esc(REC_FROM || '#/foods')}">${icon('left')}Back</a>
       <div class="tiny muted rec-kicker">${x.meta}</div><h1><span class="rec-emo">${esc(r.emoji)}</span>${esc(r.name)}</h1>${x.tags ? `<div class="row wrap" style="margin-top:8px">${x.tags}</div>` : ''}</div>
-    <div class="row wrap">${x.blocked}${favBtnHTML(rid)}<button class="btn" data-act="recipe-print" data-rid="${rid}">${icon('print')}Print</button><button class="btn" data-act="recipe-dup" data-rid="${rid}">Duplicate</button><button class="btn primary" data-act="recipe-edit" data-rid="${rid}">${icon('edit')}Edit recipe</button></div></div>
+    <div class="row wrap">${x.blocked}${favBtnHTML(rid)}<button class="btn" data-act="recipe-print" data-rid="${rid}">${icon('print')}Imprimir</button><button class="btn" data-act="recipe-dup" data-rid="${rid}">Duplicar</button><button class="btn primary" data-act="recipe-edit" data-rid="${rid}">${icon('edit')}Editar receita</button></div></div>
     <div class="grid g4" style="gap:10px;margin-bottom:16px">${x.macros}</div>
     <div class="grid ${r.yield > 1 ? 'g2' : ''}" style="margin-bottom:16px"><div class="card"><div class="card-h"><h2>Per standard serving</h2></div><div class="ing-list">${x.list(x.per)}</div></div>
       ${r.yield > 1 ? `<div class="card"><div class="card-h"><h2>Full batch</h2><span class="pill">${r.yield} servings</span></div><div class="ing-list">${x.list(x.batch)}</div></div>` : ''}</div>
@@ -162,7 +162,7 @@ function recipePrintHTML(rid) {
     <div class="pr-mac">Per serving: <b>${fmt(m.k)}</b> kcal · <b>${fmt(m.p)} g</b> protein · <b>${fmt(m.c)} g</b> carbs · <b>${fmt(m.f)} g</b> fat</div>
     <div class="pr-cols"><section><h2>Per serving</h2>${table(x.per)}</section>${r.yield > 1 ? `<section><h2>Full batch · ${r.yield} servings</h2>${table(x.batch)}</section>` : ''}</div>
     ${r.steps.length ? `<section class="pr-steps"><h2>Method</h2><ol>${r.steps.map(y => `<li>${esc(y)}</li>`).join('')}</ol></section>` : ''}
-    ${links.length ? `<section class="pr-links"><h2>Source</h2>${links.map(l => `<div>${esc(l.title || l.site || '')}${l.title ? ' — ' : ''}${esc(l.url)}</div>`).join('')}</section>` : ''}
+    ${links.length ? `<section class="pr-links"><h2>Fonte</h2>${links.map(l => `<div>${esc(l.title || l.site || '')}${l.title ? ' — ' : ''}${esc(l.url)}</div>`).join('')}</section>` : ''}
     <footer>${esc(appTitle())} · printed ${esc(fmtDate(todayISO(), { month: 'short', day: 'numeric', year: 'numeric' }))} · amounts are one standard serving; your daily portions are sized to your targets in the app.</footer></article>`;
 }
 function printRecipe(rid) {
@@ -193,20 +193,20 @@ function groceryWeek() {
   const GL = groceryRows(A, wd, totals);
   GRO_ROWS = { rows: GL.rows, week: wd[0], wk };
   const nW = Math.ceil(dates.length / 7);
-  const opts = Array.from({ length: nW }, (_, i) => `<option value="${i + 1}" ${wk === i + 1 ? 'selected' : ''}>Week ${i + 1} · ${fmtDate(dates[i * 7], { month: 'short', day: 'numeric' })} – ${fmtDate(dates[Math.min(dates.length - 1, i * 7 + 6)], { month: 'short', day: 'numeric' })}${phaseForWeek(i + 1).cycle > 1 ? ' · cycle ' + phaseForWeek(i + 1).cycle : ''}</option>`).join('');
+  const opts = Array.from({ length: nW }, (_, i) => `<option value="${i + 1}" ${wk === i + 1 ? 'selected' : ''}>Semana ${i + 1} · ${fmtDate(dates[i * 7], { month: 'short', day: 'numeric' })} – ${fmtDate(dates[Math.min(dates.length - 1, i * 7 + 6)], { month: 'short', day: 'numeric' })}${phaseForWeek(i + 1).cycle > 1 ? ' · ciclo ' + phaseForWeek(i + 1).cycle : ''}</option>`).join('');
   return { A, dates, wk, wd, totals, cooks, singles, carried, got, GL, opts };
 }
 function prepScheduleHTML(G) {
   const { cooks, singles, carried } = G;
   const cookRows = cooks.slice().sort((a, b) => a.d < b.d ? -1 : 1).map(({ d, m, b }) => { const dd = parseISO(d); const prep = addDays(d, -1);
-    return `<div class="prep-row"><div class="d"><span>${DOW[dd.getDay()]}</span><b>${dd.getDate()}</b></div><div style="flex:1;min-width:0"><div class="row"><span style="font-size:20px">${esc(m.r.emoji)}</span><b>${esc(m.r.name)}</b><span class="bd cook">COOK ×${b.batch.size}</span>${b.batch.partnerServ ? `<span class="bd shr" data-tip="${b.batch.size - b.batch.partnerServ} for you · ${b.batch.partnerServ} for ${esc(syncName())}">${icon('users')}${b.batch.partnerServ}</span>` : ''}</div>
-      <div class="small sub" style="margin-top:3px">Eat: ${b.batch.members.map(o => fmtDate(o.date, { weekday: 'short' }) + ' ' + SLOT_LABEL[o.slot].toLowerCase()).join(' · ')}${m.r.storage === 'freezer' ? ' · freeze extras' : ''}</div>
-      <div class="tiny muted">Prep ${fmtDate(prep, { weekday: 'long' })} evening or ${fmtDate(d, { weekday: 'long' })} morning · ~${m.r.time} min${b.batch.size < m.r.yield ? ` · recipe scaled to ${Math.round(b.batch.scale * 100)}%` : ''}</div></div></div>`; }).join('') || '<div class="muted small">No batch cooking this week.</div>';
+    return `<div class="prep-row"><div class="d"><span>${DOW[dd.getDay()]}</span><b>${dd.getDate()}</b></div><div style="flex:1;min-width:0"><div class="row"><span style="font-size:20px">${esc(m.r.emoji)}</span><b>${esc(m.r.name)}</b><span class="bd cook">PREPARAR ×${b.batch.size}</span>${b.batch.partnerServ ? `<span class="bd shr" data-tip="${b.batch.size - b.batch.partnerServ} para você · ${b.batch.partnerServ} para ${esc(syncName())}">${icon('users')}${b.batch.partnerServ}</span>` : ''}</div>
+      <div class="small sub" style="margin-top:3px">Consumir: ${b.batch.members.map(o => fmtDate(o.date, { weekday: 'short' }) + ' ' + SLOT_LABEL[o.slot].toLowerCase()).join(' · ')}${m.r.storage === 'freezer' ? ' · congelar extras' : ''}</div>
+      <div class="tiny muted">Preparar na noite de ${fmtDate(prep, { weekday: 'long' })} ou na manhã de ${fmtDate(d, { weekday: 'long' })} · ~${m.r.time} min${b.batch.size < m.r.yield ? ` · recipe scaled to ${Math.round(b.batch.scale * 100)}%` : ''}</div></div></div>`; }).join('') || '<div class="muted small">Nenhum preparo em lote nesta semana.</div>';
   const singleSummary = {}; singles.forEach(({ m }) => singleSummary[m.r.id] = (singleSummary[m.r.id] || 0) + 1);
-  return `<div class="card"><div class="card-h"><h2>Batch-cook schedule</h2></div>${cookRows}
-        ${carried.length ? `<div class="note" style="margin-top:12px">${icon('loop')}<span>Carried over from last week (already cooked): ${[...new Set(carried.map(c => c.m.r.name))].map(esc).join(', ')}.</span></div>` : ''}</div>
-        <div style="height:16px"></div><div class="card"><div class="card-h"><h2>Cook-fresh meals</h2></div>
-        <div class="row wrap" style="gap:6px">${Object.entries(singleSummary).map(([id, n]) => `<span class="pill">${esc(RECIPE[id].emoji)} ${esc(RECIPE[id].name)}${n > 1 ? ' ×' + n : ''}</span>`).join('') || '<span class="muted small">None</span>'}</div></div>`;
+  return `<div class="card"><div class="card-h"><h2>Cronograma de preparo em lote</h2></div>${cookRows}
+        ${carried.length ? `<div class="note" style="margin-top:12px">${icon('loop')}<span>Trazido da semana passada (já preparado): ${[...new Set(carried.map(c => c.m.r.name))].map(esc).join(', ')}.</span></div>` : ''}</div>
+        <div style="height:16px"></div><div class="card"><div class="card-h"><h2>Refeições para preparar na hora</h2></div>
+        <div class="row wrap" style="gap:6px">${Object.entries(singleSummary).map(([id, n]) => `<span class="pill">${esc(RECIPE[id].emoji)} ${esc(RECIPE[id].name)}${n > 1 ? ' ×' + n : ''}</span>`).join('') || '<span class="muted small">Nenhuma</span>'}</div></div>`;
 }
 function viewGrocery() {
   const G = groceryWeek(); if (isPhone()) return groceryPhoneHTML(G);
@@ -216,21 +216,21 @@ function viewGrocery() {
   const order = AISLES.concat(Object.keys(aisles).filter(a => !AISLES.includes(a)));
   // everything stays on the list; what the pantry covers starts ticked with a pantry note, so a pantry that's behind can't hide an item
   const list = order.filter(a => aisles[a]).map(a => `<div class="gro-aisle"><h3>${a}</h3>${aisles[a].sort((x, y) => ING[x.id].n.localeCompare(ING[y.id].n)).map(r => { const { id, total, have } = r; const g = groceryText(id, total);
-    const pi = packInfo(id); const npk = Math.ceil(total / pi.P - 1e-9); const pkTxt = pi.w >= .3 && pi.P > 1 ? `<small class="pk" title="Typical package: ${fmt(pi.P)} ${unitOf(id)} — edit it on the food">≈ ${npk} pack${npk === 1 ? '' : 's'}</small>` : '';
+    const pi = packInfo(id); const npk = Math.ceil(total / pi.P - 1e-9); const pkTxt = pi.w >= .3 && pi.P > 1 ? `<small class="pk" title="Embalagem típica: ${fmt(pi.P)} ${unitOf(id)} — edite no alimento">≈ ${npk} embalagem${npk === 1 ? '' : 'ens'}</small>` : '';
     const st = groRowState(r, got);
-    const panTxt = st.covered ? `<small class="pan-have full" title="Your pantry has enough — untick it if you still need to buy it">${icon('box')}In your pantry${have > total * 1.01 ? ` · ${esc(pantryQtyText(id, have))}` : ''}</small>` : have > 0 ? `<small class="pan-have" title="Your pantry has some of this">${icon('box')}${esc(pantryQtyText(id, have))} at home</small>` : '';
-    return `<label class="gro-item ${st.checked ? 'got' : ''} ${st.covered ? 'pan' : ''}"><input type="checkbox" data-input="gro" data-id="${id}" ${st.covered ? 'data-pan="1"' : ''} ${st.checked ? 'checked' : ''}><span>${esc(g.name)}${st.covered ? `<span class="gro-pan-ic" title="In your pantry">${icon('box')}</span>` : ''}</span><span class="q">${g.qty}${g.sub ? `<small>${g.sub}</small>` : ''}${pkTxt}${panTxt}</span></label>`; }).join('')}</div>`).join('');
+    const panTxt = st.covered ? `<small class="pan-have full" title="Sua despensa tem quantidade suficiente — desmarque se ainda precisar comprar">${icon('box')}Na sua despensa${have > total * 1.01 ? ` · ${esc(pantryQtyText(id, have))}` : ''}</small>` : have > 0 ? `<small class="pan-have" title="Sua despensa tem parte desta quantidade">${icon('box')}${esc(pantryQtyText(id, have))} em casa</small>` : '';
+    return `<label class="gro-item ${st.checked ? 'got' : ''} ${st.covered ? 'pan' : ''}"><input type="checkbox" data-input="gro" data-id="${id}" ${st.covered ? 'data-pan="1"' : ''} ${st.checked ? 'checked' : ''}><span>${esc(g.name)}${st.covered ? `<span class="gro-pan-ic" title="Na sua despensa">${icon('box')}</span>` : ''}</span><span class="q">${g.qty}${g.sub ? `<small>${g.sub}</small>` : ''}${pkTxt}${panTxt}</span></label>`; }).join('')}</div>`).join('');
   const T = groTools(GL.rows, got); const nAll = GL.rows.length;
-  return `<div class="page-head"><div class="t"><h1>Grocery & meal prep</h1><p>Quantities are summed from the exact scaled portions on your calendar — including leftovers — for the selected week.</p></div>
-      <div class="row wrap">${syncBtnHTML()}<select class="inp" data-input="gro-week">${opts}</select><button class="btn" data-act="copy-list">${icon('list')}Copy list</button><button class="btn" data-act="print">Print</button></div></div>
+  return `<div class="page-head"><div class="t"><h1>Compras e preparo</h1><p>As quantidades são somadas a partir das porções exatas ajustadas no calendário — incluindo sobras — para a semana selecionada.</p></div>
+      <div class="row wrap">${syncBtnHTML()}<select class="inp" data-input="gro-week">${opts}</select><button class="btn" data-act="copy-list">${icon('list')}Copiar lista</button><button class="btn" data-act="print">Imprimir</button></div></div>
     ${syncGroceryNote(wd, A)}
     ${moneySaverHTML(wd)}<div style="height:16px"></div>
     <div class="g-half">
       <div>${prepScheduleHTML(G)}</div>
-      <div class="card"><div class="card-h"><h2>Shopping list</h2><span class="muted small">${nAll} item${nAll === 1 ? '' : 's'} · tap to check off</span></div>
-        ${nAll ? `<div class="row wrap gro-tools"><button class="btn sm" data-act="gro-all" data-v="1" ${T.checked === nAll ? 'disabled' : ''}>${icon('check')}Check all</button><button class="btn sm" data-act="gro-all" data-v="0" ${T.checked ? '' : 'disabled'}>${icon('x')}Uncheck all</button><button class="btn sm primary" data-act="gro-pantry" ${T.add ? '' : 'disabled'} title="Put the items you ticked in the pantry and clear their ticks">${icon('box')}Add checked to pantry${T.add ? ` (${T.add})` : ''}</button></div>` : ''}
-        ${GL.note}${list || '<div class="muted">Nothing planned this week.</div>'}
-        <div class="tiny muted" style="margin-top:10px">Rice & quinoa are listed uncooked (~⅓ of cooked weight). Seasonings, garlic, lemon/lime and cooking spray aren’t listed.</div></div></div>`;
+      <div class="card"><div class="card-h"><h2>Lista de compras</h2><span class="muted small">${nAll} item${nAll === 1 ? '' : 'ns'} · toque para marcar</span></div>
+        ${nAll ? `<div class="row wrap gro-tools"><button class="btn sm" data-act="gro-all" data-v="1" ${T.checked === nAll ? 'disabled' : ''}>${icon('check')}Marcar tudo</button><button class="btn sm" data-act="gro-all" data-v="0" ${T.checked ? '' : 'disabled'}>${icon('x')}Desmarcar tudo</button><button class="btn sm primary" data-act="gro-pantry" ${T.add ? '' : 'disabled'} title="Colocar os itens marcados na despensa e limpar as marcações">${icon('box')}Adicionar marcados à despensa${T.add ? ` (${T.add})` : ''}</button></div>` : ''}
+        ${GL.note}${list || '<div class="muted">Nada planejado nesta semana.</div>'}
+        <div class="tiny muted" style="margin-top:10px">Arroz e quinoa aparecem em peso cru (~⅓ do peso cozido). Temperos, alho, limão e spray culinário não aparecem na lista.</div></div></div>`;
 }
 
 /* ---------------- money saver: ingredient sharing ---------------- */
@@ -483,7 +483,7 @@ function sideFoot() {
   const ph = i >= 0 ? phaseForWeek(planWeek(t)) : null;
   const lbl = i < 0 ? `Começa em ${-i} dia${-i === 1 ? '' : 's'}` : `Ciclo ${ph.cycle} · ${ph.name}`;
   const frac = i < 0 ? 0 : ph.cycle === 1 ? Math.min(1, d / LAUNCH_DAYS) : (ph.wic - 1 + ((i % 7) + 1) / 7) / 13;
-  $('#side-foot').innerHTML = userChipHTML() + `<div class="lbl">${i >= 0 && ph.cycle > 1 ? 'Ciclo ' + ph.cycle : 'Progresso'}</div><div class="big">Day ${d}${i >= 0 && ph.cycle === 1 && d <= LAUNCH_DAYS ? '<span class="muted" style="font-size:14px"> / 90</span>' : ''}</div><div class="small sub">${lbl}</div><div class="pbar"><i style="width:${frac * 100}%"></i></div>
+  $('#side-foot').innerHTML = userChipHTML() + `<div class="lbl">${i >= 0 && ph.cycle > 1 ? 'Ciclo ' + ph.cycle : 'Progresso'}</div><div class="big">Dia ${d}${i >= 0 && ph.cycle === 1 && d <= LAUNCH_DAYS ? '<span class="muted" style="font-size:14px"> / 90</span>' : ''}</div><div class="small sub">${lbl}</div><div class="pbar"><i style="width:${frac * 100}%"></i></div>
     <button class="btn sm ghost theme-btn" data-act="theme-toggle" title="Mudar para o tema ${effTheme() === 'light' ? 'escuro' : 'claro'}" aria-label="Mudar para o tema ${effTheme() === 'light' ? 'escuro' : 'claro'}">${icon(effTheme() === 'light' ? 'moon' : 'sun')}<span>Tema ${effTheme() === 'light' ? 'escuro' : 'claro'}</span></button><div class="app-ver" title="FORGE 90 ${APP_VERSION}">${APP_VERSION}</div>`;
   const tg = $('#side-toggle'); if (tg) { const c = !!UI.navCollapsed; tg.innerHTML = icon(c ? 'sideR' : 'sideL'); tg.title = c ? 'Expandir menu' : 'Recolher menu'; tg.setAttribute('aria-label', tg.title); tg.setAttribute('aria-expanded', String(!c)); }
 }
@@ -528,7 +528,7 @@ function render() {
   $('#view').innerHTML = html; sideFoot(); hideTip(); fpAfter(); pantryNavBadge(); tabbarRender(page);
   if (page === 'progress') progressCharts();
   window.scrollTo(0, same ? sy : 0);
-  document.title = appTitle() + ' · ' + (page === 'recipe' ? ((RECIPE[decodeURIComponent(arg || '')] || {}).name || 'Recipe') : (navItems().concat([['account', 'Account'], ['you', 'You'], ['prep', 'Meal prep']]).find(n => n[0] === page) || [, page === 'day' ? 'Day' : phone ? 'Today' : 'Dashboard'])[1]);
+  document.title = appTitle() + ' · ' + (page === 'recipe' ? ((RECIPE[decodeURIComponent(arg || '')] || {}).name || 'Receita') : (navItems().concat([['account', 'Conta'], ['you', 'Você'], ['prep', 'Preparo de refeições']]).find(n => n[0] === page) || [, page === 'day' ? 'Dia' : phone ? 'Hoje' : 'Painel'])[1]);
   if (page === 'account') accountAfter(); if (page === 'admin') adminAfter(); if (page === 'settings') settingsAfter();
   if (UI._scrollTo) { const el = document.getElementById(UI._scrollTo); UI._scrollTo = null; if (el) el.scrollIntoView({ block: 'start' }); }
   woRefresh();
@@ -551,20 +551,20 @@ const ACT = {
   recipe: el => recipeModal(el.dataset.rid),
   'recipe-print': el => printRecipe(el.dataset.rid),
   'recipe-expand': el => { const h = location.hash; REC_FROM = /^#\/recipe\//.test(h) ? REC_FROM : (h || '#/'); closeModal(); location.hash = '#/recipe/' + el.dataset.rid; },
-  'toggle-done': el => { const d = el.dataset.date; if (S.done[d]) delete S.done[d]; else S.done[d] = true; saveState(); render(); toast(S.done[d] ? 'Workout marked complete 💪' : 'Marked not complete'); },
+  'toggle-done': el => { const d = el.dataset.date; if (S.done[d]) delete S.done[d]; else S.done[d] = true; saveState(); render(); toast(S.done[d] ? 'Treino marcado como concluído 💪' : 'Marcado como não concluído'); },
   'set-rate': el => { S.settings.rate = +el.dataset.v; saveState(); render(); toast(`Ritmo de perda definido em ${el.dataset.v} kg/sem. — porções atualizadas`); },
   'set-goal': el => { const v = el.dataset.v; if (v === S.settings.goal) return; S.settings.goal = v; S.settings.kcalAdjust = 0; saveState(); render();
     toast(v === 'bulk' ? 'Ganho de massa — calorias, macros e porções atualizadas' : v === 'maintain' ? 'Manutenção — calorias mantidas estáveis' : 'Perda de gordura — déficit reativado'); },
-  'apply-trend': el => { S.settings.kcalAdjust = (+S.settings.kcalAdjust || 0) + (+el.dataset.delta); saveState(); render(); toast(`Calories adjusted ${+el.dataset.delta > 0 ? '+' : ''}${el.dataset.delta} kcal/dia`); },
+  'apply-trend': el => { S.settings.kcalAdjust = (+S.settings.kcalAdjust || 0) + (+el.dataset.delta); saveState(); render(); toast(`Calorias ajustadas em ${+el.dataset.delta > 0 ? '+' : ''}${el.dataset.delta} kcal/dia`); },
   'pr-range': el => { UI.prRange = el.dataset.v === '14' ? '14' : 'all'; saveUI(); render(); },
   'del-weight': el => { S.weights = S.weights.filter(x => x.d !== el.dataset.d); saveState(); render(); toast('Pesagem excluída'); },
   theme: el => { S.settings.theme = el.dataset.v; saveState(); applyTheme(); render(); },
   'theme-toggle': () => { S.settings.theme = effTheme() === 'light' ? 'dark' : 'light'; saveState(); applyTheme(); render(); },
   'nav-toggle': () => { UI.navCollapsed = !UI.navCollapsed; saveUI(); hideTip(); render();
     setTimeout(() => { if (location.hash.startsWith('#/progress')) progressCharts(); if (location.hash.startsWith('#/calendar') && calIsCompact() !== UI._calCompact) render(); }, 260); },
-  export: () => { const blob = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `forge90-backup-${todayISO()}.json`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); toast('Backup downloaded'); },
+  export: () => { const blob = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `forge90-backup-${todayISO()}.json`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); toast('Backup baixado'); },
   reset: () => confirmBox('Redefinir tudo?', 'Isso exclui deste navegador as alterações no plano, pesagens, registros de força, alimentos e receitas personalizados. Exporte um backup antes se quiser preservá-los.', 'Redefinir', () => { S = freshState(); rebuildCatalog(); ensureHorizon(); bgCurrent = null; saveState(); undoStack.length = 0; applyTheme(); showOnboarding(() => { shell(); render(); toast('Redefinição concluída — seu novo plano está pronto'); }); }, true),
-  'copy-list': () => { const txt = $$('.gro-item').map(l => `${l.querySelector('input').checked ? '[x]' : '[ ]'} ${l.children[1].textContent} — ${l.querySelector('.q').childNodes[0].textContent}`).join('\n'); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Shopping list copied'), () => toast('Copy not available — use Print instead')); },
+  'copy-list': () => { const txt = $$('.gro-item').map(l => `${l.querySelector('input').checked ? '[x]' : '[ ]'} ${l.children[1].textContent} — ${l.querySelector('.q').childNodes[0].textContent}`).join('\n'); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Lista de compras copiada'), () => toast('Cópia indisponível — use Imprimir')); },
   print: () => window.print()
 };
 function shiftCal(n) {
