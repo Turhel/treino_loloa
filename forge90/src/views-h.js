@@ -115,8 +115,8 @@ Object.assign(ACT, {
   'swap-prog': el => swapOpenProg(el.dataset.slot, el.dataset.ex),
   'swap-pick': el => swapPick(el.dataset.id),
   coll: el => { const k = el.dataset.k; UI.coll = UI.coll || {}; if (UI.coll[k]) delete UI.coll[k]; else UI.coll[k] = 1; saveUI();
-    const sec = el.closest('.coll'); const open = collOpen(k); if (sec) sec.classList.toggle('shut', !open); el.setAttribute('aria-expanded', String(open)); el.title = open ? 'Collapse' : 'Expand'; },
-  'avatar-rm': () => confirmBox('Remove your profile picture?', 'It’s deleted from the server and your initials show instead.', 'Remove', async () => { try { const r = await api('DELETE', '/api/account/avatar'); avatarApplied(r.user); toast('Profile picture removed'); } catch (e) { toast(e.message); } }, true)
+    const sec = el.closest('.coll'); const open = collOpen(k); if (sec) sec.classList.toggle('shut', !open); el.setAttribute('aria-expanded', String(open)); el.title = open ? 'Recolher' : 'Expandir'; },
+  'avatar-rm': () => confirmBox('Remover sua foto de perfil?', 'Ela será excluída do servidor e suas iniciais aparecerão no lugar.', 'Remover', async () => { try { const r = await api('DELETE', '/api/account/avatar'); avatarApplied(r.user); toast('Foto de perfil removida'); } catch (e) { toast(e.message); } }, true)
 });
 document.addEventListener('input', e => { const t = e.target; if (t && t.dataset && t.dataset.input === 'swap-q') swapFilter(); });
 document.addEventListener('change', e => {

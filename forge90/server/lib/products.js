@@ -31,10 +31,10 @@ async function offLookup(code) {
   const fields = 'code,product_name,product_name_en,generic_name,brands,quantity,product_quantity,product_quantity_unit,serving_size,serving_quantity,serving_quantity_unit,nutriments,nutrition_data_per,categories_tags,image_front_small_url';
   let r;
   try { r = await fetchUrl(`${OFF_BASE()}/api/v2/product/${encodeURIComponent(code)}.json?fields=${fields}`, { timeout: 9000, maxBytes: 2 * 1024 * 1024, headers: { Accept: 'application/json', 'User-Agent': UA } }); }
-  catch (e) { throw new ImportErr(502, 'Couldn’t reach Open Food Facts right now. You can enter the product yourself.'); }
+  catch (e) { throw new ImportErr(502, 'Não foi possível acessar o Open Food Facts agora. Você pode cadastrar o produto manualmente.'); }
   if (r.status === 404) return null;
-  if (r.status >= 400) throw new ImportErr(502, `Open Food Facts returned an error (HTTP ${r.status}). You can enter the product yourself.`);
-  let j; try { j = JSON.parse(r.body); } catch (e) { throw new ImportErr(502, 'Open Food Facts sent an unreadable answer. You can enter the product yourself.'); }
+  if (r.status >= 400) throw new ImportErr(502, `O Open Food Facts retornou um erro (HTTP ${r.status}). Você pode cadastrar o produto manualmente.`);
+  let j; try { j = JSON.parse(r.body); } catch (e) { throw new ImportErr(502, 'O Open Food Facts enviou uma resposta ilegível. Você pode cadastrar o produto manualmente.'); }
   if (!j || j.status === 0 || !j.product) return null;
   const p = j.product; const n = p.nutriments || {};
   let k = num(n['energy-kcal_100g']); if (k == null && num(n.energy_100g) != null) k = num(n.energy_100g) / 4.184;
