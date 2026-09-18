@@ -290,14 +290,14 @@ route('POST', '/api/invite/accept', { limit: 'auth' }, async (req, res, ctx) => 
   const nm = String(i.name || '').trim().split(/\s+/);
   const u = { id: uid(), email: i.email, name, firstName: i.name ? nm[0] : '', lastName: i.name ? nm.slice(1).join(' ') : '', role: i.role === 'admin' ? 'admin' : 'user', status: 'active', pw: await hashPw(b.password), mustChange: false, createdAt: now(), pwChangedAt: now(), invitedBy: i.invitedBy || null, failed: 0, lockedUntil: null, notify: { passwordChange: true } };
   db.users.push(u); db.invites = db.invites.filter(x => x !== i);
-  audit('invite_accepted', { userId: u.id, actorId: i.invitedBy || null, ip: clientIp(req), detail: `${u.email} (${u.role})` });
+  audit('invite_accepted', { userId: u.id, actorId: i.invitedBy || null, ip: clientIp(req), detail: `${u.email} (${u.role === 'admin' ? 'administrador' : 'usuário'})` });
   u.lastLoginAt = now(); u.lastLoginIp = clientIp(req); createSession(req, res, u, !!b.remember); send(res, 201, { user: pubUser(u) });
 });
 
 route('POST', '/api/login', { limit: 'auth' }, async (req, res, ctx) => {
   const b = ctx.body; const ip = clientIp(req); const sec = db.settings.security;
   const u = findUser(b.email);
-  if (!u) { await verifyPw(String(b.password || ''), DUMMY_HASH); audit('login_fail', { ip, detail: 'unknown ' + normEmail(b.email).slice(0, 80) }); err(401, 'O e-mail e a senha não correspondem.'); }
+  if (!u) { await verifyPw(String(b.password || ''), DUMMY_HASH); audit('login_fail', { ip, detail: 'desconhecido ' + normEmail(b.email).slice(0, 80) }); err(401, 'O e-mail e a senha não correspondem.'); }
   if (isLocked(u)) { const m = Math.max(1, Math.ceil((u.lockedUntil - now()) / 60000)); err(423, `Esta conta foi bloqueada após muitas tentativas de login. Tente novamente em ${m} minuto${m === 1 ? '' : 's'}, ou redefina sua senha${sec.autoResetOnLock ? ' usando o link enviado por e-mail' : ''}.`, { locked: true, until: u.lockedUntil }); }
   const ok = await verifyPw(String(b.password || ''), u.pw);
   if (!ok) {
@@ -729,7 +729,7 @@ route('POST', '/api/admin/invites', { admin: true }, async (req, res, ctx) => {
   else inv = { id: uid(), email, name, role, invitedBy: ctx.me.u.id, createdAt: now(), sends: 0 };
   await sendInvite(inv, req, ctx.me.u);
   if (!again) db.invites.push(inv); saveDb();
-  audit(again ? 'invite_resent' : 'invite_sent', { actorId: ctx.me.u.id, ip: clientIp(req), detail: `${email} (${role})` });
+  audit(again ? 'invite_resent' : 'invite_sent', { actorId: ctx.me.u.id, ip: clientIp(req), detail: `${email} (${role === 'admin' ? 'administrador' : 'usuário'})` });
   send(res, 201, { invite: inviteRow(inv), resent: again });
 });
 route('POST', '/api/admin/invites/:id/resend', { admin: true }, async (req, res, ctx) => {
@@ -812,15 +812,15 @@ route('PATCH', '/api/admin/settings', { admin: true }, async (req, res, ctx) => 
     if (x.clearPass) delete q.pass;
     if (x.useEnv) EMAIL_KEYS.concat('pass').forEach(k => delete q[k]);
     const fe = mailConfig().fromEmail; if (fe && !validEmail(normEmail(fe))) err(400, 'O endereço do remetente não é um e-mail válido.');
-    changed.push('email'); }
-  if (b.defaults && b.defaults.theme) { if (['dark', 'light', 'system'].includes(b.defaults.theme)) s.defaults.theme = b.defaults.theme; changed.push('defaults'); }
+    changed.push('e-mail'); }
+  if (b.defaults && b.defaults.theme) { if (['dark', 'light', 'system'].includes(b.defaults.theme)) s.defaults.theme = b.defaults.theme; changed.push('padrões'); }
   saveDb(); audit('settings_changed', { actorId: ctx.me.u.id, ip: clientIp(req), detail: changed.join(', ') }); send(res, 200, adminSettingsView());
 });
 route('POST', '/api/admin/email/test', { admin: true }, async (req, res, ctx) => {
   const to = normEmail(ctx.body.to || ctx.me.u.email); if (!validEmail(to)) err(400, 'Informe um endereço válido para enviar o teste.');
   try { await deliver(to, '', MAIL.simpleEmail({ title: 'E-mail de teste do FORGE 90', heading: 'O e-mail está funcionando ✔', lines: ['Este é um teste do FORGE 90 → Administrador → E-mail.', 'Os e-mails de redefinição de senha serão enviados por esta conta.'], buttonUrl: baseUrl(req), buttonLabel: 'Abrir FORGE 90', appUrl: baseUrl(req), appName: db.settings.appName }));
-    audit('email_test', { actorId: ctx.me.u.id, ip: clientIp(req), detail: 'sent to ' + to }); send(res, 200, { ok: true, to }); }
-  catch (e) { audit('email_test', { actorId: ctx.me.u.id, ip: clientIp(req), detail: 'FAILED: ' + e.message.slice(0, 200) }); err(502, e.message); }
+    audit('email_test', { actorId: ctx.me.u.id, ip: clientIp(req), detail: 'enviado para ' + to }); send(res, 200, { ok: true, to }); }
+  catch (e) { audit('email_test', { actorId: ctx.me.u.id, ip: clientIp(req), detail: 'FALHOU: ' + e.message.slice(0, 200) }); err(502, e.message); }
 });
 route('GET', '/api/admin/proxy', { admin: true }, async (req, res) => {
   const h = req.headers; const au = String(db.settings.appUrl || ENV.APP_URL || '').replace(/\/+$/, '');
