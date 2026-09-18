@@ -293,7 +293,7 @@ function gymPanelHTML() {
   if (!c) return `<div class="card gym-card">${head}<div class="empty-state" style="padding:14px 6px">${icon('scan')}<div>Adicione seu cartão de acesso e entre na academia usando o celular.</div><button class="btn primary" data-act="gym-add" style="margin-top:10px">${icon('plus')}Adicionar cartão</button></div></div>`;
   return `<div class="card gym-card">${head}<button type="button" class="gc-show ${c.fmt === 'qr' ? 'qr' : ''}" data-act="gym-full" data-id="${c.id}" title="Mostrar em tela cheia para o leitor">${barcodeSVG(c.code, c.fmt)}</button>
     <div class="gc-num"><b>${esc(c.name)}</b><span class="num">${esc(gymHuman(c))}</span></div>
-    <div class="row wrap" style="gap:6px;justify-content:center;margin-top:8px"><button class="btn sm primary" data-act="gym-full" data-id="${c.id}">${icon('expand')}Full screen</button></div></div>`;
+    <div class="row wrap" style="gap:6px;justify-content:center;margin-top:8px"><button class="btn sm primary" data-act="gym-full" data-id="${c.id}">${icon('expand')}Tela cheia</button></div></div>`;
 }
 // full screen for the gym's scanner: white background, as big as the screen allows, screen kept awake
 let GYM_LOCK = null;
