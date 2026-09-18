@@ -221,7 +221,7 @@ function foodsTableHTML() {
 
 /* ---------- food editor ---------- */
 function subOptions(sel) { return FOOD_CATS.map(c => `<optgroup label="${esc(c.name)}">${c.subs.map(([id, l]) => `<option value="${id}" ${sel === id ? 'selected' : ''}>${esc(l)}</option>`).join('')}</optgroup>`).join(''); }
-// Built-in values for a food (used by "Reset to defaults" and the "Default:" hints)
+// Built-in values for a food (used by "Restaurar padrão" and the "Default:" hints)
 function foodDefaults(id) {
   const b = BASE_ING[id]; if (!b) return null; const sub = BASE_SUB[id] || 'sauces';
   return { n: b.n, sub, a: b.a, basis: b.u ? 'u' : b.ml ? 'ml' : 'g', u: b.u || '', g: b.g || '', k: b.k, p: b.p, c: b.c, f: b.f, r: b.r, pk: defaultPack(id, sub, b) };
@@ -260,7 +260,7 @@ function feDefHints() {
   const f = $('#modal form[data-form="food"]'); if (!f) return; const id = f.dataset.id; const d = id && ING[id] && ING[id].base ? foodDefaults(id) : null; if (!d) return;
   const val = n => f.elements[n] ? f.elements[n].value : '';
   const same = (n, dv) => { const v = val(n); return (typeof dv === 'number') ? Math.abs((+v || 0) - dv) < 1e-6 : String(v).trim() === String(dv); };
-  const show = { n: d.n, sub: SUB_LABEL[d.sub] || d.sub, a: d.a, basis: { g: '100 g', ml: '100 ml', u: '1 item' }[d.basis], u: d.u ? `${d.u}, ${d.g} g` : '', k: fmt(d.k, 1), p: fmt(d.p, 1), c: fmt(d.c, 1), f: fmt(d.f, 1), r: FE_ROLE[d.r], pk: `${fmt(d.pk)} ${d.basis === 'u' ? 'items' : d.basis === 'ml' ? 'ml' : 'g'}` };
+  const show = { n: d.n, sub: SUB_LABEL[d.sub] || d.sub, a: d.a, basis: { g: '100 g', ml: '100 ml', u: '1 item' }[d.basis], u: d.u ? `${d.u}, ${d.g} g` : '', k: fmt(d.k, 1), p: fmt(d.p, 1), c: fmt(d.c, 1), f: fmt(d.f, 1), r: FE_ROLE[d.r], pk: `${fmt(d.pk)} ${d.basis === 'u' ? 'itens' : d.basis === 'ml' ? 'ml' : 'g'}` };
   let dirty = false;
   $$('#modal .fe-def').forEach(el => { const k = el.dataset.def; let diff;
     if (k === 'u') diff = d.basis === 'u' && (!same('u', d.u) || !same('g', d.g)); else if (k === 'basis') diff = !same('basis', d.basis); else diff = !same(k, d[k]);
