@@ -21,7 +21,7 @@ function tabbarRender(page) {
   const href = k => k === 'today' ? '#/' : k === 'plan' ? '#/' + (UI.lastPlan || 'calendar') : k === 'kitchen' ? '#/' + (UI.lastKit || 'grocery') : '#/you';
   el.innerHTML = [['today', 'Today', 'today'], ['plan', 'Plan', 'cal'], ['add'], ['kitchen', 'Kitchen', 'cart'], ['you', 'You', 'user']].map(([k, l, ic]) => k === 'add'
     ? `<button type="button" class="tb-add" data-act="plus-sheet" aria-label="Quick add"><span>${icon('plus')}</span></button>`
-    : `<a class="tb ${cur === k ? 'on' : ''}" href="${href(k)}" ${cur === k ? 'aria-current="page"' : ''}>${icon(ic)}<span>${l}</span>${k === 'kitchen' && soon ? `<i class="tb-badge" title="${soon} pantry item${soon === 1 ? '' : 's'} expiring soon">${soon}</i>` : ''}</a>`).join('');
+    : `<a class="tb ${cur === k ? 'on' : ''}" href="${href(k)}" ${cur === k ? 'aria-current="page"' : ''}>${icon(ic)}<span>${l}</span>${k === 'kitchen' && soon ? `<i class="tb-badge" title="${soon} item${soon === 1 ? '' : 's'} da despensa perto do vencimento">${soon}</i>` : ''}</a>`).join('');
 }
 
 /* ---------------- popups slide up from the bottom on phones: drag the handle down (or tap it) to close ---------------- */

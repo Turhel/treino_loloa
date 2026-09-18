@@ -1944,9 +1944,39 @@ const PT_PHRASES = {
   "Share the pantry": "Compartilhar a despensa",
   "Stop sharing": "Parar de compartilhar",
   "Unsync meal plans": "Parar de sincronizar planos de refeição",
+  "Overview": "Visão geral",
+  "Users": "Usuários",
+  "Activity log": "Registro de atividades",
+  "Data & backup": "Dados e backup",
+  "Email isn’t working yet": "O e-mail ainda não está funcionando",
+  "invites and password-reset emails can’t be sent.": "convites e e-mails de redefinição de senha não podem ser enviados.",
+  "Finish setup in ": "Conclua a configuração em ",
+  "Invite": "Convidar",
+  "Admins": "Administradores",
+  "All": "Todos",
+  "Disabled": "Desativado",
+  "None (local relay)": "Nenhuma (relay local)",
+  "Some values are set here and override the server environment (Docker variables / .env).": "Alguns valores estão definidos aqui e substituem o ambiente do servidor (variáveis do Docker / .env).",
+  "All values come from the server environment (Docker variables / .env). Anything you save here overrides them.": "Todos os valores vêm do ambiente do servidor (variáveis do Docker / .env). Tudo o que for salvo aqui os substituirá.",
+  "You can’t remove your own admin access here": "Você não pode remover seu próprio acesso de administrador aqui",
+  "Only the owner can change administrator access": "Somente o proprietário pode alterar o acesso de administrador",
+  "Give or remove administrator privileges": "Conceder ou remover privilégios de administrador",
+  "Send a fresh link that lasts another ": "Enviar um novo link válido por mais ",
+  " days": " dias",
+  "No invites waiting. New accounts are invite-only — use Invite to email someone a link (it lasts ": "Não há convites pendentes. Novas contas entram apenas por convite — use Convidar para enviar um link por e-mail (válido por ",
+  " days).": " dias).",
+  "Not set": "Não definido",
+  "Remove the saved password": "Remover a senha salva",
+  "Passwords are stored as salted scrypt hashes; reset links are random 256-bit tokens stored hashed, and every password change signs the account out everywhere else. New rules apply the next time someone chooses a password.": "As senhas são armazenadas como hashes scrypt com salt; os links de redefinição usam tokens aleatórios de 256 bits armazenados em hash, e toda alteração de senha encerra as demais sessões da conta. Novas regras passam a valer na próxima vez que alguém escolher uma senha.",
+  "Downloads every account (without passwords), each account’s plan data and the app settings (without the email password) as one JSON file.": "Baixa todas as contas (sem senhas), os dados de plano de cada conta e as configurações do aplicativo (sem a senha do e-mail) em um único arquivo JSON.",
+  "To back up everything including passwords, copy the server’s data folder while it’s stopped.": "Para fazer backup de tudo, inclusive senhas, copie a pasta de dados do servidor enquanto ele estiver parado.",
+  "Stored data": "Dados armazenados",
+  "License": "Licença",
+  "Source code": "Código-fonte",
+  "Up for": "Ativo há",
 };
 
-const PT_EXACT_KEYS = new Set(['Off', 'Rest', 'Test', 'Week', 'Progress', 'lb', 'of', 'all', 'breakfast', 'lunch', 'dinner', 'snack', '— none —', "Browser", "Decline", "Unsync", "List", "Prep", "Plan", "Kitchen", "Workout", "This week", "Upper", "Lower", "Full body", "Mixed", "Gym card", "Body stats", "Recent PRs", "Required", "You", "Food", "Name", "Plain HTTP", "Direct connection", "Account", "Administrator", "Owner", "Remove", "Security", "Scan", "Approve", "Unlock", "Swap", "Today", "Sync", "Recent", "Active", "Pending", "Expired", "Resend", "Revoke", "Accounts", "Member", "Manage", "User", "Role", "Status", "Devices", "Ready", "Send", "Accept", "Undo", "Refresh"]);
+const PT_EXACT_KEYS = new Set(['Off', 'Rest', 'Test', 'Week', 'Progress', 'lb', 'of', 'all', 'breakfast', 'lunch', 'dinner', 'snack', '— none —', "Browser", "Decline", "Unsync", "List", "Prep", "Plan", "Kitchen", "Workout", "This week", "Upper", "Lower", "Full body", "Mixed", "Gym card", "Body stats", "Recent PRs", "Required", "You", "Food", "Name", "Plain HTTP", "Direct connection", "Account", "Administrator", "Owner", "Remove", "Security", "Scan", "Approve", "Unlock", "Swap", "Today", "Sync", "Recent", "Active", "Pending", "Expired", "Resend", "Revoke", "Accounts", "Member", "Manage", "User", "Role", "Status", "Devices", "Ready", "Send", "Accept", "Undo", "Refresh", "Overview", "Users", "Activity log", "Data & backup", "Invite", "Admins", "All", "Disabled", "Not set", "Stored data", "License", "Source code"]);
 const PT_PAIRS = Object.entries(PT_PHRASES)
   .filter(([from]) => !PT_EXACT_KEYS.has(from))
   .sort((a, b) => b[0].length - a[0].length);

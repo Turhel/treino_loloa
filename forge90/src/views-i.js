@@ -597,7 +597,7 @@ function pantrySubmit(form) {
   if (qs !== '' && !(+qs > 0)) { toast('Enter an amount above 0, or leave it blank for one package'); return; }
   pantryAdd(g.id, qs === '' ? null : panFromShown(g.id, Math.round(+qs)), fd.get('exp') || null, 'manual'); closeModal(); render(); toast(`${g.n} added to the pantry`);
 }
-function pantryNavBadge() { const a = $('.nav a[data-nav="pantry"]'); if (!a) return; const n = S ? pantrySoon().length : 0; let b = a.querySelector('.nav-badge'); if (!n) { if (b) b.remove(); return; } if (!b) { b = document.createElement('span'); b.className = 'nav-badge'; a.appendChild(b); } b.textContent = n; b.title = `${n} pantry item${n === 1 ? '' : 's'} expiring soon`; }
+function pantryNavBadge() { const a = $('.nav a[data-nav="pantry"]'); if (!a) return; const n = S ? pantrySoon().length : 0; let b = a.querySelector('.nav-badge'); if (!n) { if (b) b.remove(); return; } if (!b) { b = document.createElement('span'); b.className = 'nav-badge'; a.appendChild(b); } b.textContent = n; b.title = `${n} item${n === 1 ? '' : 's'} da despensa perto do vencimento`; }
 
 /* ---------- shopping list: pantry-aware rows, check all, add checked to the pantry ---------- */
 let GRO_ROWS = null;       // { rows, week, wk } for the list on screen

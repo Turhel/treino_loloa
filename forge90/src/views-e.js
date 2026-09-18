@@ -277,7 +277,7 @@ document.addEventListener('input', e => { const t = e.target; if (t.dataset && t
 document.addEventListener('change', async e => { const t = e.target; if (t.dataset && t.dataset.input === 'acc-notify') { try { const r = await api('PATCH', '/api/account', { notify: { passwordChange: t.checked } }); AUTH.user = r.user; toast(t.checked ? 'You’ll get an email when your password changes' : 'Password-change emails turned off'); } catch (x) { toast(x.message); t.checked = !t.checked; } } });
 Object.assign(ACT, {
   'acc-revoke': async el => { const self = el.dataset.self === '1'; const go = async () => { try { await api('DELETE', '/api/account/sessions/' + el.dataset.id); if (self) { AUTH.user = null; return showAuth('login', { info: 'You’re signed out.' }); } toast('Device signed out'); accountAfter(); } catch (e) { toast(e.message); } }; if (self) logout(); else go(); },
-  'acc-revoke-others': () => confirmBox('Sign out other devices?', 'Every other browser signed in to your account will need to sign in again.', 'Sign them out', async () => { try { const r = await api('POST', '/api/account/sessions/revoke-others'); toast(`${r.revoked} device${r.revoked === 1 ? '' : 's'} signed out`); accountAfter(); } catch (e) { toast(e.message); } }),
+  'acc-revoke-others': () => confirmBox('Sign out other devices?', 'Every other browser signed in to your account will need to sign in again.', 'Sign them out', async () => { try { const r = await api('POST', '/api/account/sessions/revoke-others'); toast(`${r.revoked} dispositivo${r.revoked === 1 ? '' : 's'} desconectado${r.revoked === 1 ? '' : 's'}`); accountAfter(); } catch (e) { toast(e.message); } }),
   'acc-delete': () => { modal(`<h2>Delete your account?</h2><p class="sub small">This permanently deletes <b>${esc(AUTH.user.email)}</b> with its plan, weigh-ins, logs, custom foods and recipes. Export a backup first if you want to keep anything.</p>
       <form data-form="acc-del" style="margin-top:12px">${pwField('password', 'Your password', 'current-password')}<div class="row" style="justify-content:flex-end;margin-top:14px"><button type="button" class="btn" data-act="close-modal">Cancel</button><button class="btn danger" type="submit">${icon('trash')}Delete forever</button></div></form>`, 'sm'); }
 });
@@ -286,11 +286,11 @@ document.addEventListener('submit', async e => { const f = e.target; if (!f.data
 
 /* ---------- admin console (#/admin) ---------- */
 const ADM = { tab: 'overview', users: null, invites: null, settings: null, stats: null, audit: null, q: '', filter: 'all', evType: '', evUser: '' };
-const ADM_TABS = [['overview', 'Overview', 'grid'], ['users', 'Users', 'users'], ['security', 'Security', 'lock'], ['app', 'Configurações do aplicativo', 'sliders'], ['email', 'Email', 'mail'], ['proxy', 'Server & proxy', 'shield'], ['activity', 'Activity log', 'activity'], ['data', 'Dados e backup', 'download']];
+const ADM_TABS = [['overview', 'Visão geral', 'grid'], ['users', 'Usuários', 'users'], ['security', 'Segurança', 'lock'], ['app', 'Configurações do aplicativo', 'sliders'], ['email', 'E-mail', 'mail'], ['proxy', 'Servidor e proxy', 'shield'], ['activity', 'Registro de atividades', 'activity'], ['data', 'Dados e backup', 'download']];
 function viewAdmin() {
   if (AUTH.mode !== 'server' || !AUTH.user) return serverOnly('Admin');
   if (!isAdmin()) return `<div class="page-head"><div class="t"><h1>Admin</h1></div></div><div class="card"><div class="note warn">${icon('lock')}<span>Only administrators can open the admin console.</span></div></div>`;
-  return `<div class="page-head"><div class="t"><h1>Painel administrativo</h1><p>Invite people, manage accounts and admin privileges, sign-in security and email.</p></div></div>
+  return `<div class="page-head"><div class="t"><h1>Painel administrativo</h1><p>Convide pessoas, gerencie contas e privilégios de administrador, segurança de login e e-mail.</p></div></div>
     <div class="adm-tabs" role="tablist">${ADM_TABS.map(([k, l, i]) => `<button role="tab" aria-selected="${ADM.tab === k}" class="${ADM.tab === k ? 'on' : ''}" data-act="adm-tab" data-v="${k}">${icon(i)}<span>${l}</span></button>`).join('')}</div>
     <div id="adm-root">${admTabHTML()}</div>`;
 }
@@ -312,7 +312,7 @@ async function adminAfter(force) {
 const spin = '<div class="card"><div class="auth-spin"></div></div>';
 const statusPill = u => u.status === 'pending' ? '<span class="pill warn-pill">Aguardando aprovação</span>' : u.status === 'disabled' ? '<span class="pill">Desativado</span>' : u.locked ? `<span class="pill warn-pill" title="Bloqueado até ${when(u.lockedUntil)}">${icon('lock')}Bloqueado</span>` : '<span class="pill acc">Ativo</span>';
 function invDue(i) { const ms = i.expiresAt - Date.now(); if (i.expired || ms <= 0) return '<span class="pill warn-pill">Expirado</span>'; const h = Math.round(ms / 3600000); return `<span class="small">em ${h < 24 ? h + ' h' : Math.round(h / 24) + ' dia' + (Math.round(h / 24) === 1 ? '' : 's')}</span>`; }
-const invActs = i => `<button class="btn sm" data-act="adm-inv-resend" data-id="${i.id}" title="Send a fresh link that lasts another ${(ADM.settings && ADM.settings.inviteDays) || 7} days">${icon('mail')}Resend</button><button class="btn sm ghost danger" data-act="adm-inv-revoke" data-id="${i.id}">Revoke</button>`;
+const invActs = i => `<button class="btn sm" data-act="adm-inv-resend" data-id="${i.id}" title="Enviar um novo link válido por mais ${(ADM.settings && ADM.settings.inviteDays) || 7} dias">${icon('mail')}Reenviar</button><button class="btn sm ghost danger" data-act="adm-inv-revoke" data-id="${i.id}">Revogar</button>`;
 function admTabHTML() {
   const t = ADM.tab, st = ADM.settings;
   if (t === 'overview') {
@@ -351,7 +351,7 @@ function admTabHTML() {
       ${admNum('Tamanho mínimo da senha', 'pwMinLength', s.pwMinLength, 8, 64, 'caracteres')}${admChk('Require letters and a number or symbol', 'pwRequireMix', s.pwRequireMix)}
       ${admNum('Falhas de login antes do bloqueio', 'lockThreshold', s.lockThreshold, 3, 20, 'tentativas')}${admNum('Lockout lasts', 'lockMinutes', s.lockMinutes, 1, 1440, 'minutes')}
       ${admChk('Quando uma conta for bloqueada, enviar ao proprietário um link de redefinição de senha', 'autoResetOnLock', s.autoResetOnLock)}${admChk('Email users when their password is changed or reset', 'notifyPasswordChange', s.notifyPasswordChange)}
-      ${admChk(`<b>Require HTTPS</b> — send plain-HTTP visits to the secure App address<br><span class="tiny muted">${st.httpsEnvOff ? 'Turned off by <code>REQUIRE_HTTPS=false</code> in the container settings.' : st.httpsTarget ? `Visits like <code>http://&lt;server-ip&gt;:8090</code> go to <b>${esc(st.httpsTarget)}</b>, and browsers are told to always use HTTPS.` : 'Takes effect once the App address starts with https:// (Admin → Configurações do aplicativo).'} See <a href="#" data-act="adm-tab" data-v="proxy">Server &amp; proxy</a>.</span>`, 'requireHttps', s.requireHttps !== false)}
+      ${admChk(`<b>Require HTTPS</b> — send plain-HTTP visits to the secure App address<br><span class="tiny muted">${st.httpsEnvOff ? 'Desativado por <code>REQUIRE_HTTPS=false</code> nas configurações do contêiner.' : st.httpsTarget ? `Visits like <code>http://&lt;server-ip&gt;:8090</code> go to <b>${esc(st.httpsTarget)}</b>, and browsers are told to always use HTTPS.` : 'Takes effect once the App address starts with https:// (Admin → Configurações do aplicativo).'} See <a href="#" data-act="adm-tab" data-v="proxy">Server &amp; proxy</a>.</span>`, 'requireHttps', s.requireHttps !== false)}
       ${admNum('Signed-in session lasts (idle)', 'sessionHours', s.sessionHours, 1, 168, 'horas')}${admNum('“Keep me signed in” lasts', 'rememberDays', s.rememberDays, 1, 365, 'dias')}
       <div class="field"><label>Password-reset links expire after</label><div class="row"><input class="inp" value="${st.resetMinutes}" disabled style="max-width:90px"><span class="small muted">minutes · single use</span></div></div></div>
       <div class="note" style="margin-top:14px">${icon('info')}<span>Passwords are stored as salted scrypt hashes; reset links are random 256-bit tokens stored hashed, and every password change signs the account out everywhere else. New rules apply the next time someone chooses a password.</span></div>
@@ -402,34 +402,34 @@ function admProxyHTML() {
   const p = ADM.proxy; if (!p) return spin;
   const via = !!(p.headers.xff || p.headers.proto || p.headers.xRealIp); const reqHost = String(p.headers.host || '').toLowerCase(); const appHost = urlHost(p.appUrl);
   const sug = esc(trustSuggestion(p.peer)); const code = v => `<code>${esc(v)}</code>`; const checks = []; const add = (st, title, text) => checks.push({ st, title, text });
-  if (p.https) add('ok', 'Conectado por HTTPS', via ? 'Your proxy passes <code>X-Forwarded-Proto: https</code> and FORGE 90 trusts it.' : 'This connection is encrypted.');
-  else if (via && !p.trusted) add('bad', 'HTTPS isn’t detected', `Your proxy at ${code(p.peer)} sends forwarded headers, but FORGE 90 isn’t set to trust it. Set ${code('TRUST_PROXY=' + trustSuggestion(p.peer))} in the Unraid template, then restart the container.`);
-  else if (appHost && reqHost === appHost) add('bad', 'HTTPS isn’t detected', `You opened ${code(reqHost)}, but the request reached FORGE 90 as plain HTTP. In Nginx Proxy Manager, give the proxy host an SSL certificate and turn on <b>Force SSL</b>.`);
-  else add('warn', 'Plain HTTP', `You’re connected straight to ${code(reqHost)} without encryption, so passwords cross your network in plain text. Use your https:// address.`);
-  if (via && p.trusted) add(p.trustMode === 'all' ? 'warn' : 'ok', 'Visitor IP addresses', `FORGE 90 sees you as <b>${esc(p.clientIp)}</b>, through your proxy at ${code(p.peer)}.` + (p.trustMode === 'all' ? `<br><code>TRUST_PROXY=true</code> trusts forwarded headers from anything that can reach port ${p.port}, so someone on your network could fake their address. Lock it to your proxy: ${code('TRUST_PROXY=' + trustSuggestion(p.peer))}.` : ''));
-  else if (via) add('bad', 'Visitor IP addresses', `Every visitor looks like ${code(p.peer)} (your proxy), so sign-in limits and lockouts would hit everyone at once and the activity log shows the proxy. Set ${code('TRUST_PROXY=' + trustSuggestion(p.peer))}.`);
-  else add('ok', 'Visitor IP addresses', `Direct connection — FORGE 90 sees you as <b>${esc(p.clientIp)}</b>.`);
-  if (!p.appUrl) add('warn', 'App address', 'Not set, so links in invite and reset emails use whatever address each request came in on. Set <code>APP_URL</code> (or Admin → Configurações do aplicativo) to your https:// address.');
-  else if (!/^https:/i.test(p.appUrl)) add('warn', 'App address', `${code(p.appUrl)} isn’t https. Change it to your https:// address so email links are secure and Require HTTPS can work.`);
-  else if (appHost !== reqHost) add('info', 'App address', `Emails link to <b>${esc(p.appUrl)}</b>; right now you’re using ${code(reqHost)}.`);
-  else add('ok', 'App address', `Invite and reset emails link to <b>${esc(p.appUrl)}</b>${p.appUrlSource === 'admin' ? ' (set in Configurações do aplicativo)' : ''}.`);
+  if (p.https) add('ok', 'Conectado por HTTPS', via ? 'Seu proxy envia <code>X-Forwarded-Proto: https</code> e o FORGE 90 confia nele.' : 'Esta conexão é criptografada.');
+  else if (via && !p.trusted) add('bad', 'HTTPS isn’t detected', `Seu proxy em ${code(p.peer)} envia cabeçalhos encaminhados, mas o FORGE 90 não está configurado para confiar nele. Defina ${code('TRUST_PROXY=' + trustSuggestion(p.peer))} no template do Unraid e reinicie o contêiner.`);
+  else if (appHost && reqHost === appHost) add('bad', 'HTTPS isn’t detected', `Você abriu ${code(reqHost)}, mas a solicitação chegou ao FORGE 90 por HTTP sem criptografia. No Nginx Proxy Manager, adicione um certificado SSL ao host do proxy e ative <b>Force SSL</b>.`);
+  else add('warn', 'Plain HTTP', `Você está conectado diretamente a ${code(reqHost)} sem criptografia, então as senhas trafegam pela rede em texto simples. Use seu endereço https://.`);
+  if (via && p.trusted) add(p.trustMode === 'all' ? 'warn' : 'ok', 'Visitor IP addresses', `O FORGE 90 identifica você como <b>${esc(p.clientIp)}</b>, por meio do proxy em ${code(p.peer)}.` + (p.trustMode === 'all' ? `<br><code>TRUST_PROXY=true</code> trusts forwarded headers from anything that can reach port ${p.port}, so someone on your network could fake their address. Lock it to your proxy: ${code('TRUST_PROXY=' + trustSuggestion(p.peer))}.` : ''));
+  else if (via) add('bad', 'Visitor IP addresses', `Todos os visitantes aparecem como ${code(p.peer)} (seu proxy), então limites de login e bloqueios afetariam todos ao mesmo tempo e o registro de atividades mostraria o proxy. Defina ${code('TRUST_PROXY=' + trustSuggestion(p.peer))}.`);
+  else add('ok', 'Visitor IP addresses', `Conexão direta — o FORGE 90 identifica você como <b>${esc(p.clientIp)}</b>.`);
+  if (!p.appUrl) add('warn', 'App address', 'Não definido; por isso, links de convite e redefinição usam o endereço de origem de cada solicitação. Defina <code>APP_URL</code> (ou Admin → Configurações do aplicativo) com seu endereço https://.');
+  else if (!/^https:/i.test(p.appUrl)) add('warn', 'App address', `${code(p.appUrl)} não usa https. Altere para seu endereço https:// para que os links dos e-mails sejam seguros e a opção Exigir HTTPS funcione.`);
+  else if (appHost !== reqHost) add('info', 'App address', `Os e-mails apontam para <b>${esc(p.appUrl)}</b>; agora você está usando ${code(reqHost)}.`);
+  else add('ok', 'App address', `Os e-mails de convite e redefinição apontam para <b>${esc(p.appUrl)}</b>${p.appUrlSource === 'admin' ? ' (definido em Configurações do aplicativo)' : ''}.`);
   if (p.https && p.cookieSecure) add('ok', 'Secure sign-in cookie', 'O cookie de sessão só é enviado por HTTPS.');
   else if (p.https) add('warn', 'Secure sign-in cookie', `<code>COOKIE_SECURE=${esc(p.cookieSetting)}</code> — remove it or set it to <code>auto</code>.`);
-  else add('info', 'Secure sign-in cookie', 'Turns on automatically once you connect over HTTPS.');
+  else add('info', 'Secure sign-in cookie', 'É ativado automaticamente quando você se conecta por HTTPS.');
   const rh = p.requireHttps;
-  if (rh.envOff) add('info', 'Require HTTPS', 'Turned off by <code>REQUIRE_HTTPS=false</code> in the container settings.');
-  else if (!rh.setting) add('warn', 'Require HTTPS', 'Off (Admin → Security), so plain-HTTP visits by IP address are allowed.');
-  else if (!rh.target) add('info', 'Require HTTPS', 'Waiting for an https:// App address. Once it’s set, plain-HTTP visits such as <code>http://&lt;server-ip&gt;:8090</code> are sent there.');
-  else add('ok', 'Require HTTPS', `Plain-HTTP visits to any other address are sent to <b>${esc(rh.target)}</b>${p.hsts ? ', and browsers are told to always use HTTPS (HSTS).' : '.'}`);
-  if (p.trustBad.length) add('bad', 'TRUST_PROXY', `Ignored because they aren’t IP addresses or CIDR ranges: ${p.trustBad.map(code).join(', ')}.`);
+  if (rh.envOff) add('info', 'Require HTTPS', 'Desativado por <code>REQUIRE_HTTPS=false</code> nas configurações do contêiner.');
+  else if (!rh.setting) add('warn', 'Require HTTPS', 'Desativado (Admin → Segurança), então acessos por IP usando HTTP sem criptografia são permitidos.');
+  else if (!rh.target) add('info', 'Require HTTPS', 'Aguardando um endereço https:// do aplicativo. Quando for definido, acessos HTTP sem criptografia, como <code>http://&lt;server-ip&gt;:8090</code>, serão redirecionados para ele.');
+  else add('ok', 'Require HTTPS', `Acessos HTTP sem criptografia a qualquer outro endereço são enviados para <b>${esc(rh.target)}</b>${p.hsts ? ', e os navegadores são instruídos a sempre usar HTTPS (HSTS).' : '.'}`);
+  if (p.trustBad.length) add('bad', 'TRUST_PROXY', `Ignorados porque não são endereços IP nem intervalos CIDR: ${p.trustBad.map(code).join(', ')}.`);
   const ic = { ok: 'check', warn: 'info', bad: 'x', info: 'info' };
   const bad = checks.filter(c => c.st === 'bad' || c.st === 'warn').length;
-  const rows = [['Conectado a partir de', p.peer], ['X-Forwarded-For', p.headers.xff], ['X-Forwarded-Proto', p.headers.proto], ['X-Real-IP', p.headers.xRealIp], ['Host', p.headers.host], ['TRUST_PROXY', p.trustRaw || '(not set)'], ['Listening on', `${p.host}:${p.port}`], ['Version', p.version]];
+  const rows = [['Conectado a partir de', p.peer], ['X-Forwarded-For', p.headers.xff], ['X-Forwarded-Proto', p.headers.proto], ['X-Real-IP', p.headers.xRealIp], ['Host', p.headers.host], ['TRUST_PROXY', p.trustRaw || '(não definido)'], ['Escutando em', `${p.host}:${p.port}`], ['Versão', p.version]];
   const appUrlEx = p.appUrl && /^https:/i.test(p.appUrl) ? p.appUrl : 'https://forge.yourdomain.com';
-  return `<div class="grid g-split"><div class="card"><div class="card-h"><h2>Connection checks</h2>${bad ? `<span class="pill warn-pill">${bad} to fix</span>` : '<span class="pill acc">All good</span>'}<button class="btn sm ghost" style="margin-left:auto" data-act="adm-refresh">${icon('loop')}Re-check</button></div>
+  return `<div class="grid g-split"><div class="card"><div class="card-h"><h2>Verificações de conexão</h2>${bad ? `<span class="pill warn-pill">${bad} para corrigir</span>` : '<span class="pill acc">Tudo certo</span>'}<button class="btn sm ghost" style="margin-left:auto" data-act="adm-refresh">${icon('loop')}Verificar novamente</button></div>
       <div class="px-checks">${checks.map(c => `<div class="px-row ${c.st}"><span class="px-ic">${icon(ic[c.st])}</span><div><b>${c.title}</b><div class="small sub">${c.text}</div></div></div>`).join('')}</div>
-      <div class="tiny muted" style="margin-top:10px">Checks describe this browser’s connection. Open this page through your https:// address to test the proxy.</div></div>
-    <div><div class="card"><div class="card-h"><h2>What the server received</h2></div><table class="tbl"><tbody>${rows.map(([k, v]) => `<tr><td class="small">${k}</td><td class="small">${v ? `<code>${esc(v)}</code>` : '<span class="muted">—</span>'}</td></tr>`).join('')}</tbody></table></div>
+      <div class="tiny muted" style="margin-top:10px">As verificações descrevem a conexão deste navegador. Abra esta página pelo seu endereço https:// para testar o proxy.</div></div>
+    <div><div class="card"><div class="card-h"><h2>O que o servidor recebeu</h2></div><table class="tbl"><tbody>${rows.map(([k, v]) => `<tr><td class="small">${k}</td><td class="small">${v ? `<code>${esc(v)}</code>` : '<span class="muted">—</span>'}</td></tr>`).join('')}</tbody></table></div>
       <div style="height:16px"></div><div class="card"><div class="card-h"><h2>Nginx Proxy Manager setup</h2></div><ol class="small sub px-steps">
         <li><b>Proxy host:</b> domain <code>${esc(urlHost(appUrlEx))}</code>, scheme <code>http</code>, forward to the FORGE 90 container (its name or IP) on port <code>${p.port}</code>. Turn on <b>Block Common Exploits</b>.</li>
         <li><b>SSL tab:</b> pick your certificate and turn on <b>Force SSL</b>, <b>HTTP/2</b> and <b>HSTS</b>.</li>
