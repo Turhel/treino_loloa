@@ -39,16 +39,16 @@ function gymAutoFmt(code) {
 // null when the code can be drawn in that type, otherwise why not
 function gymCodeProblem(code, fmt) {
   if (!code) return 'Digite o número do cartão.';
-  if (fmt === 'code128') return /^[\x20-\x7e]{1,80}$/.test(code) ? null : 'Code 128 takes letters, numbers and common symbols (up to 80).';
-  if (fmt === 'code39') return /^[0-9A-Z\-. $/+%]{1,60}$/.test(code) ? null : 'Code 39 takes capital letters, numbers, spaces and - . $ / + %.';
-  if (fmt === 'codabar') return /^[A-D]?[0-9\-$:/.+]{1,60}[A-D]?$/.test(code) ? null : 'Codabar takes numbers and - $ : / . +, optionally between A–D start and stop letters.';
-  if (fmt === 'itf') return /^(\d\d){1,40}$/.test(code) ? null : 'Interleaved 2 of 5 needs an even number of digits.';
-  if (fmt === 'ean13') return /^\d{13}$/.test(code) && gtinOk(code) ? null : 'EAN-13 is 13 digits with a valid check digit.';
-  if (fmt === 'upca') return /^\d{12}$/.test(code) && gtinOk(code) ? null : 'UPC-A is 12 digits with a valid check digit.';
-  if (fmt === 'ean8') return /^\d{8}$/.test(code) && gtinOk(code) ? null : 'EAN-8 is 8 digits with a valid check digit.';
-  if (fmt === 'upce') return /^[01]\d{7}$/.test(code) && gtinOk(upceExpand(code) || '1') ? null : 'UPC-E is 8 digits starting with 0 or 1.';
-  if (fmt === 'qr') return new TextEncoder().encode(code).length <= 200 ? null : 'That’s too long for a QR code here (200 characters).';
-  return 'Pick a barcode type.';
+  if (fmt === 'code128') return /^[\x20-\x7e]{1,80}$/.test(code) ? null : 'Code 128 aceita letras, números e símbolos comuns (até 80 caracteres).';
+  if (fmt === 'code39') return /^[0-9A-Z\-. $/+%]{1,60}$/.test(code) ? null : 'Code 39 aceita letras maiúsculas, números, espaços e - . $ / + %.';
+  if (fmt === 'codabar') return /^[A-D]?[0-9\-$:/.+]{1,60}[A-D]?$/.test(code) ? null : 'Codabar aceita números e - $ : / . +, opcionalmente entre letras A–D de início e fim.';
+  if (fmt === 'itf') return /^(\d\d){1,40}$/.test(code) ? null : 'Interleaved 2 of 5 precisa de uma quantidade par de dígitos.';
+  if (fmt === 'ean13') return /^\d{13}$/.test(code) && gtinOk(code) ? null : 'EAN-13 deve ter 13 dígitos e um dígito verificador válido.';
+  if (fmt === 'upca') return /^\d{12}$/.test(code) && gtinOk(code) ? null : 'UPC-A deve ter 12 dígitos e um dígito verificador válido.';
+  if (fmt === 'ean8') return /^\d{8}$/.test(code) && gtinOk(code) ? null : 'EAN-8 deve ter 8 dígitos e um dígito verificador válido.';
+  if (fmt === 'upce') return /^[01]\d{7}$/.test(code) && gtinOk(upceExpand(code) || '1') ? null : 'UPC-E deve ter 8 dígitos e começar com 0 ou 1.';
+  if (fmt === 'qr') return new TextEncoder().encode(code).length <= 200 ? null : 'Este conteúdo é longo demais para um QR code aqui (máximo de 200 caracteres).';
+  return 'Escolha um tipo de código de barras.';
 }
 function upceExpand(c) { if (!/^[01]\d{7}$/.test(c)) return null; const d = c.slice(1, 7); const e = +d[5];
   const body = e <= 2 ? d[0] + d[1] + d[5] + '0000' + d[2] + d[3] + d[4] : e === 3 ? d[0] + d[1] + d[2] + '00000' + d[3] + d[4] : e === 4 ? d[0] + d[1] + d[2] + d[3] + '00000' + d[4] : d[0] + d[1] + d[2] + d[3] + d[4] + '0000' + d[5];
