@@ -29,8 +29,8 @@ function renderSwap() {
   const x = SWP; const cur = EX[x.exId]; const g = exGroupOf(cur); const sl = SLOTS[x.slot];
   let scope, reset = '';
   if (x.mode === 'day') {
-    scope = `Only changes the ${esc(sl.label.toLowerCase())} exercise on <b>${fmtDate(x.date, { weekday: 'long', month: 'short', day: 'numeric' })}</b>. The program stays the same.`;
-    if (x.planned !== x.exId) reset = `<button class="btn sm" data-act="swap-pick" data-id="${x.planned}">${icon('undo')}Back to the planned exercise: ${esc(EX[x.planned].name)}</button>`;
+    scope = `Altera apenas o exercício de ${esc(sl.label.toLowerCase())} em <b>${fmtDate(x.date, { weekday: 'long', month: 'short', day: 'numeric' })}</b>. O programa permanece igual.`;
+    if (x.planned !== x.exId) reset = `<button class="btn sm" data-act="swap-pick" data-id="${x.planned}">${icon('undo')}Voltar ao exercício planejado: ${esc(EX[x.planned].name)}</button>`;
   } else {
     const from = swapStartWeek(x.exId); const orig = progSwapOrigin(x.slot, x.exId, from) || progSwapOrigin(x.slot, x.exId, curPlanWeekStart());
     scope = `Substitui <b>${esc(cur.name)}</b> em todos os lugares onde a rotação <b>${esc(sl.label)}</b> usa esse exercício, a partir da semana de <b>${fmtDate(from, { month: 'short', day: 'numeric' })}</b>. As semanas anteriores mantêm o que foi planejado.`;
@@ -39,9 +39,9 @@ function renderSwap() {
   const groups = { slot: `Outros exercícios de ${esc(sl.label.toLowerCase())}`, group: `Mais exercícios de ${esc(g.toLowerCase())}`, other: 'Outros grupos musculares' };
   let last = ''; const opts = swapCandidates().map(({ e, grp }) => {
     const head = grp !== last ? `<div class="swap-grp">${groups[grp]}</div>` : ''; last = grp;
-    const pills = [exOffNow(e.id) ? '<span class="pill">Off in library</span>' : '', e.custom ? '<span class="pill acc">Custom</span>' : '', e.extra ? '<span class="pill">Research pick</span>' : ''].join('');
+    const pills = [exOffNow(e.id) ? '<span class="pill">Desativado na biblioteca</span>' : '', e.custom ? '<span class="pill acc">Personalizado</span>' : '', e.extra ? '<span class="pill">Selecionado por evidências</span>' : ''].join('');
     return `${head}<button type="button" class="swap-opt" data-act="swap-pick" data-id="${e.id}" data-n="${esc((e.name + ' ' + e.equip + ' ' + exGroupOf(e)).toLowerCase())}" data-tip-ex="${e.id}">${muscleMap(e.primary, e.secondary)}<span class="swap-t"><b>${esc(e.name)}</b><small>${esc(e.equip || '')} · ${e.compound ? 'composto' : 'isolador'}</small></span><span class="swap-p">${pills}</span></button>`; }).join('');
-  modal(`<div class="swap-m"><div class="row"><h2 style="flex:1">${x.mode === 'day' ? 'Trocar somente neste dia' : 'Trocar no programa'}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Close">${icon('x')}</button></div>
+  modal(`<div class="swap-m"><div class="row"><h2 style="flex:1">${x.mode === 'day' ? 'Trocar somente neste dia' : 'Trocar no programa'}</h2><button class="btn icon ghost" data-act="close-modal" aria-label="Fechar">${icon('x')}</button></div>
     <div class="swap-cur">${muscleMap(cur.primary, cur.secondary)}<div style="min-width:0"><div class="tiny muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.08em">${esc(sl.label)} · agora</div><b>${esc(cur.name)}</b><div class="tiny muted">${esc(cur.equip || '')}</div></div></div>
     <div class="note" style="margin:10px 0">${icon('info')}<span>${scope}</span></div>${reset ? `<div style="margin-bottom:10px">${reset}</div>` : ''}
     <div class="row wrap" style="gap:10px;margin-bottom:8px"><input class="inp" type="search" id="swap-q" data-input="swap-q" placeholder="Buscar exercícios…" style="flex:1;min-width:180px" autocomplete="off">
@@ -82,7 +82,7 @@ function swapPick(id) {
 const collOpen = k => !((UI.coll || {})[k]);
 function collHead(k, title, extra = '') {
   const open = collOpen(k);
-  return `<button type="button" class="coll-btn" data-act="coll" data-k="${k}" aria-expanded="${open}" title="${open ? 'Collapse' : 'Expand'}">${icon('right')}<h2>${title}</h2></button>${extra}`;
+  return `<button type="button" class="coll-btn" data-act="coll" data-k="${k}" aria-expanded="${open}" title="${open ? 'Recolher' : 'Expandir'}">${icon('right')}<h2>${title}</h2></button>${extra}`;
 }
 const collCls = k => `coll ${collOpen(k) ? '' : 'shut'}`;
 

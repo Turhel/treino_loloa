@@ -269,7 +269,7 @@ let toastTimer = null;
 const TOAST_MS = 10000;   // notifications stay up for 10 seconds (paused while the pointer is over them)
 function toast(msg, undoable) {
   const t = $('#toast'); if (!t) return;
-  t.innerHTML = `<span>${esc(msg)}</span>${undoable ? `<button data-act="undo">Undo</button>` : ''}<button class="toast-x" data-act="toast-close" aria-label="Dismiss">${icon('x')}</button>`;
+  t.innerHTML = `<span>${esc(msg)}</span>${undoable ? `<button data-act="undo">Desfazer</button>` : ''}<button class="toast-x" data-act="toast-close" aria-label="Dispensar">${icon('x')}</button>`;
   t.setAttribute('role', 'status'); t.setAttribute('aria-live', 'polite');
   t.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), TOAST_MS);
   if (!t._hover) { t._hover = true; t.addEventListener('mouseenter', () => clearTimeout(toastTimer)); t.addEventListener('mouseleave', () => { clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 4000); }); }
@@ -277,7 +277,7 @@ function toast(msg, undoable) {
 function modal(html, cls = '', backable) {
   const old = $('#modal'); if (old) old.remove();     // replaced in place: re-rendering a sheet mustn't churn history
   const bg = document.createElement('div'); bg.className = 'modal-bg'; bg.id = 'modal';
-  bg.innerHTML = `<div class="modal ${cls}">${isPhone() ? '<div class="sh-hdl" role="button" tabindex="-1" aria-label="Close"><i></i></div>' : ''}${html}</div>`;
+  bg.innerHTML = `<div class="modal ${cls}">${isPhone() ? '<div class="sh-hdl" role="button" tabindex="-1" aria-label="Fechar"><i></i></div>' : ''}${html}</div>`;
   bg.addEventListener('mousedown', e => { if (e.target === bg) closeModal(); });
   document.body.appendChild(bg); hideTip();
   if (backable) backPush('modal', closeModal);

@@ -55,7 +55,7 @@ function viewDashboard() {
     return `<div class="row" style="padding:7px 0;border-top:1px solid var(--line)" data-tip-meal="${focus}|${m.slot}"><span style="font-size:20px;width:26px;text-align:center">${esc(m.r.emoji)}</span><div style="flex:1;min-width:0"><div class="tiny muted" style="text-transform:uppercase;letter-spacing:.08em;font-weight:700">${SLOT_LABEL[m.slot]}</div><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.r.name)} ${batchBadge(b)}${shareBadge(focus, m.slot)}</div></div><span class="num small"><b>${fmt(m.m.k)}</b> kcal · <span style="color:var(--prot)">${fmt(m.m.p)}P</span></span><button class="btn icon ghost qe-pen" data-act="qe" data-d="${focus}" data-f="meal:${m.slot}" title="Trocar esta refeição" aria-label="Trocar ${SLOT_LABEL[m.slot].toLowerCase()}">${icon('edit')}</button></div>`; }).join('');
   const kfrac = day.totals.k / day.tg.kcal;
   const todayCard = `<div class="card"><div class="card-h"><h2>${focus === today ? 'Hoje' : fmtDate(focus, { weekday: 'long', month: 'short', day: 'numeric' })}</h2><span class="pill ${day.isTrain ? 'acc' : ''}">${day.isTrain ? 'Dia de treino' : 'Dia de descanso'}</span>${syncBtnHTML('sm')}<a class="btn sm ghost" href="#/day/${focus}">Abrir dia ${icon('right')}</a></div>
-    <div class="qe-links"><button class="btn sm" data-act="qe" data-d="${focus}" data-f="wo">${icon('dumbbell')}Edit workout</button><button class="btn sm" data-act="qe" data-d="${focus}" data-f="meals">${icon('food')}Edit meals</button>${focus === today ? scanBtnHTML('today', 'sm') + addFoodBtnHTML('', 'sm') : ''}${day.entry.w ? `<button class="btn sm primary" data-act="wo-open" data-d="${focus}" title="Um exercício por vez, com cronômetro de descanso">${icon('play')}Workout mode</button>` : ''}<a class="btn sm ghost" href="#/workouts">${icon('grip')}Workout plan</a><a class="btn sm ghost" href="#/foods">${icon('book')}Recipes</a></div>
+    <div class="qe-links"><button class="btn sm" data-act="qe" data-d="${focus}" data-f="wo">${icon('dumbbell')}Edit workout</button><button class="btn sm" data-act="qe" data-d="${focus}" data-f="meals">${icon('food')}Edit meals</button>${focus === today ? scanBtnHTML('today', 'sm') + addFoodBtnHTML('', 'sm') : ''}${day.entry.w ? `<button class="btn sm primary" data-act="wo-open" data-d="${focus}" title="Um exercício por vez, com cronômetro de descanso">${icon('play')}Modo treino</button>` : ''}<a class="btn sm ghost" href="#/workouts">${icon('grip')}Workout plan</a><a class="btn sm ghost" href="#/foods">${icon('book')}Recipes</a></div>
     ${wo}<hr class="sep"><div class="grid ring-row" style="grid-template-columns:auto 1fr;gap:20px;align-items:center">
       <div class="ring">${ringSVG(kfrac, 'var(--kcal)')}<div class="c"><b>${fmt(day.totals.k)}</b><span>de ${fmt(day.tg.kcal)} kcal</span></div></div>
       <div>${macroBars(day.totals, day.tg)}<div class="tiny muted" style="margin-top:6px">Multiplicadores de porção: proteína ×${day.pF.toFixed(2)} · carboidratos/gorduras ×${day.cF.toFixed(2)}</div></div></div>
@@ -276,13 +276,13 @@ function viewDay(date) {
   const A = computeAll(); const day = A.days[date]; const e = S.plan[date];
   const idx = planIndex(date), wk = planWeek(date);
   const prev = inPlan(addDays(date, -1)) ? addDays(date, -1) : null, next = inPlan(addDays(date, 1)) ? addDays(date, 1) : null;
-  const head = `<div class="day-head"><a class="btn icon" href="#/calendar" data-tip="Back to calendar">${icon('cal')}</a>
-    <div class="date"><div class="muted small" style="font-weight:600">${idx < LAUNCH_DAYS ? `Day ${idx + 1} of 90 · Week ${wk}` : `Day ${idx + 1} · Cycle ${phaseForWeek(wk).cycle}, week ${phaseForWeek(wk).wic} of 13`}</div><h1>${fmtDate(date, { weekday: 'long', month: 'long', day: 'numeric' })}</h1></div>
+  const head = `<div class="day-head"><a class="btn icon" href="#/calendar" data-tip="Voltar ao calendário">${icon('cal')}</a>
+    <div class="date"><div class="muted small" style="font-weight:600">${idx < LAUNCH_DAYS ? `Dia ${idx + 1} de 90 · Semana ${wk}` : `Dia ${idx + 1} · Ciclo ${phaseForWeek(wk).cycle}, semana ${phaseForWeek(wk).wic} de 13`}</div><h1>${fmtDate(date, { weekday: 'long', month: 'long', day: 'numeric' })}</h1></div>
     <div class="row wrap">${phasePill(wk)}<span class="pill ${day.isTrain ? 'acc' : ''}">${day.isTrain ? 'Dia de treino' : 'Dia de descanso'}</span></div><div class="spacer"></div>${syncBtnHTML()}
     <a class="btn icon ${prev ? '' : 'hidden'}" href="#/day/${prev}">${icon('left')}</a><a class="btn icon ${next ? '' : 'hidden'}" href="#/day/${next}">${icon('right')}</a></div>`;
 
   // workout
-  const opts = `<option value="">— Rest day —</option>` + (e.w && TEMPLATES[e.w.t] && TEMPLATES[e.w.t].legacy ? `<option value="${e.w.t}" selected>${esc(TEMPLATES[e.w.t].name)} (earlier plan)</option>` : '') + ALL_PHASES.map(p => `<optgroup label="${p.name}">${p.templates.map(k => `<option value="${k}" ${e.w && e.w.t === k ? 'selected' : ''}>${esc(TEMPLATES[k].name)}</option>`).join('')}</optgroup>`).join('');
+  const opts = `<option value="">— Dia de descanso —</option>` + (e.w && TEMPLATES[e.w.t] && TEMPLATES[e.w.t].legacy ? `<option value="${e.w.t}" selected>${esc(TEMPLATES[e.w.t].name)} (plano anterior)</option>` : '') + ALL_PHASES.map(p => `<optgroup label="${p.name}">${p.templates.map(k => `<option value="${k}" ${e.w && e.w.t === k ? 'selected' : ''}>${esc(TEMPLATES[k].name)}</option>`).join('')}</optgroup>`).join('');
   let woCard;
   if (e.w) {
     const t = TEMPLATES[e.w.t]; const rows = sessionRows(e.w);
@@ -291,78 +291,78 @@ function viewDay(date) {
         <h2 style="margin-top:8px">${esc(t.name)}</h2><div class="sub small" style="margin-top:2px">${esc(t.focus)}</div></div>
         ${muscleMap(prim, sec).replace('class="mm"', 'class="mm" style="width:110px;height:110px;flex:none"')}</div>
       <div class="row wrap" style="margin-bottom:12px"><select class="inp" data-input="day-wo" data-date="${date}" style="max-width:280px">${opts}</select>
-        <button class="btn ${S.done[date] ? 'primary' : ''}" data-act="toggle-done" data-date="${date}">${icon('check')}${S.done[date] ? 'Completed' : 'Mark complete'}</button><button class="btn primary" data-act="wo-open" data-d="${date}" title="Um exercício por vez, com cronômetro de descanso">${icon('play')}Workout mode</button></div>
-      <div class="scroll-x"><table class="ex-table"><thead><tr><th>#</th><th>Exercise</th><th>Target</th><th>Log sets (lb × reps)</th></tr></thead><tbody>
+        <button class="btn ${S.done[date] ? 'primary' : ''}" data-act="toggle-done" data-date="${date}">${icon('check')}${S.done[date] ? 'Concluído' : 'Marcar como concluído'}</button><button class="btn primary" data-act="wo-open" data-d="${date}" title="Um exercício por vez, com cronômetro de descanso">${icon('play')}Modo treino</button></div>
+      <div class="scroll-x"><table class="ex-table"><thead><tr><th>#</th><th>Exercício</th><th>Meta</th><th>Registrar séries (kg × rep.)</th></tr></thead><tbody>
       ${rows.map((r, i) => exRowHTML(date, r, i)).join('')}</tbody></table></div>
       <div class="note" style="margin-top:12px">${icon('info')}<span><b>RIR</b> = rep. em reserva (quantas rep. limpas você ainda conseguiria fazer). Séries de força <span class="type-s">F</span>: descanso de 2–3 min. Séries de hipertrofia <span class="type-h">H</span>: descanso de 60–120 s. Passe o cursor sobre um exercício para ver a execução passo a passo.</span></div></div>`;
   } else {
-    woCard = `<div class="card"><div class="card-h"><h2>Rest &amp; recover</h2></div><div class="note acc">${icon('info')}<span>No lifting today. Walk 8–10k steps, get 7–9 h of sleep and keep protein on target. Today’s calorie target is ${fmt(S.settings.sessionKcal)} kcal lower than a training day, and portions are resized to match.</span></div>
-      <div class="row wrap" style="margin-top:14px"><span class="small sub">Add a session:</span><select class="inp" data-input="day-wo" data-date="${date}" style="max-width:280px">${opts}</select></div></div>`;
+    woCard = `<div class="card"><div class="card-h"><h2>Descanso e recuperação</h2></div><div class="note acc">${icon('info')}<span>Hoje não há treino de força. Caminhe 8–10 mil passos, durma 7–9 h e mantenha a meta de proteína. A meta calórica de hoje é ${fmt(S.settings.sessionKcal)} kcal menor que em um dia de treino, e as porções são ajustadas para acompanhar.</span></div>
+      <div class="row wrap" style="margin-top:14px"><span class="small sub">Adicionar uma sessão:</span><select class="inp" data-input="day-wo" data-date="${date}" style="max-width:280px">${opts}</select></div></div>`;
   }
 
   // nutrition
   const st = day.stats; const tg = day.tg;
   const mealsHTML = MEAL_SLOTS.map(slot => {
     const m = day.meals.find(x => x.slot === slot);
-    const sel = `<select class="inp" data-input="day-meal" data-date="${date}" data-slot="${slot}" style="height:30px;font-size:12px;max-width:190px"><option value="">— none —</option>${['breakfast', 'lunch', 'dinner', 'snack'].map(c => `<optgroup label="${c[0].toUpperCase() + c.slice(1)}">${RECIPES.filter(r => r.cat === c && (recipeAllowed(r) || (m && m.r.id === r.id))).map(r => `<option value="${r.id}" ${m && m.r.id === r.id ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</optgroup>`).join('')}</select>`;
-    if (!m) return `<div class="dmeal empty"><span class="em">+</span><div class="dmeal-t"><span class="slot">${SLOT_LABEL[slot]}</span><span class="muted small">Nothing planned</span></div>${sel}${extrasHTML(day, slot)}</div>`;
+    const sel = `<select class="inp" data-input="day-meal" data-date="${date}" data-slot="${slot}" style="height:30px;font-size:12px;max-width:190px"><option value="">— nenhuma —</option>${['breakfast', 'lunch', 'dinner', 'snack'].map(c => `<optgroup label="${c[0].toUpperCase() + c.slice(1)}">${RECIPES.filter(r => r.cat === c && (recipeAllowed(r) || (m && m.r.id === r.id))).map(r => `<option value="${r.id}" ${m && m.r.id === r.id ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</optgroup>`).join('')}</select>`;
+    if (!m) return `<div class="dmeal empty"><span class="em">+</span><div class="dmeal-t"><span class="slot">${SLOT_LABEL[slot]}</span><span class="muted small">Nada planejado</span></div>${sel}${extrasHTML(day, slot)}</div>`;
     const b = A.batches.info[date + '|' + slot];
     let bnote = '';
     if (b && b.role === 'cook') {
       const list = Object.entries(b.batch.amounts).map(([id, a]) => { const t = amountText(id, a); return `<span>${esc(ING[id].n)}</span><span class="q">${t.main}${t.sub ? `<small>${t.sub}</small>` : ''}</span>`; }).join('');
-      bnote = `<details class="dmeal-note cook"><summary>${icon('flame')}<b>Cook ${b.batch.size} serving${b.batch.size > 1 ? 's' : ''} today</b>${b.batch.partnerServ ? ` (${b.batch.size - b.batch.partnerServ} for you, ${b.batch.partnerServ} for ${esc(syncName())})` : ''}${b.batch.size < m.r.yield ? ` · recipe at ${Math.round(b.batch.scale * 100)}%` : ''} · leftovers ${b.batch.members.slice(1).map(o => fmtDate(o.date, { weekday: 'short' }) + ' ' + SLOT_LABEL[o.slot].toLowerCase()).join(', ') || '—'}</summary><div class="ing-list">${list}</div></details>`;
-    } else if (b && b.frozen) bnote = `<span class="dmeal-note">${icon('snow')}Frozen leftover — move it to the fridge the night before</span>`;
+      bnote = `<details class="dmeal-note cook"><summary>${icon('flame')}<b>Prepare ${b.batch.size} porção${b.batch.size > 1 ? 'ões' : ''} hoje</b>${b.batch.partnerServ ? ` (${b.batch.size - b.batch.partnerServ} para você, ${b.batch.partnerServ} para ${esc(syncName())})` : ''}${b.batch.size < m.r.yield ? ` · receita em ${Math.round(b.batch.scale * 100)}%` : ''} · sobras ${b.batch.members.slice(1).map(o => fmtDate(o.date, { weekday: 'short' }) + ' ' + SLOT_LABEL[o.slot].toLowerCase()).join(', ') || '—'}</summary><div class="ing-list">${list}</div></details>`;
+    } else if (b && b.frozen) bnote = `<span class="dmeal-note">${icon('snow')}Sobra congelada — passe para a geladeira na noite anterior</span>`;
     const items = m.items.map(it => { const t = amountText(it.id, it.amt); const dir = it.role === 'P' ? day.pF : (it.role === 'C' || it.role === 'F') ? day.cF : 1;
       return `<span class="di">${esc(ING[it.id].n.split(',')[0])} <b class="q ${dir > 1.02 ? 'scaled-up' : dir < 0.98 ? 'scaled-dn' : ''}">${t.main}</b></span>`; }).join('');
-    return `<div class="dmeal"><div class="dmeal-top"><button type="button" class="dmeal-h" data-act="recipe" data-rid="${m.r.id}" title="Show the recipe"><span class="em">${esc(m.r.emoji)}</span><span class="dmeal-t"><span class="slot">${SLOT_LABEL[slot]} ${batchBadge(b)}${shareBadge(date, slot)}</span><b class="nm">${esc(m.r.name)}</b></span>
+    return `<div class="dmeal"><div class="dmeal-top"><button type="button" class="dmeal-h" data-act="recipe" data-rid="${m.r.id}" title="Mostrar a receita"><span class="em">${esc(m.r.emoji)}</span><span class="dmeal-t"><span class="slot">${SLOT_LABEL[slot]} ${batchBadge(b)}${shareBadge(date, slot)}</span><b class="nm">${esc(m.r.name)}</b></span>
       <span class="mk"><b>${fmt(m.m.k)} kcal</b><span class="pcf"><span class="p">${fmt(m.m.p)}P</span><span class="c">${fmt(m.m.c)}C</span><span class="f">${fmt(m.m.f)}F</span></span></span></button>
-      <label class="dmeal-swap" title="Trocar esta refeição">${icon('loop')}<span class="sr">Swap ${esc(SLOT_LABEL[slot].toLowerCase())}</span>${sel}</label></div>
+      <label class="dmeal-swap" title="Trocar esta refeição">${icon('loop')}<span class="sr">Trocar ${esc(SLOT_LABEL[slot].toLowerCase())}</span>${sel}</label></div>
       <div class="dmeal-ings">${items}</div>${bnote ? `<div class="dmeal-f">${bnote}</div>` : ''}${extrasHTML(day, slot)}</div>`;
   }).join('');
-  const nutCard = `<div class="card"><div class="card-h"><h2>Nutrition</h2><span class="pill">${day.isTrain ? 'Training' : 'Rest'} target</span><div class="spacer"></div>${scanBtnHTML('today', 'sm', date)}${addFoodBtnHTML(date, 'sm')}</div>
-    <div class="grid" style="grid-template-columns:auto 1fr;gap:18px;align-items:center"><div class="ring">${ringSVG(day.totals.k / tg.kcal, 'var(--kcal)')}<div class="c"><b>${fmt(day.totals.k)}</b><span>of ${fmt(tg.kcal)} kcal</span></div></div><div>${macroBars(day.totals, tg)}</div></div>
-    <div class="note" style="margin-top:12px">${icon('scale')}<span>Portions sized from <b>${fmt(st.w, 1)} lb · ${fmt(st.bf, 1)}% BF${st.est ? ' (est.)' : ''}</b> ${st.src === 'start' ? '(starting stats)' : '(weigh-in ' + fmtDate(st.src) + ')'}: protein sources ×${day.pF.toFixed(2)}, carb &amp; fat sources ×${day.cF.toFixed(2)}. <span class="scaled-up" style="color:var(--good)">Green</span> amounts are scaled up, <span style="color:var(--kcal)">orange</span> scaled down.</span></div>
-    <div class="dmeals">${mealsHTML}</div><div class="tiny muted" style="margin-top:4px">Tap a meal for the full recipe. Amounts above are today’s portions${(day.extras || []).length ? ', already made smaller to fit the foods you added' : ''}.</div></div>`;
+  const nutCard = `<div class="card"><div class="card-h"><h2>Nutrição</h2><span class="pill">${day.isTrain ? 'Treino' : 'Descanso'} · meta</span><div class="spacer"></div>${scanBtnHTML('today', 'sm', date)}${addFoodBtnHTML(date, 'sm')}</div>
+    <div class="grid" style="grid-template-columns:auto 1fr;gap:18px;align-items:center"><div class="ring">${ringSVG(day.totals.k / tg.kcal, 'var(--kcal)')}<div class="c"><b>${fmt(day.totals.k)}</b><span>de ${fmt(tg.kcal)} kcal</span></div></div><div>${macroBars(day.totals, tg)}</div></div>
+    <div class="note" style="margin-top:12px">${icon('scale')}<span>Porções calculadas a partir de <b>${fmt(st.w, 1)} kg · ${fmt(st.bf, 1)}% de gordura corporal${st.est ? ' (estim.)' : ''}</b> ${st.src === 'start' ? '(dados iniciais)' : '(pesagem de ' + fmtDate(st.src) + ')'}: fontes de proteína ×${day.pF.toFixed(2)}, fontes de carboidratos e gorduras ×${day.cF.toFixed(2)}. Quantidades em <span class="scaled-up" style="color:var(--good)">verde</span> foram aumentadas e em <span style="color:var(--kcal)">laranja</span>, reduzidas.</span></div>
+    <div class="dmeals">${mealsHTML}</div><div class="tiny muted" style="margin-top:4px">Toque em uma refeição para ver a receita completa. As quantidades acima são as porções de hoje${(day.extras || []).length ? ', já reduzidas para acomodar os alimentos que você adicionou' : ''}.</div></div>`;
   return head + `<div class="day-grid"><div>${woCard}</div><div>${nutCard}</div></div>`;
 }
 function exRowHTML(date, r, i) {
   const sug = suggestion(r.ex.id, r.reps, date);
   const sets = setInputsHTML(date, r); const typeB = typeBadge(r);
   return `<tr><td class="muted" style="font-weight:700">${i + 1}</td>
-    <td style="min-width:190px"><div class="ex-line"><span class="ex-name" data-tip-ex="${r.ex.id}">${esc(r.ex.name)}</span>${swapBtnHTML(date, r)}</div><div class="ex-meta">${esc(SLOTS[r.slot].label)} · ${r.daySwap ? `swapped for this day <span class="muted">(planned: ${esc(r.planned.name)})</span>` : r.progSwap ? `swapped in the program <span class="muted">(was ${esc(EX[r.progSwap] ? EX[r.progSwap].name : '')})</span>` : `variation ${r.vi + 1}/${r.nv}`}</div>${r.note ? `<div class="ex-meta" style="color:var(--accent-text)">${esc(r.note)}</div>` : ''}</td>
-    <td style="white-space:nowrap">${typeB} <b>${r.sets} × ${esc(r.reps)}</b><div class="ex-meta">RIR ${esc(r.rir)} · rest ${r.rest >= 120 ? (r.rest / 60) + ' min' : r.rest + ' s'}</div></td>
+    <td style="min-width:190px"><div class="ex-line"><span class="ex-name" data-tip-ex="${r.ex.id}">${esc(r.ex.name)}</span>${swapBtnHTML(date, r)}</div><div class="ex-meta">${esc(SLOTS[r.slot].label)} · ${r.daySwap ? `trocado neste dia <span class="muted">(planejado: ${esc(r.planned.name)})</span>` : r.progSwap ? `trocado no programa <span class="muted">(era ${esc(EX[r.progSwap] ? EX[r.progSwap].name : '')})</span>` : `variação ${r.vi + 1}/${r.nv}`}</div>${r.note ? `<div class="ex-meta" style="color:var(--accent-text)">${esc(r.note)}</div>` : ''}</td>
+    <td style="white-space:nowrap">${typeB} <b>${r.sets} × ${esc(r.reps)}</b><div class="ex-meta">RIR ${esc(r.rir)} · descanso ${r.rest >= 120 ? (r.rest / 60) + ' min' : r.rest + ' s'}</div></td>
     <td><div class="sets">${sets}</div>${hintHTML(date, r, sug)}</td></tr>`;
 }
 function setInputsHTML(date, r) {
   const logs = (S.logs[date] || {})[r.ex.id] || []; const wl = r.ex.assist ? 'assist.' : isBW(r.ex.id) ? '+kg' : 'kg';
   return Array.from({ length: r.sets }, (_, k) => { const s = logs[k] || {};
-    return `<div class="set ${s.r > 0 ? 'logged' : ''}"><span class="n">${k + 1}</span><input class="w num" type="number" inputmode="decimal" step="2.5" min="0" placeholder="${wl}" value="${s.w != null ? esc(s.w) : ''}" data-log="${date}|${r.ex.id}|${k}|w" aria-label="${esc(r.ex.name)} set ${k + 1} weight"><span class="x">×</span><input class="r num" type="number" inputmode="numeric" min="0" max="100" placeholder="reps" value="${s.r != null ? esc(s.r) : ''}" data-log="${date}|${r.ex.id}|${k}|r" aria-label="${esc(r.ex.name)} set ${k + 1} reps"></div>`; }).join('');
+    return `<div class="set ${s.r > 0 ? 'logged' : ''}"><span class="n">${k + 1}</span><input class="w num" type="number" inputmode="decimal" step="2.5" min="0" placeholder="${wl}" value="${s.w != null ? esc(s.w) : ''}" data-log="${date}|${r.ex.id}|${k}|w" aria-label="${esc(r.ex.name)} série ${k + 1} carga"><span class="x">×</span><input class="r num" type="number" inputmode="numeric" min="0" max="100" placeholder="rep." value="${s.r != null ? esc(s.r) : ''}" data-log="${date}|${r.ex.id}|${k}|r" aria-label="${esc(r.ex.name)} série ${k + 1} repetições"></div>`; }).join('');
 }
-const swapBtnHTML = (date, r, back) => `<button type="button" class="swap-btn ${r.daySwap ? 'on' : ''}" data-act="swap-day" data-date="${date}" data-i="${r.i}"${back ? ` data-back="${back}"` : ''} title="Swap ${esc(r.ex.name)} for this day" aria-label="Swap ${esc(r.ex.name)} for this day">${icon('loop')}</button>`;
+const swapBtnHTML = (date, r, back) => `<button type="button" class="swap-btn ${r.daySwap ? 'on' : ''}" data-act="swap-day" data-date="${date}" data-i="${r.i}"${back ? ` data-back="${back}"` : ''} title="Trocar ${esc(r.ex.name)} neste dia" aria-label="Trocar ${esc(r.ex.name)} neste dia">${icon('loop')}</button>`;
 const typeBadge = r => `<span class="type-${r.type.toLowerCase()}">${r.type === 'S' ? 'F' : r.type === 'T' ? 'TEST' : 'H'}</span>`;
-const hintHTML = (date, r, sug) => `<div class="hint" id="hint-${r.ex.id}">${prBadge(date, r.ex.id)}${sug ? icon('zap') + `<span>${esc(sug.text)}</span>` : `<span class="muted">First time — pick a weight you can do for the target reps at RIR ${esc(r.rir)}.</span>`}</div>`;
+const hintHTML = (date, r, sug) => `<div class="hint" id="hint-${r.ex.id}">${prBadge(date, r.ex.id)}${sug ? icon('zap') + `<span>${esc(sug.text)}</span>` : `<span class="muted">Primeira vez — escolha uma carga que permita cumprir as repetições-alvo em RIR ${esc(r.rir)}.</span>`}</div>`;
 /* sets logged (reps entered) for a session, counting only the planned sets */
 function loggedSets(date, rows) { let done = 0, total = 0; rows.forEach(r => { const l = (S.logs[date] || {})[r.ex.id] || []; total += r.sets; for (let k = 0; k < r.sets; k++) if (l[k] && +l[k].r > 0) done++; }); return { done, total }; }
 function exLogged(date, r) { const l = (S.logs[date] || {})[r.ex.id] || []; for (let k = 0; k < r.sets; k++) if (!(l[k] && +l[k].r > 0)) return false; return true; }
 /* dashboard "Today" set logger */
 function todayLogHTML(date, rows) {
   const c = loggedSets(date, rows); const rest = r => r.rest >= 120 ? (r.rest / 60) + ' min' : r.rest + ' s';
-  return `<div class="tlog" data-tlog="${date}"><div class="tlog-h"><h3>Log sets</h3><span class="tiny muted">weight × reps — saves as you type</span><span class="pill ${c.done >= c.total ? 'acc' : ''}" id="tlog-count">${c.done} / ${c.total} sets</span></div>
-    ${rows.map((r, i) => `<div class="tlog-ex ${exLogged(date, r) ? 'done' : ''}" data-tlog-ex="${r.ex.id}"><div class="tlog-name"><span class="tlog-n">${exLogged(date, r) ? icon('check') : i + 1}</span><div style="min-width:0"><div class="ex-line"><span class="ex-name" data-tip-ex="${r.ex.id}">${esc(r.ex.name)}</span>${swapBtnHTML(date, r)}</div><div class="ex-meta">${typeBadge(r)} <b>${r.sets} × ${esc(r.reps)}</b> · RIR ${esc(r.rir)} · rest ${rest(r)}${r.daySwap ? ' · swapped today' : ''}</div></div></div>
+  return `<div class="tlog" data-tlog="${date}"><div class="tlog-h"><h3>Registrar séries</h3><span class="tiny muted">carga × repetições — salva enquanto você digita</span><span class="pill ${c.done >= c.total ? 'acc' : ''}" id="tlog-count">${c.done} / ${c.total} séries</span></div>
+    ${rows.map((r, i) => `<div class="tlog-ex ${exLogged(date, r) ? 'done' : ''}" data-tlog-ex="${r.ex.id}"><div class="tlog-name"><span class="tlog-n">${exLogged(date, r) ? icon('check') : i + 1}</span><div style="min-width:0"><div class="ex-line"><span class="ex-name" data-tip-ex="${r.ex.id}">${esc(r.ex.name)}</span>${swapBtnHTML(date, r)}</div><div class="ex-meta">${typeBadge(r)} <b>${r.sets} × ${esc(r.reps)}</b> · RIR ${esc(r.rir)} · descanso ${rest(r)}${r.daySwap ? ' · trocado hoje' : ''}</div></div></div>
       <div class="tlog-sets"><div class="sets">${setInputsHTML(date, r)}</div>${hintHTML(date, r, suggestion(r.ex.id, r.reps, date))}</div></div>`).join('')}
-    <div class="row wrap tlog-foot"><button class="btn ${S.done[date] ? 'primary' : ''}" data-act="toggle-done" data-date="${date}">${icon('check')}${S.done[date] ? 'Workout completed' : 'Mark workout complete'}</button><a class="btn ghost sm" href="#/day/${date}">Full day view ${icon('right')}</a></div></div>`;
+    <div class="row wrap tlog-foot"><button class="btn ${S.done[date] ? 'primary' : ''}" data-act="toggle-done" data-date="${date}">${icon('check')}${S.done[date] ? 'Treino concluído' : 'Marcar treino como concluído'}</button><a class="btn ghost sm" href="#/day/${date}">Ver dia completo ${icon('right')}</a></div></div>`;
 }
 /* live refresh of the counters after a set is typed in (no full re-render, so focus stays put) */
 function refreshLogProgress(date, exId) {
   document.querySelectorAll(`[data-log^="${date}|${exId}|"]`).forEach(inp => { const k = +inp.dataset.log.split('|')[2]; const s = ((S.logs[date] || {})[exId] || [])[k]; const st = inp.closest('.set'); if (st) st.classList.toggle('logged', !!(s && +s.r > 0)); });
   const box = document.querySelector(`[data-tlog="${date}"]`); const e = S.plan[date]; if (!box || !e || !e.w) return;
   const rows = sessionRows(e.w); const c = loggedSets(date, rows); const cnt = $('#tlog-count');
-  if (cnt) { cnt.textContent = `${c.done} / ${c.total} sets`; cnt.classList.toggle('acc', c.done >= c.total); }
+  if (cnt) { cnt.textContent = `${c.done} / ${c.total} séries`; cnt.classList.toggle('acc', c.done >= c.total); }
   const r = rows.find(x => x.ex.id === exId); const el = box.querySelector(`[data-tlog-ex="${exId}"]`);
   if (r && el) { const d = exLogged(date, r); el.classList.toggle('done', d); const n = el.querySelector('.tlog-n'); if (n) n.innerHTML = d ? icon('check') : String(rows.indexOf(r) + 1); }
   return c;
 }
 function prBadge(date, exId) {
   const h = exerciseHistory(exId).find(x => x.d === date);
-  return h && h.pr ? `<span class="prb">${icon('trophy')}PR ${isBW(exId) ? h.best + ' reps' : 'e1RM ' + fmt(h.best)}</span>` : '';
+  return h && h.pr ? `<span class="prb">${icon('trophy')}PR ${isBW(exId) ? h.best + ' rep.' : 'e1RM ' + fmt(h.best)}</span>` : '';
 }
